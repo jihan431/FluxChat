@@ -69,23 +69,23 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const password = document.getElementById('loginPassword').value.trim();
 
   if (!email || !password) {
-    showNotification('Masukkan email dan password!', 'error');
+    showNotification('❌ Masukkan email dan password!', 'error');
     return;
   }
 
   if (!validateEmail(email)) {
-    showNotification('Format email tidak valid!', 'error');
+    showNotification('❌ Format email tidak valid!', 'error');
     return;
   }
 
   if (!validatePassword(password)) {
-    showNotification('Password minimal 6 karakter!', 'error');
+    showNotification('❌ Password minimal 6 karakter!', 'error');
     return;
   }
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Loading...';
+  submitBtn.textContent = '⏳ Login...';
 
   try {
     const res = await fetch(`${API_URL}/api/login`, {
@@ -97,18 +97,18 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     if (data.success) {
       localStorage.setItem('currentUser', JSON.stringify(data.user));
-      showNotification('Login berhasil!', 'success');
+      showNotification('✅ Login berhasil! Mengalihkan...', 'success');
       setTimeout(() => {
         window.location.href = 'index.html';
       }, 1000);
     } else {
-      showNotification('Error: ' + data.error, 'error');
+      showNotification('❌ ' + data.error, 'error');
     }
   } catch (error) {
-    showNotification('Network error: ' + error.message, 'error');
+    showNotification('❌ Error jaringan: ' + error.message, 'error');
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Login';
+    submitBtn.textContent = 'Masuk Sekarang';
   }
 });
 
@@ -152,11 +152,11 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     const data = await res.json();
 
     if (data.success) {
-      showNotification('Kode OTP telah dikirim ke email Anda!', 'success');
-      document.getElementById('otpEmail').value = email;
-      switchTab('otp');
+      showNotification('✅ Kode OTP telah dikirim ke email Anda! Periksa inbox email Anda.', 'success');
+      document.getElementById('otpEmailHidden').value = email;
+      setTimeout(() => setMode('otp'), 500);
     } else {
-      showNotification('Error: ' + data.error, 'error');
+      showNotification('❌ Error: ' + data.error, 'error');
     }
   } catch (error) {
     showNotification('Network error: ' + error.message, 'error');
@@ -168,7 +168,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
 
 document.getElementById('otpForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('otpEmail').value.trim();
+  const email = document.getElementById('otpEmailHidden').value.trim();
   const otp = document.getElementById('otpCode').value.trim();
 
   if (!email || !otp) {
@@ -194,10 +194,11 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (data.success) {
-      showNotification('Verifikasi berhasil! Silakan login.', 'success');
-      switchTab('login');
+      showNotification('✨ Verifikasi berhasil! Silakan login sekarang.', 'success');
+      document.getElementById('otpCode').value = '';
+      setTimeout(() => setMode('login'), 1000);
     } else {
-      showNotification('Error: ' + data.error, 'error');
+      showNotification('❌ Error: ' + data.error, 'error');
     }
   } catch (error) {
     showNotification('Network error: ' + error.message, 'error');
@@ -208,10 +209,12 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
 });
 
 function showNotification(message, type) {
+  const toastBox = document.getElementById('toastBox');
+  if (!toastBox) return;
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
-  notification.textContent = message;
-  document.body.appendChild(notification);
+  notification.innerHTML = `<span class="notif-icon">${type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️'}</span> <span class="notif-text">${message}</span>`;
+  toastBox.appendChild(notification);
 
   setTimeout(() => {
     notification.classList.add('show');
@@ -220,7 +223,7 @@ function showNotification(message, type) {
   setTimeout(() => {
     notification.classList.remove('show');
     setTimeout(() => notification.remove(), 300);
-  }, 4000); // Increased timeout for better visibility
+  }, 4000);
 }
 
 // Forgot password placeholder
