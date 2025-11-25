@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - FluxChat</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-body">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo">
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="28" fill="url(#gradient)" />
+            <path d="M20 25C20 22.2386 22.2386 20 25 20H35C37.7614 20 40 22.2386 40 25V30C40 32.7614 37.7614 35 35 35H32L28 40L24 35H25C22.2386 35 20 32.7614 20 30V25Z" fill="white"/>
+            <defs>
+              <linearGradient id="gradient" x1="0" y1="0" x2="60" y2="60">
+                <stop offset="0%" style="stop-color:#667eea"/>
+                <stop offset="100%" style="stop-color:#764ba2"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1>Welcome Back</h1>
+        <p>Login atau buat akun baru untuk masuk</p>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" onclick="switchTab('login')" role="tab" aria-selected="true" aria-controls="loginForm">Login</button>
+        <button class="tab" onclick="switchTab('register')" role="tab" aria-selected="false" aria-controls="registerForm">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form" role="form" aria-labelledby="login-header">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="email@example.com" required aria-describedby="email-help">
+          <small id="email-help" class="sr-only">Masukkan alamat email yang valid</small>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="Masukkan password" required aria-describedby="password-help">
+          <small id="password-help" class="sr-only">Password minimal 6 karakter</small>
+        </div>
+        <div class="form-group">
+          <a href="#" class="forgot-password">Lupa Password?</a>
+        </div>
+        <button type="submit" class="btn-primary">Login</button>
+      </form>
+
+      <h2 id="register-header" class="sr-only">Register Form</h2>
+      <!-- Register Form -->
+      <form id="registerForm" class="auth-form hidden" role="form" aria-labelledby="register-header">
+        <div class="form-group">
+          <label for="regUsername">Username</label>
+          <input type="text" id="regUsername" placeholder="Pilih username unik" required aria-describedby="username-help">
+          <small id="username-help" class="sr-only">Username harus unik dan tanpa spasi</small>
+        </div>
+        <div class="form-group">
+          <label for="regNama">Nama Lengkap</label>
+          <input type="text" id="regNama" placeholder="Masukkan nama lengkap Anda" required aria-describedby="nama-help">
+          <small id="nama-help" class="sr-only">Masukkan nama lengkap asli</small>
+        </div>
+        <div class="form-group">
+          <label for="regEmail">Email</label>
+          <input type="email" id="regEmail" placeholder="email@example.com" required aria-describedby="reg-email-help">
+          <small id="reg-email-help" class="sr-only">Masukkan alamat email yang valid</small>
+        </div>
+        <div class="form-group">
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" placeholder="Masukkan password" required aria-describedby="reg-password-help">
+          <small id="reg-password-help" class="sr-only">Password minimal 6 karakter</small>
+        </div>
+        <button type="submit" class="btn-primary">Daftar</button>
+      </form>
+
+      <h2 id="otp-header" class="sr-only">OTP Verification Form</h2>
+      <!-- OTP Verification Form -->
+      <form id="otpForm" class="auth-form hidden" role="form" aria-labelledby="otp-header">
+        <div class="form-group">
+          <label for="otpEmail">Email</label>
+          <input type="email" id="otpEmail" placeholder="email@example.com" readonly aria-describedby="otp-email-help">
+          <small id="otp-email-help" class="sr-only">Email yang digunakan untuk registrasi</small>
+        </div>
+        <div class="form-group">
+          <label for="otpCode">Kode OTP</label>
+          <input type="text" id="otpCode" placeholder="Masukkan kode OTP" required aria-describedby="otp-code-help">
+          <small id="otp-code-help" class="sr-only">Masukkan kode OTP 6 digit yang dikirim ke email</small>
+        </div>
+        <button type="submit" class="btn-primary">Verifikasi</button>
+      </form>
+
+      <div class="login-footer">
+        <p>instagram :  <a href="https://www.instagram.com/jhnngrhaa?igsh=MWVqeTZ0dHdiMjYzcA=="> @jhnngrha</a></p>
+      </div>
+    </div>
+
+    <div class="login-illustration">
+      <div class="illustration-content">
+        <h2>Connect with Everyone</h2>
+        <p>Chat real-time dengan teman dan kolega. Nikmati video call dan voice call berkualitas tinggi.</p>
+        <div class="features">
+          <div class="feature-item">
+            <span class="feature-icon"> </span>
+            <span>Real-time Chat</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon"> </span>
+            <span>Video Calls</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon"> </span>
+            <span>Secure & Private</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>
