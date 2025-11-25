@@ -1,6 +1,5 @@
 const API_URL = window.location.origin;
 
-// Validation functions
 function validateEmail(email) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
@@ -57,10 +56,14 @@ function setMode(mode) {
     loginForm.classList.add('hidden');
     registerForm.classList.remove('hidden');
     otpForm.classList.add('hidden');
+  } else if (mode === 'otp') {
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    loginForm.classList.add('hidden');
+    registerForm.classList.add('hidden');
+    otpForm.classList.remove('hidden');
   }
 }
 
-// Pastikan fungsi tersedia di global scope
 window.setMode = setMode;
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -96,11 +99,10 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (data.success) {
-      localStorage.setItem('currentUser', JSON.stringify(data.user));
-      showNotification('✅ Login berhasil! Mengalihkan...', 'success');
-      setTimeout(() => {
-        window.location.href = 'index.html';
-      }, 1000);
+      document.getElementById('otpEmailHidden').value = email;
+      document.getElementById('otpType').value = 'login';
+      showNotification('✅ Kode OTP telah dikirim ke email Anda! Masukkan kode OTP.', 'success');
+      setTimeout(() => setMode('otp'), 500);
     } else {
       showNotification('❌ ' + data.error, 'error');
     }
@@ -154,6 +156,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     if (data.success) {
       showNotification('✅ Kode OTP telah dikirim ke email Anda! Periksa inbox email Anda.', 'success');
       document.getElementById('otpEmailHidden').value = email;
+      document.getElementById('otpType').value = 'register';
       setTimeout(() => setMode('otp'), 500);
     } else {
       showNotification('❌ Error: ' + data.error, 'error');
@@ -170,6 +173,7 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('otpEmailHidden').value.trim();
   const otp = document.getElementById('otpCode').value.trim();
+  const otpType = document.getElementById('otpType').value;
 
   if (!email || !otp) {
     showNotification('Masukkan email dan kode OTP!', 'error');
@@ -186,7 +190,8 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
   submitBtn.textContent = 'Loading...';
 
   try {
-    const res = await fetch(`${API_URL}/api/verify-otp`, {
+    const endpoint = otpType === 'login' ? '/api/verify-login-otp' : '/api/verify-otp';
+    const res = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, otp })
@@ -194,9 +199,17 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (data.success) {
-      showNotification('✨ Verifikasi berhasil! Silakan login sekarang.', 'success');
-      document.getElementById('otpCode').value = '';
-      setTimeout(() => setMode('login'), 1000);
+      if (otpType === 'login') {
+        // Login berhasil, simpan user data dan redirect ke index
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        showNotification('✨ Login berhasil! Selamat datang.', 'success');
+        setTimeout(() => window.location.href = 'index.html', 1000);
+      } else {
+        // Registrasi berhasil, kembali ke login
+        showNotification('✨ Verifikasi berhasil! Silakan login sekarang.', 'success');
+        document.getElementById('otpCode').value = '';
+        setTimeout(() => setMode('login'), 1000);
+      }
     } else {
       showNotification('❌ Error: ' + data.error, 'error');
     }
@@ -211,22 +224,21 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
 function showNotification(message, type) {
   const toastBox = document.getElementById('toastBox');
   if (!toastBox) return;
-  const notification = document.createElement('div');
-  notification.className = `notification ${type}`;
-  notification.innerHTML = `<span class="notif-icon">${type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️'}</span> <span class="notif-text">${message}</span>`;
-  toastBox.appendChild(notification);
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span class="notif-icon">${type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️'}</span> <span class="notif-text">${message}</span>`;
+  toastBox.appendChild(toast);
 
   setTimeout(() => {
-    notification.classList.add('show');
+    toast.classList.add('show');
   }, 100);
 
   setTimeout(() => {
-    notification.classList.remove('show');
-    setTimeout(() => notification.remove(), 300);
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
   }, 4000);
 }
 
-// Forgot password placeholder
 const forgotPasswordLink = document.querySelector('.forgot-password');
 if (forgotPasswordLink) {
   forgotPasswordLink.addEventListener('click', (e) => {
@@ -235,7 +247,6 @@ if (forgotPasswordLink) {
   });
 }
 
-// Check if already logged in
 if (localStorage.getItem('currentUser')) {
   window.location.href = 'index.html';
 }

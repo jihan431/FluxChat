@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FluxChat - App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <title>FluxChat</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="/socket.io/socket.io.js"></script>
@@ -14,51 +14,67 @@
     
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="my-profile">
-          <div class="avatar" id="myAvatar">?</div>
-          <div class="my-info">
-            <h3 id="myUsername">Loading...</h3>
-            <span class="status-text">Online</span>
+        <h2 class="brand-name">FluxChat</h2>
+        <div style="display: flex; gap: 8px;">
+          <button class="icon-btn" onclick="toggleSearchBar()" title="Cari">
+            <i data-feather="search"></i>
+          </button>
+          <button class="icon-btn" onclick="openAddUserModal()" title="Tambah User">
+            <i data-feather="user-plus"></i>
+          </button>
+          <div class="dropdown" id="userDropdown">
+            <button class="icon-btn" onclick="toggleUserMenu()" title="Menu">
+              <i data-feather="more-vertical"></i>
+            </button>
+            <div class="dropdown-menu hidden" id="userMenu">
+              <a href="#" onclick="openProfile(event)" class="dropdown-item">
+                <i data-feather="user" style="width: 16px; height: 16px;"></i>
+                <span>Profile</span>
+              </a>
+              <a href="#" onclick="openBlockedUsers(event)" class="dropdown-item">
+                <i data-feather="alert-circle" style="width: 16px; height: 16px;"></i>
+                <span>Blocked User</span>
+              </a>
+              <a href="#" onclick="logout(event)" class="dropdown-item danger">
+                <i data-feather="log-out" style="width: 16px; height: 16px;"></i>
+                <span>Logout</span>
+              </a>
+            </div>
           </div>
         </div>
-        <button onclick="logout()" class="icon-btn danger" title="Keluar">
-          <i data-feather="log-out"></i>
-        </button>
       </div>
 
-      <div class="search-bar">
-        <i data-feather="search"></i>
-        <input type="text" id="searchInput" placeholder="Cari pengguna...">
+      <div class="search-bar hidden" id="searchBar">
+        <input type="text" id="searchInput" placeholder="Cari pengguna..." autocomplete="off" autofocus>
       </div>
 
       <div class="users-list" id="usersList">
-        <div class="empty-state">Memuat kontak...</div>
-      </div>
+        </div>
     </aside>
 
     <main class="chat-area" id="chatArea">
       <div class="welcome-screen" id="welcomeScreen">
-        <div class="welcome-content">
-          <div class="welcome-icon">
-            <i data-feather="message-square"></i>
-          </div>
-          <h2>Selamat Datang di FluxChat</h2>
-          <p>Pilih kontak di sebelah kiri untuk memulai percakapan.</p>
+        <div class="welcome-icon">
+          <i data-feather="message-square" style="width: 60px; height: 60px;"></i>
         </div>
+        <h2>Selamat Datang di FluxChat</h2>
+        <p>Pilih kontak di menu sebelah kiri untuk memulai chat.</p>
       </div>
 
       <div class="chat-room hidden" id="chatRoom">
         <header class="chat-header">
-          <button class="back-btn" onclick="toggleSidebar()">
+          <button class="back-btn" onclick="closeChat()">
             <i data-feather="arrow-left"></i>
           </button>
+          
           <div class="chat-info">
             <div class="avatar small" id="chatAvatar">U</div>
             <div>
               <h3 id="chatName">User</h3>
-              <span id="chatStatus" class="user-status">Offline</span>
+              <span id="chatStatus" class="user-status-text">Offline</span>
             </div>
           </div>
+          
           <div class="header-actions">
             <button class="icon-btn" onclick="startCall('voice')"><i data-feather="phone"></i></button>
             <button class="icon-btn" onclick="startCall('video')"><i data-feather="video"></i></button>
@@ -68,8 +84,16 @@
         <div class="messages-container" id="messagesContainer">
           </div>
 
+        <div id="filePreview" class="file-preview hidden">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i data-feather="file" style="color: var(--primary);"></i>
+            <span id="fileName" style="font-size: 0.9rem;">file.jpg</span>
+          </div>
+          <button class="icon-btn danger" onclick="clearFile()"><i data-feather="x"></i></button>
+        </div>
+
         <div class="input-area">
-          <label for="fileInput" class="icon-btn file-btn">
+          <label for="fileInput" class="icon-btn">
             <i data-feather="paperclip"></i>
           </label>
           <input type="file" id="fileInput" hidden>
@@ -79,21 +103,41 @@
             <i data-feather="send"></i>
           </button>
         </div>
-        
-        <div id="filePreview" class="file-preview hidden">
-          <span id="fileName">file.jpg</span>
-          <button onclick="clearFile()">X</button>
-        </div>
       </div>
     </main>
   </div>
 
+  <div id="addUserModal" class="modal hidden">
+    <div class="glass-panel" style="max-width: 350px;">
+      <h2 style="margin-top: 0; margin-bottom: 20px;">Tambah Pengguna</h2>
+      <form id="addUserForm" style="display: flex; flex-direction: column; gap: 15px;">
+        <div>
+          <label style="display: block; margin-bottom: 5px; font-size: 0.9rem; color: #94a3b8;">Nama</label>
+          <input type="text" id="addNama" placeholder="Masukkan nama pengguna" style="width: 100%; padding: 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: white; outline: none;">
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" onclick="closeAddUserModal()" class="btn-secondary" style="padding: 10px 20px; border: 1px solid #334155; border-radius: 8px; background: transparent; color: white; cursor: pointer; transition: 0.2s;">
+            Batal
+          </button>
+          <button type="submit" class="btn-primary" style="padding: 10px 20px; border: none; border-radius: 8px; background: #6366f1; color: white; cursor: pointer; transition: 0.2s;">
+            Tambah
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="callModal" class="modal hidden">
-    <div class="modal-content glass-panel">
-      <div class="call-status" id="callStatus">Panggilan Masuk...</div>
-      <div class="avatar large pulse" id="callAvatar">U</div>
-      <h2 id="callTargetName">User Name</h2>
-      
+    <div class="glass-panel">
+      <div class="video-container hidden" id="videoContainer">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay muted playsinline></video>
+      </div>
+
+      <div class="call-status" id="callStatus" style="margin-bottom: 15px; color: #94a3b8;">Memanggil...</div>
+      <div class="avatar large pulse" id="callAvatar" style="font-size: 2rem; width: 80px; height: 80px; margin: 0 auto;">U</div>
+      <h2 id="callTargetName" style="margin-top: 15px;">User Name</h2>
+
       <div id="incomingActions" class="call-actions hidden">
         <button class="btn-call reject" onclick="rejectCall()"><i data-feather="phone-off"></i></button>
         <button class="btn-call accept" onclick="answerCall()"><i data-feather="phone-call"></i></button>
@@ -103,11 +147,6 @@
         <button class="btn-call secondary" onclick="toggleMute()" id="muteBtn"><i data-feather="mic"></i></button>
         <button class="btn-call reject" onclick="endCall()"><i data-feather="phone-off"></i></button>
         <button class="btn-call secondary" onclick="toggleCamera()" id="camBtn"><i data-feather="video"></i></button>
-      </div>
-
-      <div class="video-container hidden" id="videoContainer">
-        <video id="remoteVideo" autoplay playsinline></video>
-        <video id="localVideo" autoplay muted playsinline></video>
       </div>
     </div>
   </div>
