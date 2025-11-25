@@ -137,57 +137,18 @@ app.post('/api/login', async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'Akun tidak ditemukan' });
 
-    if (user.otpHash) return res.status(403).json({ error: 'Akun belum diverifikasi' });
+    // Cek apakah akun sudah diverifikasi lewat OTP register
+    if (user.otpHash) 
+      return res.status(403).json({ error: 'Akun belum diverifikasi. Silakan cek email.' });
 
     const validPass = await bcrypt.compare(password, user.password);
     if (!validPass) return res.status(400).json({ error: 'Password salah' });
 
-    // Generate OTP for login
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`🔐 Login OTP for ${email}: ${otp}`); // Temporary log for testing
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-
-    user.otpHash = otpHash;
-    user.otpExpires = otpExpires;
-    await user.save();
-
-    try {
-      await transporter.sendMail({
-        from: 'FluxChat Security',
-        to: email,
-        subject: 'Kode Login FluxChat',
-        html: `<h3>Kode OTP Login Anda: <b>${otp}</b></h3><p>Kode ini berlaku selama 10 menit.</p>`
-      });
-    } catch (emailErr) {
-      console.error('Email error:', emailErr);
-    }
-
-    res.json({ success: true, message: 'OTP terkirim ke email Anda' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/verify-login-otp', async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
-
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-
-    if (user.otpHash !== otpHash || user.otpExpires < Date.now()) {
-      return res.status(400).json({ error: 'OTP salah atau kadaluarsa' });
-    }
-
-    user.otpHash = undefined;
-    user.otpExpires = undefined;
+    // === LOGIN LANGSUNG TANPA OTP ===
     user.lastSeen = new Date();
     await user.save();
 
-    res.json({
+    return res.json({
       success: true,
       user: {
         username: user.username,
@@ -196,10 +157,12 @@ app.post('/api/verify-login-otp', async (req, res) => {
         id: user._id
       }
     });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 app.get('/api/users', async (req, res) => {
   const users = await User.find({}, 'username nama lastSeen avatar');

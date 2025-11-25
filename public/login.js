@@ -17,27 +17,6 @@ function validateOTP(otp) {
   return /^\d{6}$/.test(otp);
 }
 
-function switchTab(tab) {
-  const tabs = document.querySelectorAll('.tab');
-  const loginForm = document.getElementById('loginForm');
-  const registerForm = document.getElementById('registerForm');
-  const otpForm = document.getElementById('otpForm');
-
-  tabs.forEach(t => t.classList.remove('active'));
-
-  if (tab === 'login') {
-    tabs[0].classList.add('active');
-    loginForm.classList.remove('hidden');
-    registerForm.classList.add('hidden');
-    otpForm.classList.add('hidden');
-  } else {
-    tabs[1].classList.add('active');
-    loginForm.classList.add('hidden');
-    registerForm.classList.remove('hidden');
-    otpForm.classList.add('hidden');
-  }
-}
-
 function setMode(mode) {
   const loginForm = document.getElementById('loginForm');
   const registerForm = document.getElementById('registerForm');
@@ -66,29 +45,58 @@ function setMode(mode) {
 
 window.setMode = setMode;
 
+// --- LOGIKA TOAST TERBARU ---
+function showNotification(message, type = 'info') {
+  const toastBox = document.getElementById('toastBox');
+  if (!toastBox) return;
+
+  const toast = document.createElement('div');
+  toast.classList.add('toast', type);
+
+  // Icon SVG based on type
+  let iconHtml = '';
+  if (type === 'success') {
+    iconHtml = `<i data-feather="check-circle" style="color: #4ade80"></i>`;
+  } else if (type === 'error') {
+    iconHtml = `<i data-feather="alert-circle" style="color: #f87171"></i>`;
+  } else {
+    iconHtml = `<i data-feather="info" style="color: #60a5fa"></i>`;
+  }
+
+  toast.innerHTML = `
+    <div class="toast-icon">${iconHtml}</div>
+    <div class="toast-msg">${message}</div>
+  `;
+
+  toastBox.appendChild(toast);
+
+  // Render icon feather
+  if (typeof feather !== 'undefined') {
+    feather.replace();
+  }
+
+  // Auto remove after 4s
+  setTimeout(() => {
+    toast.classList.add('hide');
+    toast.addEventListener('animationend', () => {
+      toast.remove();
+    });
+  }, 4000);
+}
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
 
   if (!email || !password) {
-    showNotification('❌ Masukkan email dan password!', 'error');
-    return;
-  }
-
-  if (!validateEmail(email)) {
-    showNotification('❌ Format email tidak valid!', 'error');
-    return;
-  }
-
-  if (!validatePassword(password)) {
-    showNotification('❌ Password minimal 6 karakter!', 'error');
+    showNotification('Masukkan email dan password!', 'error');
     return;
   }
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
   submitBtn.disabled = true;
-  submitBtn.textContent = '⏳ Login...';
+  submitBtn.textContent = 'Memproses...';
 
   try {
     const res = await fetch(`${API_URL}/api/login`, {
@@ -97,17 +105,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-
     if (data.success) {
-      document.getElementById('otpEmailHidden').value = email;
-      document.getElementById('otpType').value = 'login';
-      showNotification('✅ Kode OTP telah dikirim ke email Anda! Masukkan kode OTP.', 'success');
-      setTimeout(() => setMode('otp'), 500);
-    } else {
-      showNotification('❌ ' + data.error, 'error');
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      showNotification('Login sukses! Mengalihkan...', 'success');
+      setTimeout(() => window.location.href = 'index.html', 800);
+    }
+    else {
+      showNotification(data.error || 'Login gagal', 'error');
     }
   } catch (error) {
-    showNotification('❌ Error jaringan: ' + error.message, 'error');
+    showNotification('Error jaringan: ' + error.message, 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Masuk Sekarang';
@@ -122,28 +129,13 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
   const password = document.getElementById('regPassword').value.trim();
 
   if (!username || !nama || !email || !password) {
-    showNotification('Isi semua field!', 'error');
-    return;
-  }
-
-  if (!validateUsername(username)) {
-    showNotification('Username harus unik dan tanpa spasi!', 'error');
-    return;
-  }
-
-  if (!validateEmail(email)) {
-    showNotification('Format email tidak valid!', 'error');
-    return;
-  }
-
-  if (!validatePassword(password)) {
-    showNotification('Password minimal 6 karakter!', 'error');
+    showNotification('Isi semua kolom!', 'error');
     return;
   }
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Loading...';
+  submitBtn.textContent = 'Memproses...';
 
   try {
     const res = await fetch(`${API_URL}/api/register`, {
@@ -154,18 +146,18 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     const data = await res.json();
 
     if (data.success) {
-      showNotification('✅ Kode OTP telah dikirim ke email Anda! Periksa inbox email Anda.', 'success');
+      showNotification('Registrasi sukses! Cek OTP di email.', 'success');
       document.getElementById('otpEmailHidden').value = email;
       document.getElementById('otpType').value = 'register';
       setTimeout(() => setMode('otp'), 500);
     } else {
-      showNotification('❌ Error: ' + data.error, 'error');
+      showNotification(data.error || 'Gagal daftar', 'error');
     }
   } catch (error) {
-    showNotification('Network error: ' + error.message, 'error');
+    showNotification('Error jaringan: ' + error.message, 'error');
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Daftar';
+    submitBtn.textContent = 'Buat Akun';
   }
 });
 
@@ -175,19 +167,14 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
   const otp = document.getElementById('otpCode').value.trim();
   const otpType = document.getElementById('otpType').value;
 
-  if (!email || !otp) {
-    showNotification('Masukkan email dan kode OTP!', 'error');
-    return;
-  }
-
   if (!validateOTP(otp)) {
-    showNotification('Kode OTP harus 6 digit angka!', 'error');
+    showNotification('Kode OTP harus 6 digit angka.', 'error');
     return;
   }
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Loading...';
+  submitBtn.textContent = 'Memverifikasi...';
 
   try {
     const endpoint = otpType === 'login' ? '/api/verify-login-otp' : '/api/verify-otp';
@@ -200,53 +187,30 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
 
     if (data.success) {
       if (otpType === 'login') {
-        // Login berhasil, simpan user data dan redirect ke index
         localStorage.setItem('currentUser', JSON.stringify(data.user));
-        showNotification('✨ Login berhasil! Selamat datang.', 'success');
+        showNotification('Login berhasil! Mengalihkan...', 'success');
         setTimeout(() => window.location.href = 'index.html', 1000);
       } else {
-        // Registrasi berhasil, kembali ke login
-        showNotification('✨ Verifikasi berhasil! Silakan login sekarang.', 'success');
+        showNotification('Verifikasi berhasil! Silakan login.', 'success');
         document.getElementById('otpCode').value = '';
         setTimeout(() => setMode('login'), 1000);
       }
     } else {
-      showNotification('❌ Error: ' + data.error, 'error');
+      showNotification(data.error || 'OTP Salah', 'error');
     }
   } catch (error) {
-    showNotification('Network error: ' + error.message, 'error');
+    showNotification('Error jaringan: ' + error.message, 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Verifikasi';
   }
 });
 
-function showNotification(message, type) {
-  const toastBox = document.getElementById('toastBox');
-  if (!toastBox) return;
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `<span class="notif-icon">${type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️'}</span> <span class="notif-text">${message}</span>`;
-  toastBox.appendChild(toast);
-
-  setTimeout(() => {
-    toast.classList.add('show');
-  }, 100);
-
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-}
-
-const forgotPasswordLink = document.querySelector('.forgot-password');
-if (forgotPasswordLink) {
-  forgotPasswordLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showNotification('Fitur lupa password belum tersedia. Hubungi admin.', 'info');
-  });
-}
-
 if (localStorage.getItem('currentUser')) {
   window.location.href = 'index.html';
 }
+
+// Inisialisasi icon saat load
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof feather !== 'undefined') feather.replace();
+});
