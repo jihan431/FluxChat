@@ -39,6 +39,30 @@ function switchTab(tab) {
   }
 }
 
+function setMode(mode) {
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const otpForm = document.getElementById('otpForm');
+  const tabButtons = document.querySelectorAll('.tab-btn');
+
+  tabButtons.forEach(btn => btn.classList.remove('active'));
+
+  if (mode === 'login') {
+    tabButtons[0].classList.add('active');
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+    otpForm.classList.add('hidden');
+  } else if (mode === 'register') {
+    tabButtons[1].classList.add('active');
+    loginForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+    otpForm.classList.add('hidden');
+  }
+}
+
+// Pastikan fungsi tersedia di global scope
+window.setMode = setMode;
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim();
@@ -200,10 +224,13 @@ function showNotification(message, type) {
 }
 
 // Forgot password placeholder
-document.querySelector('.forgot-password').addEventListener('click', (e) => {
-  e.preventDefault();
-  showNotification('Fitur lupa password belum tersedia. Hubungi admin.', 'info');
-});
+const forgotPasswordLink = document.querySelector('.forgot-password');
+if (forgotPasswordLink) {
+  forgotPasswordLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    showNotification('Fitur lupa password belum tersedia. Hubungi admin.', 'info');
+  });
+}
 
 // Check if already logged in
 if (localStorage.getItem('currentUser')) {
