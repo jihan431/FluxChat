@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 mongoose.connect('mongodb://localhost:27017/chatapp')
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB error:', err));
+  .then(() => {})
+  .catch(err => {});
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
@@ -13,7 +13,12 @@ const userSchema = new mongoose.Schema({
   lastSeen: { type: Date, default: Date.now },
   otpHash: { type: String },
   otpExpires: { type: Date },
-  avatar: { type: String, default: 'default' }
+  avatar: { type: String, default: 'default' },
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  friendRequests: [{
+    from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now }
+  }]
 });
 
 const User = mongoose.model('User', userSchema);
@@ -21,26 +26,49 @@ const User = mongoose.model('User', userSchema);
 async function seedDatabase() {
   try {
     await User.deleteMany({});
-    console.log('✅ Database dibersihkan');
 
     const hashedPassword = await bcrypt.hash('testpass123', 10);
 
-    const testUser = new User({
-      username: 'testuser',
-      nama: 'Test User',
-      email: 'testuser@example.com',
+    // Buat 3 user test
+    const user1 = new User({
+      username: 'user1',
+      nama: 'Alice Johnson',
+      email: 'alice@example.com',
       password: hashedPassword,
-      lastSeen: new Date()
+      lastSeen: new Date(),
     });
 
-    await testUser.save();
-    console.log('✅ Test user berhasil ditambahkan!');
-    console.log('📧 Email: testuser@example.com');
-    console.log('🔑 Password: testpass123');
+    const user2 = new User({
+      username: 'user2',
+      nama: 'Bob Smith',
+      email: 'bob@example.com',
+      password: hashedPassword,
+      lastSeen: new Date(),
+    });
+
+    const user3 = new User({
+      username: 'user3',
+      nama: 'Charlie Brown',
+      email: 'charlie@example.com',
+      password: hashedPassword,
+      lastSeen: new Date(),
+    });
+
+    await user1.save();
+    await user2.save();
+    await user3.save();
+
+    // Set user1 dan user2 sebagai teman
+    user1.friends.push(user2._id, user3._id);
+    user2.friends.push(user1._id, user3._id);
+    user3.friends.push(user1._id, user2._id);
+
+    await user1.save();
+    await user2.save();
+    await user3.save();
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error:', error);
     process.exit(1);
   }
 }

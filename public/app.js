@@ -1,18 +1,228 @@
+//
 const socket = io();
 const API_URL = `${window.location.origin}/api`;
 let currentUser = JSON.parse(localStorage.getItem('currentUser'));
 let selectedUser = null;
+let selectedGroup = null;
 let peerConnection;
 let localStream;
+let searchTimeout = null;
+let callTimer = null;
+let callDuration = 0;
+let isVideo = false;
 const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
+// --- CHAT HISTORY TRACKING ---
+let chatHistory = {}; // { username/groupId: { name, lastMessage, timestamp, unreadCount, isGroup } }
+let typingUsers = {}; // { username: true/false }
+let callHistory = []; // Array untuk menyimpan history call
+let recentChats = []; // Array untuk riwayat chat (user + group)
+let currentTab = 'chats'; // Track tab mana yang aktif
+
+// --- 1. TOAST NOTIFICATION SYSTEM ---
+const Toast = {
+  container: null,
+  init() {
+    this.container = document.createElement('div');
+    this.container.className = 'toast-container';
+    document.body.appendChild(this.container);
+  },
+  show(message, type = 'info') {
+    if (!this.container) this.init();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${message}</span>`;
+    
+    this.container.appendChild(toast);
+    
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+};
+
+// --- 2. AUTH & INITIALIZATION ---
 if (!currentUser) window.location.href = 'login.html';
+
+document.addEventListener('DOMContentLoaded', () => {
+  if(typeof feather !== 'undefined') feather.replace();
+
+  // Sembunyikan modal saat load
+  document.getElementById('callModal').classList.add('hidden');
+  document.getElementById('profileModal').classList.remove('active');
+
+  // Load Daftar Teman & Request (Logika Baru)
+  loadFriendsAndRequests();
+
+  // Load Groups dan join socket rooms
+  loadGroups();
+
+  // Load Call History
+  loadCallHistory();
+
+  // --- Event Listeners ---
+  document.getElementById('messageInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  // Typing indicator
+  let typingTimeout;
+  document.getElementById('messageInput').addEventListener('input', () => {
+    if (selectedUser) {
+      socket.emit('typing', { to: selectedUser.username, from: currentUser.username });
+    }
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      socket.emit('stop_typing', { to: selectedUser.username, from: currentUser.username });
+    }, 1000);
+  });
+
+  // Listener Search Input (Debounce)
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchUsers(e.target.value);
+  });
+
+  // Close dropdown user menu
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('userDropdown');
+    const userMenu = document.getElementById('userMenu');
+    if (dropdown && !dropdown.contains(e.target)) {
+      userMenu.classList.add('hidden');
+    }
+  });
+
+  const backBtn = document.getElementById('backToSidebar');
+  if (backBtn) backBtn.addEventListener('click', closeChat);
+
+  // Modal Profil Listeners
+  const closeModalBtns = document.querySelectorAll('.close-modal');
+  closeModalBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.modal').forEach(m => {
+        m.classList.remove('active');
+        m.classList.add('hidden'); 
+      });
+    });
+  });
+
+  const saveProfileBtn = document.getElementById('saveProfile');
+  if (saveProfileBtn) {
+    saveProfileBtn.addEventListener('click', saveProfile);
+  }
+
+  // Event Listeners untuk Profile Photo Upload (Unified)
+  const profilePhotoInput = document.getElementById('profilePhotoInput');
+  const profilePhotoPreview = document.getElementById('profilePhotoPreview');
+  
+  if(profilePhotoInput) {
+    profilePhotoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if(file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          // Update avatar display in header
+          const avatarDisplay = document.getElementById('profileAvatarDisplay');
+          avatarDisplay.style.backgroundImage = `url('${evt.target.result}')`;
+          avatarDisplay.textContent = '';
+          
+          // Update photo preview in form
+          const profilePhotoImg = document.getElementById('profilePhotoImg');
+          const profilePhotoPlaceholder = document.getElementById('profilePhotoPlaceholder');
+          
+          profilePhotoImg.src = evt.target.result;
+          profilePhotoImg.style.display = 'block';
+          profilePhotoPlaceholder.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  if(profilePhotoPreview) {
+    profilePhotoPreview.addEventListener('click', () => {
+      if(profilePhotoInput) profilePhotoInput.click();
+    });
+  }
+
+  // Event Listeners untuk Create Group Modal
+  const createGroupBtn = document.getElementById('createGroupBtn');
+  if (createGroupBtn) {
+    createGroupBtn.addEventListener('click', createGroup);
+  }
+});
+
+// --- HELPER: Update Sidebar User Avatar (DEPRECATED - Removed from HTML) ---
+function updateSidebarUserAvatar() {
+  const sidebarAvatar = document.getElementById('sidebarUserAvatar');
+  if (!sidebarAvatar) return;
+  
+  if (currentUser.avatar) {
+    // User has uploaded a profile photo
+    sidebarAvatar.style.backgroundImage = `url('${currentUser.avatar}')`;
+    sidebarAvatar.style.backgroundSize = 'cover';
+    sidebarAvatar.style.backgroundPosition = 'center';
+    sidebarAvatar.style.background = '';
+    sidebarAvatar.textContent = '';
+  } else {
+    // Show gradient avatar with first letter
+    const initial = (currentUser.nama || 'U').charAt(0).toUpperCase();
+    const gradient = getAvatarGradient(currentUser.nama || 'User');
+    sidebarAvatar.style.backgroundImage = 'none';
+    sidebarAvatar.style.background = gradient;
+    sidebarAvatar.style.display = 'flex';
+    sidebarAvatar.style.alignItems = 'center';
+    sidebarAvatar.style.justifyContent = 'center';
+    sidebarAvatar.style.color = 'white';
+    sidebarAvatar.style.fontWeight = '600';
+    sidebarAvatar.style.fontSize = '1rem';
+    sidebarAvatar.textContent = initial;
+  }
+}
+
+// --- 3. UI HELPERS ---
+
+function switchTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+    tab.classList.add('hidden');
+  });
+  
+  // Remove active from all buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected tab
+  const selectedTab = document.getElementById(`${tabName}-tab`);
+  if (selectedTab) {
+    selectedTab.classList.add('active');
+    selectedTab.classList.remove('hidden');
+  }
+  
+  // Mark button as active
+  const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+  }
+  
+  // Track current tab
+  currentTab = tabName;
+}
 
 function toggleSearchBar() {
   const searchBar = document.getElementById('searchBar');
   searchBar.classList.toggle('hidden');
   if (!searchBar.classList.contains('hidden')) {
     document.getElementById('searchInput').focus();
+  } else {
+    // Clear search dan kembali ke tampilan normal
+    document.getElementById('searchInput').value = '';
+    loadFriendsAndRequests();
   }
 }
 
@@ -21,104 +231,512 @@ function toggleUserMenu() {
   userMenu.classList.toggle('hidden');
 }
 
-// Tutup dropdown saat klik di luar
-document.addEventListener('click', (e) => {
-  const dropdown = document.getElementById('userDropdown');
-  const userMenu = document.getElementById('userMenu');
-  if (dropdown && !dropdown.contains(e.target)) {
-    userMenu.classList.add('hidden');
-  }
-});
+// --- 4. PROFILE MANAGEMENT ---
 
 function openProfile(e) {
   e.preventDefault();
   document.getElementById('userMenu').classList.add('hidden');
-  alert('Profile feature coming soon!');
+  
+  const nameInput = document.getElementById('editNama');
+  if(nameInput) nameInput.value = currentUser.nama;
+  
+  const passInput = document.getElementById('editPassword');
+  if(passInput) passInput.value = '';
+
+  const emailInput = document.getElementById('editEmail');
+  if(emailInput) emailInput.textContent = currentUser.email || 'user@example.com';
+
+  const usernameDisplay = document.getElementById('profileUsernameDisplay');
+  if(usernameDisplay) usernameDisplay.textContent = currentUser.username || 'user';
+
+  const avatarDisplay = document.getElementById('profileAvatarDisplay');
+  if(currentUser.avatar && currentUser.avatar !== 'default' && (currentUser.avatar.startsWith('data:') || currentUser.avatar.startsWith('http'))) {
+    avatarDisplay.setAttribute('style', `
+      background-image: url("${currentUser.avatar}") !important;
+      background-size: cover !important;
+      background-position: center !important;
+      background-color: transparent !important;
+      display: block !important;
+    `);
+    avatarDisplay.textContent = '';
+  } else {
+    const initial = currentUser.nama.charAt(0).toUpperCase();
+    const gradient = getAvatarGradient(currentUser.nama || 'User');
+    avatarDisplay.setAttribute('style', `
+      background: ${gradient} !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: white !important;
+      font-weight: 600 !important;
+      font-size: 1.5rem !important;
+    `);
+    avatarDisplay.textContent = initial;
+  }
+
+  // Load profile photo preview
+  const profilePhotoImg = document.getElementById('profilePhotoImg');
+  const profilePhotoPlaceholder = document.getElementById('profilePhotoPlaceholder');
+  if(currentUser.avatar && currentUser.avatar !== 'default' && (currentUser.avatar.startsWith('data:') || currentUser.avatar.startsWith('http'))) {
+    profilePhotoImg.src = currentUser.avatar;
+    profilePhotoImg.style.display = 'block';
+    profilePhotoPlaceholder.style.display = 'none';
+  } else {
+    profilePhotoImg.style.display = 'none';
+    profilePhotoPlaceholder.style.display = 'block';
+  }
+
+  const modal = document.getElementById('profileModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+}
+
+function closeProfileModal() {
+  const modal = document.getElementById('profileModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('active');
+}
+
+async function saveProfile() {
+  const newNama = document.getElementById('editNama').value;
+  const newPass = document.getElementById('editPassword').value;
+  const photoInput = document.getElementById('profilePhotoInput');
+  const photoFile = photoInput ? photoInput.files[0] : null;
+  const btn = document.getElementById('saveProfile');
+
+  if(!newNama) return Toast.show("Nama tidak boleh kosong", "error");
+
+  btn.disabled = true;
+  btn.innerHTML = '<i data-feather="loader" style="width: 18px; height: 18px; margin-right: 8px; display: inline; animation: spin 1s linear infinite;"></i> Menyimpan...';
+
+  try {
+    let photoBase64 = null;
+    
+    // Convert file to base64 if exists
+    if(photoFile) {
+      photoBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(photoFile);
+      });
+    }
+
+    const payload = {
+      id: currentUser.id,
+      nama: newNama
+    };
+    
+    // Only include password if provided
+    if (newPass && newPass.trim() !== '') {
+      payload.password = newPass;
+    }
+    
+    // Only include avatar if provided
+    if (photoBase64) {
+      payload.avatar = photoBase64;
+    }
+    
+    const res = await fetch(`${API_URL}/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      Toast.show('Profil berhasil disimpan', 'success');
+      currentUser = { ...currentUser, ...data.user };
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      
+      // Clear file input
+      if(photoInput) photoInput.value = '';
+      
+      // Close modal
+      closeProfileModal();
+    } else {
+      Toast.show(data.error || 'Gagal menyimpan profil', 'error');
+    }
+  } catch (err) {
+    Toast.show('Terjadi kesalahan koneksi', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-feather="check" style="width: 18px; height: 18px; margin-right: 8px; display: inline;"></i> Simpan';
+    if(typeof feather !== 'undefined') feather.replace();
+  }
 }
 
 function openBlockedUsers(e) {
   e.preventDefault();
   document.getElementById('userMenu').classList.add('hidden');
-  alert('Blocked users feature coming soon!');
+  Toast.show('Fitur blokir pengguna akan segera hadir!', 'info');
 }
 
 function logout(e) {
-  e.preventDefault();
+  if(e) e.preventDefault();
   localStorage.removeItem('currentUser');
   window.location.href = 'login.html';
 }
 
-function openAddUserModal() {
-  document.getElementById('addUserModal').classList.remove('hidden');
-  document.getElementById('userMenu').classList.add('hidden');
+// --- HELPER: Create Avatar HTML ---
+// Helper: Generate consistent gradient color based on user name
+function getAvatarGradient(name) {
+  const gradients = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+    'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)',
+  ];
+  
+  // Generate consistent index based on name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % gradients.length;
+  return gradients[index];
 }
 
-function closeAddUserModal() {
-  document.getElementById('addUserModal').classList.add('hidden');
-  document.getElementById('addUserForm').reset();
+function createAvatarHTML(user, cssClass = 'avatar small', isOnline = false) {
+  const onlineClass = isOnline ? 'online' : '';
+  
+  // Check if user has a valid profile photo (not "default" and starts with data: or http)
+  if (user.avatar && user.avatar !== 'default' && (user.avatar.startsWith('data:') || user.avatar.startsWith('http'))) {
+    // User has uploaded a profile photo
+    return `<div class="${cssClass} ${onlineClass}" style="background-image: url('${user.avatar}'); background-size: cover; background-position: center;"></div>`;
+  } else {
+    // Show gradient avatar with first letter
+    const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
+    const gradient = getAvatarGradient(user.nama || user.name || 'User');
+    return `<div class="${cssClass} ${onlineClass}" style="background: ${gradient} !important; display: flex !important; align-items: center !important; justify-content: center !important; color: white !important; font-weight: 600 !important; font-size: 1.2rem !important;">${initial}</div>`;
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  feather.replace();
+// --- 5. FRIEND & SEARCH SYSTEM (CORE NEW LOGIC) ---
 
-  document.getElementById('callModal').classList.add('hidden');
-  document.getElementById('addUserModal').classList.add('hidden');
+// A. Load Teman & Request saat start
+async function loadFriendsAndRequests() {
+  try {
+    const res = await fetch(`${API_URL}/friends/list/${currentUser.id}`);
+    const data = await res.json();
 
-  socket.emit('join', currentUser.username);
-  loadUsers();
+    if (data.success) {
+      // Simpan teman ke global variable untuk keperluan chat
+      window.allUsers = data.friends; 
+      // Tampilkan daftar teman (mode normal)
+      displaySearchResults(data.friends, true); 
 
-  document.getElementById('messageInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
-
-  document.getElementById('searchInput').addEventListener('input', (e) => {
-    searchUsers(e.target.value);
-  });
-
-  document.getElementById('addUserForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('addUsername').value.trim();
-
-    if (!username) {
-      alert('Username harus diisi');
-      return;
-    }
-
-    try {
-      // Cari user di database berdasarkan username saja
-      const res = await fetch(`${API_URL}/users`);
-      const data = await res.json();
-      const user = data.users.find(u => u.username === username);
-
-      if (user) {
-        // User ditemukan, tambahkan ke daftar kontak
-        if (window.allUsers.some(u => u.username === username)) {
-          alert('User sudah ada dalam daftar kontak');
-        } else {
-          alert('User berhasil ditambahkan!');
-          displayUsers(window.allUsers);
+      // Cek Request Masuk
+      const requestContainer = document.getElementById('friendRequestsList');
+      if (requestContainer) {
+        requestContainer.innerHTML = '';
+        
+        if (data.requests.length > 0) {
+          data.requests.forEach(req => {
+            const div = document.createElement('div');
+            div.className = 'request-item'; // Pastikan ada CSS untuk ini
+            div.style.cssText = "background: rgba(255, 165, 0, 0.1); border: 1px solid orange; padding: 8px; border-radius: 5px; margin-bottom: 5px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; color: #ddd;";
+            div.innerHTML = `
+              <span>Wait! <b>${req.from.nama}</b> ingin berteman.</span>
+              <div>
+                <button onclick="respondFriend('${req.from._id}', 'accept')" style="border:none; cursor:pointer; background:none;">✅</button>
+                <button onclick="respondFriend('${req.from._id}', 'reject')" style="border:none; cursor:pointer; background:none;">❌</button>
+              </div>
+            `;
+            requestContainer.appendChild(div);
+          });
+          Toast.show(`Ada ${data.requests.length} permintaan pertemanan baru!`, 'info');
         }
-        closeAddUserModal();
-      } else {
-        alert('User tidak ditemukan');
+      }
+    }
+  } catch (err) {
+    Toast.show('Gagal memuat data teman', 'error');
+  }
+  
+  // Initialize recent chats display
+  updateRecentChatsDisplay();
+}
+
+// B. Fungsi Search dengan Debounce
+function searchUsers(query) {
+  // Jika search kosong, kembali tampilkan daftar teman saya
+  if (!query) {
+    if (currentTab === 'chats') {
+      updateRecentChatsDisplay();
+    } else if (currentTab === 'groups') {
+      displayGroups();
+    } else {
+      loadFriendsAndRequests();
+    }
+    return;
+  }
+
+  if (searchTimeout) clearTimeout(searchTimeout);
+  
+  searchTimeout = setTimeout(async () => {
+    try {
+      // Tentukan list mana yang akan di-update
+      const listId = currentTab === 'chats' ? 'recentChatsList' : 
+                     currentTab === 'groups' ? 'groupsList' : 
+                     'usersList';
+      const list = document.getElementById(listId);
+      
+      if (list) {
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#94a3b8;">Mencari...</div>';
+      }
+
+      const res = await fetch(`${API_URL}/users/search?query=${query}&currentUserId=${currentUser.id}`);
+      const data = await res.json();
+
+      if (data.success) {
+        if (currentTab === 'chats' || currentTab === 'groups') {
+          // Filter results to show in chats/groups tab
+          displaySearchResultsInTab(data.users, currentTab);
+        } else {
+          // Show in contacts tab
+          displaySearchResults(data.users, false);
+        }
       }
     } catch (err) {
-      console.error(err);
-      alert('Gagal menambah user');
+
     }
-  });
-
-  const backBtn = document.getElementById('backToSidebar');
-  if (backBtn) backBtn.addEventListener('click', closeChat);
-});
-
-function logout() {
-  localStorage.removeItem('currentUser');
-  window.location.href = 'login.html';
+  }, 300);
 }
+
+// Helper untuk menampilkan search results di tab chats/groups
+function displaySearchResultsInTab(users, tab) {
+  const listId = tab === 'chats' ? 'recentChatsList' : 'groupsList';
+  const list = document.getElementById(listId);
+  
+  if (!list) return;
+  
+  list.innerHTML = '';
+  
+  if (!users || users.length === 0) {
+    list.innerHTML = '<div style="text-align:center; padding:10px; color:#94a3b8;">Pengguna tidak ditemukan</div>';
+    return;
+  }
+
+  users.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'list-item chat-item';
+    div.id = `search-user-${user.username}`;
+
+    // Check if user is online
+    const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
+    const onlineClass = isOnline ? 'online' : '';
+
+    // Get last message untuk user ini (hanya untuk teman)
+    let lastMessageText = '';
+    let lastMessageTime = '';
+    if (user.isFriend) {
+      const lastMsg = getLastMessageForUser(user.username);
+      lastMessageText = lastMsg ? lastMsg.message : 'Tap to start chatting';
+      lastMessageTime = lastMsg ? formatMessageTime(lastMsg.timestamp) : '';
+    }
+
+    // Logic Tampilan: Jika Teman -> Bisa Chat. Jika Belum -> Tombol Add.
+    let actionButton = '';
+    if (user.isFriend) {
+        // Tampilkan action button kosong untuk space consistency
+        actionButton = ``;
+    } else if (user.isPending) {
+        actionButton = `<button class="icon-btn" disabled style="font-size:0.7rem; width:auto; padding:5px 10px; cursor:default;">Pending ⏳</button>`;
+    } else {
+        actionButton = `<button onclick="sendFriendRequest(event, '${user._id}')" class="icon-btn" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">
+                        <i data-feather="user-plus" style="width:16px; height:16px;"></i>
+                      </button>`;
+    }
+
+    div.innerHTML = `
+      ${createAvatarHTML(user, 'avatar small', isOnline)}
+      <div class="chat-item-info">
+        <h4>${user.nama}</h4>
+        <small style="font-size: 0.75rem; color: #94a3b8;">@${user.username}</small>
+        <small>${lastMessageText}</small>
+      </div>
+      <div style="font-size:0.7rem; color:#64748b; text-align:right;">${lastMessageTime}</div>
+      ${actionButton}
+    `;
+    
+    // Add click handler ke div utama (hanya jika sudah teman)
+    if (user.isFriend) {
+      div.onclick = () => selectUser(user);
+    }
+    
+    list.appendChild(div);
+  });
+  
+  if(typeof feather !== 'undefined') feather.replace();
+}
+
+// C. Display List User (Bisa untuk Teman atau Hasil Search)
+function displaySearchResults(results, isFriendList = false) {
+  const list = document.getElementById('usersList');
+  list.innerHTML = '';
+
+  if (!results || results.length === 0) {
+    list.innerHTML = `<div style="text-align:center; padding:10px; color:#94a3b8;">${isFriendList ? 'Belum ada teman' : 'Pengguna tidak ditemukan'}</div>`;
+    return;
+  }
+
+
+
+  results.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'list-item chat-item';
+    // Tambahkan ID agar bisa di-highlight saat dipilih
+    if(isFriendList) div.id = `user-item-${user.username}`;
+
+    let actionButton = '';
+
+    // Logic Tampilan: Jika Teman -> Bisa Chat. Jika Belum -> Tombol Add.
+    if (user.isFriend || isFriendList) {
+        // Tampilkan action button kosong untuk space consistency
+        actionButton = ``;
+    } else if (user.isPending) {
+        actionButton = `<button class="icon-btn" disabled style="font-size:0.7rem; width:auto; padding:5px 10px; cursor:default;">Pending ⏳</button>`;
+    } else {
+        actionButton = `<button onclick="sendFriendRequest(event, '${user._id}')" class="icon-btn" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">
+                        <i data-feather="user-plus" style="width:16px; height:16px;"></i>
+                      </button>`;
+    }
+
+    // Check if user is online
+    const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
+
+    // Get last message untuk user ini
+    const lastMsg = getLastMessageForUser(user.username);
+    const lastMessageText = lastMsg ? lastMsg.message : 'Tap to start chatting';
+    const lastMessageTime = lastMsg ? formatMessageTime(lastMsg.timestamp) : '';
+
+    div.innerHTML = `
+      ${createAvatarHTML(user, 'avatar small', isOnline)}
+      <div class="chat-item-info">
+        <h4>${user.nama}</h4>
+        <small style="font-size: 0.75rem; color: #94a3b8;">@${user.username}</small>
+        <small>${lastMessageText}</small>
+      </div>
+      <div style="font-size:0.7rem; color:#64748b; text-align:right;">${lastMessageTime}</div>
+      ${actionButton}
+    `;
+    
+    // Add click handler ke div utama (tidak di info)
+    if (user.isFriend || isFriendList) {
+      div.onclick = () => selectUserFromSearch(user._id);
+    }
+    
+    list.appendChild(div);
+  });
+  
+  if(typeof feather !== 'undefined') feather.replace();
+}
+
+// D. Helper: Memilih user untuk chat
+function selectUserFromSearch(userId) {
+  // Pastikan user ada di list local sebelum select
+  const friend = window.allUsers ? window.allUsers.find(u => u._id === userId) : null;
+  
+  if (friend) {
+    selectUser(friend);
+    // Bersihkan search bar agar kembali ke tampilan normal
+    document.getElementById('searchInput').value = '';
+    const searchBar = document.getElementById('searchBar');
+    if(!searchBar.classList.contains('hidden')) {
+        // Opsional: tutup searchbar atau biarkan terbuka
+        // searchBar.classList.add('hidden');
+        loadFriendsAndRequests(); // Refresh list ke mode teman
+    }
+  } else {
+    // Fallback jika data user search tidak lengkap, fetch ulang (jarang terjadi)
+    selectUser(window.allUsers[0]); 
+  }
+}
+
+// Di dalam file app.js
+
+async function sendFriendRequest(e, targetId) {
+  e.stopPropagation(); // Mencegah chat terbuka saat klik tombol add
+  
+  const btn = e.currentTarget;
+  const originalContent = btn.innerHTML;
+  btn.innerHTML = "⏳"; 
+  
+  // DEBUG: Cek apakah ID terbaca
+
+
+
+  try {
+    const res = await fetch(`${API_URL}/friends/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // PERBAIKAN DISINI: Gunakan _id atau id
+      body: JSON.stringify({ 
+          fromId: currentUser._id || currentUser.id, 
+          toId: targetId 
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      Toast.show("Permintaan terkirim!", "success");
+      btn.innerHTML = "Pending ⏳";
+      btn.disabled = true;
+      btn.style.cursor = "default";
+      // Opsional: Ubah class agar terlihat disabled
+      btn.classList.remove('icon-btn');
+    } else {
+      Toast.show(data.error || "Gagal mengirim request", "error");
+      btn.innerHTML = originalContent;
+      if(typeof feather !== 'undefined') feather.replace();
+    }
+  } catch (err) {
+
+    Toast.show("Gagal mengirim request (Koneksi)", "error");
+    btn.innerHTML = originalContent;
+    if(typeof feather !== 'undefined') feather.replace();
+  }
+}
+
+// F. Respon Request (Terima/Tolak)
+async function respondFriend(requesterId, action) {
+    const endpoint = action === 'accept' ? '/friends/accept' : '/friends/reject';
+    
+    try {
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, requesterId })
+      });
+  
+      const data = await res.json();
+      if (data.success) {
+        Toast.show(data.message, 'success');
+        loadFriendsAndRequests(); // Reload list agar update
+      } else {
+        Toast.show(data.error, 'error');
+      }
+    } catch (err) {
+
+      Toast.show('Gagal memproses permintaan', 'error');
+    }
+  }
+
+// --- 6. CHAT LOGIC ---
 
 function selectUser(user) {
   selectedUser = user;
+  selectedGroup = null;
+  
+  // Clear unread count for this user
+  clearUnread(user.username);
 
   if (window.innerWidth <= 768) {
     document.getElementById('sidebar').classList.add('hidden-mobile');
@@ -129,14 +747,49 @@ function selectUser(user) {
   document.getElementById('chatRoom').classList.remove('hidden');
 
   document.getElementById('chatName').textContent = user.nama;
-  document.getElementById('chatAvatar').textContent = user.nama.charAt(0).toUpperCase();
+  
+  // Set avatar with image if available, otherwise gradient avatar
+  const chatAvatarEl = document.getElementById('chatAvatar');
+  const hasValidAvatar = user.avatar && 
+                         user.avatar !== 'default' && 
+                         (user.avatar.startsWith('data:') || user.avatar.startsWith('http'));
+  
+  if (hasValidAvatar) {
+    chatAvatarEl.setAttribute('style', `
+      background-image: url("${user.avatar}") !important;
+      background-size: cover !important;
+      background-position: center !important;
+      background-color: transparent !important;
+      display: block !important;
+    `);
+    chatAvatarEl.textContent = '';
+  } else {
+    const initial = user.nama.charAt(0).toUpperCase();
+    const gradient = getAvatarGradient(user.nama || 'User');
+    chatAvatarEl.style.backgroundImage = 'none';
+    chatAvatarEl.style.background = gradient;
+    chatAvatarEl.style.display = 'flex';
+    chatAvatarEl.style.alignItems = 'center';
+    chatAvatarEl.style.justifyContent = 'center';
+    chatAvatarEl.style.color = 'white';
+    chatAvatarEl.style.fontWeight = '600';
+    chatAvatarEl.style.fontSize = '1.2rem';
+    chatAvatarEl.textContent = initial;
+  }
 
   const userStatus = window.userStatusMap && window.userStatusMap[user.username] ? window.userStatusMap[user.username] : 'offline';
   document.getElementById('chatStatus').textContent = userStatus === 'online' ? 'Online' : 'Offline';
 
+  // Highlight active items
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+  
   const activeItem = document.getElementById(`user-item-${user.username}`);
   if (activeItem) activeItem.classList.add('active');
+  
+  const activeChatItem = document.getElementById(`chat-item-${user.username}`);
+  if (activeChatItem) activeChatItem.classList.add('active');
 
   loadMessages(user.username);
 }
@@ -149,58 +802,6 @@ function closeChat() {
   }
   document.getElementById('welcomeScreen').classList.remove('hidden');
   document.getElementById('chatRoom').classList.add('hidden');
-}
-
-async function loadUsers() {
-  try {
-    const res = await fetch(`${API_URL}/users`);
-    const data = await res.json();
-    window.allUsers = data.users.filter(user => user.username !== currentUser.username);
-    displayUsers(window.allUsers);
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-function displayUsers(usersToDisplay) {
-  const list = document.getElementById('usersList');
-  list.innerHTML = '';
-
-  if (usersToDisplay.length === 0) {
-    list.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">Tidak ada pengguna</div>';
-    return;
-  }
-
-  usersToDisplay.forEach(user => {
-    const div = document.createElement('div');
-    div.className = 'user-item';
-    div.id = `user-item-${user.username}`;
-    div.onclick = () => selectUser(user);
-    div.innerHTML = `
-      <div class="avatar">${user.nama.charAt(0).toUpperCase()}</div>
-      <div style="flex:1">
-        <div style="display:flex; justify-content:space-between;">
-          <h4 style="font-size:0.95rem; margin:0;">${user.nama}</h4>
-          <div class="user-status ${user.status}" id="status-${user.username}"></div>
-        </div>
-        <small style="color:#94a3b8; font-size:0.8rem;">Klik untuk chat</small>
-      </div>
-    `;
-    list.appendChild(div);
-    window.userStatusMap = window.userStatusMap || {};
-    window.userStatusMap[user.username] = user.status;
-  });
-}
-
-function searchUsers(query) {
-  if (!window.allUsers) return;
-  
-  const filtered = window.allUsers.filter(user => 
-    user.nama.toLowerCase().includes(query.toLowerCase()) ||
-    user.username.toLowerCase().includes(query.toLowerCase())
-  );
-  
-  displayUsers(filtered);
 }
 
 async function loadMessages(otherUser) {
@@ -219,11 +820,20 @@ async function loadMessages(otherUser) {
     }
     scrollToBottom();
   } catch (err) {
-    console.error(err);
+
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">Gagal memuat pesan.</div>';
   }
 }
 
 function sendMessage() {
+  if (selectedGroup) {
+    sendGroupMessage();
+  } else if (selectedUser) {
+    sendPrivateMessage();
+  }
+}
+
+function sendPrivateMessage() {
   const input = document.getElementById('messageInput');
   const msg = input.value.trim();
   const fileInput = document.getElementById('fileInput');
@@ -232,10 +842,12 @@ function sendMessage() {
   if ((!msg && !file) || !selectedUser) return;
 
   if (file) {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File terlalu besar (Maks 5MB)');
+    if (file.size > 50 * 1024 * 1024) {
+      Toast.show('File terlalu besar (Maks 50MB)', 'error');
       return;
     }
+    
+    // Kirim file langsung tanpa kompresi
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
@@ -246,6 +858,9 @@ function sendMessage() {
         file: { name: file.name, type: file.type, data: reader.result }
       };
       socket.emit('send_message', payload);
+      const displayMsg = msg || `📎 ${file.name}`;
+      saveLastMessage(selectedUser.username, displayMsg, new Date());
+      input.value = '';
       clearFile();
     };
   } else {
@@ -254,28 +869,89 @@ function sendMessage() {
       to: selectedUser.username,
       message: msg
     });
+    // Save last message
+    saveLastMessage(selectedUser.username, msg, new Date());
+    input.value = '';
   }
-  input.value = '';
+}
+
+// Function to compress image
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = (event) => {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // Resize ke max 400x400px (lebih aggressive)
+      const maxWidth = 400;
+      const maxHeight = 400;
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Compress dengan quality lebih rendah - mulai dari 0.4 (40%)
+      let compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
+      
+      // Jika masih terlalu besar (>300KB), compress lagi dengan quality 0.2
+      if (compressedBase64.length > 300000) {
+        compressedBase64 = canvas.toDataURL('image/jpeg', 0.2);
+      }
+      
+      // Jika masih terlalu besar (>200KB), compress dengan quality 0.1
+      if (compressedBase64.length > 200000) {
+        compressedBase64 = canvas.toDataURL('image/jpeg', 0.1);
+      }
+      
+      callback(compressedBase64);
+    };
+  };
 }
 
 function addMessageToUI(msg) {
   const container = document.getElementById('messagesContainer');
-  if (container.innerText.includes('Belum ada pesan') || container.innerText.includes('Memuat')) {
+  if (container.innerText.includes('Belum ada pesan') || container.innerText.includes('Memuat') || container.innerText.includes('Gagal')) {
     container.innerHTML = '';
   }
 
   const isMe = msg.from === currentUser.username;
   const div = document.createElement('div');
-  div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
+  
+  // Jika ada image, jangan kasih background/padding
+  const hasImage = msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('image/');
+  
+  if (hasImage && !msg.message) {
+    // Hanya gambar tanpa text
+    div.className = `message-img ${isMe ? 'outgoing' : 'incoming'}`;
+  } else {
+    div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
+  }
 
   let content = '';
-  if (msg.file) {
-    if (msg.file.type.startsWith('image/')) {
-      content += `<img src="${msg.file.data}" class="msg-img" onclick="window.open(this.src)">`;
+  if (msg.file && msg.file.data) {
+    if (msg.file.type && msg.file.type.startsWith('image/')) {
+      content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
     } else {
       content += `<div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; margin-bottom:5px;">
-                    <a href="${msg.file.data}" download="${msg.file.name}" style="color:white; text-decoration:none; display:flex; align-items:center; gap:5px;">
-                      <i data-feather="download"></i> ${msg.file.name}
+                    <a href="${msg.file.data}" download="${msg.file.name || 'file'}" style="color:white; text-decoration:none; display:flex; align-items:center; gap:5px;">
+                      <i data-feather="download"></i> ${msg.file.name || 'Download File'}
                     </a>
                   </div>`;
     }
@@ -285,8 +961,14 @@ function addMessageToUI(msg) {
 
   div.innerHTML = content;
   container.appendChild(div);
-  feather.replace();
+  if(typeof feather !== 'undefined') feather.replace();
   scrollToBottom();
+
+  // Save last message for display in contacts
+  if (selectedUser && !isMe) {
+    const messageText = msg.message || (msg.file && msg.file.name ? `📎 ${msg.file.name}` : '');
+    saveLastMessage(selectedUser.username, messageText, msg.timestamp);
+  }
 }
 
 function scrollToBottom() {
@@ -294,25 +976,203 @@ function scrollToBottom() {
   container.scrollTop = container.scrollHeight;
 }
 
-document.getElementById('fileInput').addEventListener('change', function() {
-  if (this.files[0]) {
-    document.getElementById('filePreview').classList.remove('hidden');
-    document.getElementById('fileName').textContent = this.files[0].name;
-  }
-});
-
-function clearFile() {
-  document.getElementById('fileInput').value = '';
-  document.getElementById('filePreview').classList.add('hidden');
+const fileInput = document.getElementById('fileInput');
+if(fileInput){
+    fileInput.addEventListener('change', function() {
+      if (this.files[0]) {
+        const file = this.files[0];
+        // Validasi file size - 50MB max
+        if (file.size > 50 * 1024 * 1024) {
+          Toast.show('File terlalu besar (Maks 50MB)', 'error');
+          this.value = '';
+          document.getElementById('filePreview').classList.add('hidden');
+          return;
+        }
+        document.getElementById('filePreview').classList.remove('hidden');
+        document.getElementById('fileName').textContent = file.name;
+      }
+    });
 }
 
-socket.on('receive_message', (msg) => {
-  if (selectedUser && (msg.from === selectedUser.username || msg.to === selectedUser.username)) {
-    addMessageToUI(msg);
+function clearFile() {
+  const fi = document.getElementById('fileInput');
+  if(fi) {
+    fi.value = '';
+    fi.files = null;
   }
-});
+  const preview = document.getElementById('filePreview');
+  if (preview) {
+    preview.classList.add('hidden');
+    document.getElementById('fileName').textContent = '';
+  }
+}
+
+// --- CHAT HISTORY FUNCTIONS ---
+
+function addToChatHistory(id, name, message, isGroup) {
+  // Truncate long messages
+  const truncated = message.length > 50 ? message.substring(0, 50) + '...' : message;
+  
+  // Save to localStorage untuk persistent storage
+  if (isGroup) {
+    saveLastMessageGroup(id, truncated, new Date());
+  } else {
+    saveLastMessage(id, truncated, new Date());
+  }
+  
+  // Update recent chats display
+  updateRecentChatsDisplay();
+}
+
+function incrementUnread(id) {
+  // Increment unread counter di localStorage jika perlu
+  updateRecentChatsDisplay();
+}
+
+function clearUnread(id) {
+  if (chatHistory[id]) {
+    chatHistory[id].unreadCount = 0;
+  }
+  updateRecentChatsDisplay();
+}
+
+// Build recent chats from localStorage
+function buildRecentChatsFromStorage() {
+  recentChats = [];
+  
+  // Load all chat histories dari localStorage
+  if (window.allUsers) {
+    window.allUsers.forEach(user => {
+      const lastMsg = getLastMessageForUser(user.username);
+      if (lastMsg) {
+        recentChats.push({
+          id: user.username,
+          name: user.nama,
+          lastMessage: lastMsg.message,
+          timestamp: new Date(lastMsg.timestamp),
+          isGroup: false,
+          user: user
+        });
+      }
+    });
+  }
+  
+  // Load group histories
+  if (window.allGroups) {
+    window.allGroups.forEach(group => {
+      const lastMsg = getLastMessageForGroup(group._id);
+      if (lastMsg) {
+        recentChats.push({
+          id: group._id,
+          name: group.nama,
+          lastMessage: lastMsg.message,
+          timestamp: new Date(lastMsg.timestamp),
+          isGroup: true,
+          group: group
+        });
+      }
+    });
+  }
+  
+  // Sort by timestamp (most recent first)
+  recentChats.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+// Get last message untuk group
+function getLastMessageForGroup(groupId) {
+  try {
+    const storage = localStorage.getItem(`lastMsg-${currentUser.username}-group-${groupId}`);
+    if (storage) return JSON.parse(storage);
+  } catch (err) {
+
+  }
+  return null;
+}
+
+// Save last message untuk group
+function saveLastMessageGroup(groupId, message, timestamp) {
+  try {
+    const lastMsg = { message, timestamp };
+    localStorage.setItem(`lastMsg-${currentUser.username}-group-${groupId}`, JSON.stringify(lastMsg));
+  } catch (err) {
+
+  }
+}
+
+function updateRecentChatsDisplay() {
+  const list = document.getElementById('recentChatsList');
+  if (!list) return;
+  
+  // Build recent chats dari storage
+  buildRecentChatsFromStorage();
+  
+  list.innerHTML = '';
+  
+  if (recentChats.length === 0) {
+    list.innerHTML = '<div style="text-align:center; padding:10px; color:#94a3b8; font-size:0.85rem;">Mulai chat...</div>';
+    return;
+  }
+  
+  recentChats.forEach(chat => {
+    const div = document.createElement('div');
+    div.className = 'list-item chat-item';
+    div.id = `chat-item-${chat.id}`;
+    
+    const isActive = (selectedUser && selectedUser.username === chat.id) || 
+                    (selectedGroup && selectedGroup._id === chat.id);
+    
+    if (isActive) div.classList.add('active');
+    
+    const timeText = formatMessageTime(chat.timestamp);
+    
+    // Check if user is online (only for non-group chats)
+    const isOnline = !chat.isGroup && window.userStatusMap && window.userStatusMap[chat.id] === 'online';
+    
+    // Use createAvatarHTML for consistent avatar display with photos/initials
+    let avatarHTML;
+    if (chat.isGroup) {
+      // For groups, show gradient background with first letter
+      avatarHTML = `<div class="avatar small ${isOnline ? 'online' : ''}" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">${chat.name.charAt(0).toUpperCase()}</div>`;
+    } else {
+      // For users, use createAvatarHTML to show photo or initial
+      if (chat.user) {
+        avatarHTML = createAvatarHTML(chat.user, 'avatar small', isOnline);
+      } else {
+        // Fallback if user data not available
+        avatarHTML = `<div class="avatar small ${isOnline ? 'online' : ''}">${chat.name.charAt(0).toUpperCase()}</div>`;
+      }
+    }
+    
+    div.innerHTML = `
+      ${avatarHTML}
+      <div class="chat-item-info">
+        <h4>${chat.name}</h4>
+        <small style="color:#94a3b8; font-size:0.75rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chat.lastMessage}</small>
+      </div>
+      <div style="font-size:0.7rem; color:#64748b; text-align:right;">${timeText}</div>
+    `;
+    
+    div.onclick = () => {
+      if (chat.isGroup) {
+        selectGroup(chat.id);
+      } else if (chat.user) {
+
+        selectUser(chat.user);
+      }
+    };
+    
+    list.appendChild(div);
+  });
+  
+  if(typeof feather !== 'undefined') feather.replace();
+}
+
+// --- 7. SOCKET LISTENERS ---
 
 socket.on('message_sent', (msg) => {
+  // Track chat history for recent chats
+  addToChatHistory(msg.to, msg.to, msg.message, false);
+  
   if (selectedUser && msg.to === selectedUser.username) {
     addMessageToUI(msg);
   }
@@ -322,14 +1182,105 @@ socket.on('user_status_change', (data) => {
   const statusEl = document.getElementById(`status-${data.username}`);
   if (statusEl) statusEl.className = `user-status ${data.status}`;
 
+  window.userStatusMap = window.userStatusMap || {};
+  window.userStatusMap[data.username] = data.status;
+
   if (selectedUser && selectedUser.username === data.username) {
     document.getElementById('chatStatus').textContent = data.status === 'online' ? 'Online' : 'Offline';
   }
+
+  // Update avatar status indicator di list items
+  // Update di tab CHATS
+  const chatItem = document.getElementById(`chat-item-${data.username}`);
+  if (chatItem) {
+    const avatar = chatItem.querySelector('.avatar.small');
+    if (avatar) {
+      if (data.status === 'online') {
+        avatar.classList.add('online');
+      } else {
+        avatar.classList.remove('online');
+      }
+    }
+  }
+
+  // Update di tab CONTACTS
+  const userItem = document.getElementById(`user-item-${data.username}`);
+  if (userItem) {
+    const avatar = userItem.querySelector('.avatar.small');
+    if (avatar) {
+      if (data.status === 'online') {
+        avatar.classList.add('online');
+      } else {
+        avatar.classList.remove('online');
+      }
+    }
+  }
 });
 
-let isVideo = false;
-let callDuration = 0;
-let callTimer = null;
+// Notifikasi Request Pertemanan Realtime
+socket.on('new_friend_request', (data) => {
+    Toast.show(`Permintaan pertemanan baru dari ${data.from.nama}`, 'info');
+    loadFriendsAndRequests(); // Refresh list otomatis
+});
+
+// Typing indicator
+socket.on('user_typing', (data) => {
+  if (selectedUser && selectedUser.username === data.from) {
+    document.getElementById('chatStatus').innerHTML = '<em style="font-style: italic; color: #22c55e;">sedang mengetik...</em>';
+    
+    // Clear after 3 seconds
+    if (window.typingTimeout) clearTimeout(window.typingTimeout);
+    window.typingTimeout = setTimeout(() => {
+      document.getElementById('chatStatus').textContent = 'Offline';
+    }, 3000);
+  }
+  
+  // Update chat list item to show typing
+  const chatItem = document.getElementById(`chat-item-${data.from}`);
+  if (chatItem) {
+    const msg = chatItem.querySelector('small');
+    if (msg) {
+      msg.innerHTML = `<i data-feather="edit-3" style="font-size:0.8rem; color:#22c55e;"></i> sedang mengetik...`;
+      if(typeof feather !== 'undefined') feather.replace();
+    }
+  }
+});
+
+socket.on('stop_typing', (data) => {
+  // Restore last message in chat item
+  if (chatHistory[data.from]) {
+    const chatItem = document.getElementById(`chat-item-${data.from}`);
+    if (chatItem) {
+      const msg = chatItem.querySelector('small');
+      if (msg) {
+        msg.textContent = chatHistory[data.from].lastMessage;
+      }
+    }
+  }
+});
+
+// --- 8. WEBRTC / CALL LOGIC ---
+
+// Initiate call dari history
+async function initiateCallFromHistory(event, username, callType) {
+  event.stopPropagation();
+  
+  // Cari user dari allUsers berdasarkan username
+  const user = window.allUsers ? window.allUsers.find(u => u.username === username) : null;
+  
+  if (!user) {
+    Toast.show('User tidak ditemukan', 'error');
+    return;
+  }
+  
+  // Select user terlebih dahulu
+  selectUser(user);
+  
+  // Tunggu sebentar agar UI update
+  setTimeout(() => {
+    startCall(callType);
+  }, 100);
+}
 
 function startCallTimer() {
   callDuration = 0;
@@ -351,12 +1302,22 @@ function stopCallTimer() {
 }
 
 async function startCall(type) {
-  if (!selectedUser) return;
+  if (!selectedUser && !selectedGroup) return;
+  
+  // Group call belum support, hanya personal call
+  if (selectedGroup) {
+    Toast.show('Group video call sedang dalam pengembangan', 'info');
+    return;
+  }
+  
   isVideo = type === 'video';
 
-  document.getElementById('callModal').classList.remove('hidden');
+  const modal = document.getElementById('callModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+
   document.getElementById('callTargetName').textContent = selectedUser.nama;
-  document.getElementById('callStatus').textContent = 'Memanggil...';
+  document.getElementById('callStatus').textContent = '';
   document.getElementById('incomingActions').classList.add('hidden');
   document.getElementById('activeCallActions').classList.remove('hidden');
 
@@ -375,14 +1336,18 @@ async function startCall(type) {
     await peerConnection.setLocalDescription(offer);
     socket.emit('call_offer', { offer, to: selectedUser.username, from: currentUser.username, type });
   } catch (e) {
+
     endCall();
   }
 }
 
 socket.on('call_offer', (data) => {
-  document.getElementById('callModal').classList.remove('hidden');
+  const modal = document.getElementById('callModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+
   document.getElementById('callTargetName').textContent = data.from;
-  document.getElementById('callStatus').textContent = `Panggilan ${data.type} Masuk...`;
+  document.getElementById('callStatus').textContent = '';
   document.getElementById('incomingActions').classList.remove('hidden');
   document.getElementById('activeCallActions').classList.add('hidden');
   document.getElementById('videoContainer').classList.add('hidden');
@@ -390,9 +1355,23 @@ socket.on('call_offer', (data) => {
   isVideo = data.type === 'video';
   window.pendingOffer = data.offer;
   window.callerUsername = data.from;
+  
+  // Set timer untuk missed call (30 detik)
+  window.missedCallTimer = setTimeout(() => {
+    if (window.callerUsername && !window.callAnswered) {
+      // Panggilan tidak dijawab
+      saveCallToHistoryWithStatus(data.from, data.from, data.type, 0, 'missed');
+      Toast.show('Panggilan tidak terjawab', 'info');
+      closeCallUI();
+    }
+  }, 30000);
 });
 
 async function answerCall() {
+  // Clear missed call timer
+  if (window.missedCallTimer) clearTimeout(window.missedCallTimer);
+  window.callAnswered = true;
+  
   document.getElementById('incomingActions').classList.add('hidden');
   document.getElementById('activeCallActions').classList.remove('hidden');
   if (isVideo) {
@@ -411,11 +1390,22 @@ async function answerCall() {
 
 function endCall() {
   const target = selectedUser ? selectedUser.username : window.callerUsername;
+  const targetName = selectedUser ? selectedUser.nama : window.callerUsername;
+  
+  // Save call history with 'completed' status
+  if (selectedUser) {
+    saveCallToHistoryWithStatus(target, targetName, isVideo ? 'video' : 'voice', callDuration, 'completed');
+  }
+  
   if (target) socket.emit('end_call', { to: target });
   closeCallUI();
 }
 
 function rejectCall() {
+  if (window.callerUsername && window.userStatusMap) {
+    const callerName = window.callerUsername;
+    saveCallToHistoryWithStatus(window.callerUsername, callerName, isVideo ? 'video' : 'voice', 0, 'rejected');
+  }
   if (window.callerUsername) socket.emit('end_call', { to: window.callerUsername });
   closeCallUI();
 }
@@ -430,7 +1420,10 @@ function closeCallUI() {
     localStream.getTracks().forEach(t => t.stop());
     localStream = null;
   }
-  document.getElementById('callModal').classList.add('hidden');
+  const modal = document.getElementById('callModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('active');
+
   document.getElementById('callAvatar').classList.remove('hidden');
   document.getElementById('callTargetName').classList.remove('hidden');
   window.pendingOffer = null;
@@ -438,10 +1431,15 @@ function closeCallUI() {
   isVideo = false;
 }
 
-socket.on('call_ended', closeCallUI);
+socket.on('call_ended', () => {
+    Toast.show('Panggilan diakhiri', 'info');
+    closeCallUI();
+});
+
 socket.on('call_answer', async (data) => {
   await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
 });
+
 socket.on('ice_candidate', async (data) => {
   if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
 });
@@ -451,7 +1449,7 @@ async function setupMedia() {
     localStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
     document.getElementById('localVideo').srcObject = localStream;
   } catch (e) {
-    alert('Gagal akses kamera/mic');
+    Toast.show('Gagal akses kamera/mic', 'error');
     closeCallUI();
   }
 }
@@ -461,7 +1459,6 @@ function createPeerConnection() {
   if (localStream) localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
   peerConnection.ontrack = (e) => {
     document.getElementById('remoteVideo').srcObject = e.streams[0];
-    // Mulai counter detik saat panggilan sudah terhubung
     startCallTimer();
   };
   peerConnection.onicecandidate = (e) => {
@@ -473,13 +1470,737 @@ function createPeerConnection() {
 }
 
 function toggleMute() {
+  if(!localStream) return;
   const track = localStream.getAudioTracks()[0];
   track.enabled = !track.enabled;
   document.getElementById('muteBtn').style.backgroundColor = track.enabled ? '#475569' : '#ef4444';
 }
 
 function toggleCamera() {
+  if(!localStream) return;
   const track = localStream.getVideoTracks()[0];
   track.enabled = !track.enabled;
   document.getElementById('camBtn').style.backgroundColor = track.enabled ? '#475569' : '#ef4444';
+}
+
+// --- 9. GROUP CHAT FUNCTIONS ---
+
+let allGroups = [];
+
+// Load groups saat aplikasi dimulai
+async function loadGroups() {
+  try {
+    const res = await fetch(`${API_URL}/groups/${currentUser.id}`);
+    const data = await res.json();
+    
+    if (data.success) {
+      allGroups = data.groups || [];
+      displayGroups();
+      
+      // Initialize chat history for groups
+      allGroups.forEach(group => {
+        if (!chatHistory[group._id]) {
+          chatHistory[group._id] = {
+            id: group._id,
+            name: group.nama,
+            lastMessage: 'Mulai chat...',
+            timestamp: new Date(),
+            unreadCount: 0,
+            isGroup: true
+          };
+        }
+      });
+      updateRecentChatsDisplay();
+      
+      // Emit join dengan username dan group IDs
+      const groupIds = allGroups.map(g => g._id);
+      socket.emit('join', { username: currentUser.username, groupIds });
+    }
+  } catch (err) {
+
+    // Fallback: emit join dengan format lama jika error
+    socket.emit('join', currentUser.username);
+  }
+}
+
+function displayGroups() {
+  const list = document.getElementById('groupsList');
+  if (!list) return;
+  
+  list.innerHTML = '';
+  
+  if (!allGroups || allGroups.length === 0) {
+    list.innerHTML = '<div style="text-align:center; padding:10px; color:#94a3b8; font-size:0.85rem;">Belum ada group</div>';
+    return;
+  }
+
+  // Sort groups by last message timestamp
+  const sortedGroups = [...allGroups].sort((a, b) => {
+    const lastMsgA = getLastMessageForGroup(a._id);
+    const lastMsgB = getLastMessageForGroup(b._id);
+    const timeA = lastMsgA ? new Date(lastMsgA.timestamp) : new Date(0);
+    const timeB = lastMsgB ? new Date(lastMsgB.timestamp) : new Date(0);
+    return timeB - timeA;
+  });
+
+  sortedGroups.forEach(group => {
+    const div = document.createElement('div');
+    div.className = 'list-item chat-item';
+    div.id = `group-item-${group._id}`;
+    
+    const isActive = selectedGroup && selectedGroup._id === group._id;
+    if (isActive) div.classList.add('active');
+    
+    const avatar = group.avatar || group.nama.charAt(0).toUpperCase();
+    const lastMsg = getLastMessageForGroup(group._id);
+    const timeText = lastMsg ? formatMessageTime(new Date(lastMsg.timestamp)) : '';
+    
+    div.innerHTML = `
+      <div class="avatar small" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">${avatar}</div>
+      <div class="chat-item-info">
+        <h4>${group.nama}</h4>
+        <small>${lastMsg ? lastMsg.message : `${group.members.length} anggota`}</small>
+      </div>
+      <div style="font-size:0.7rem; color:#64748b; text-align:right;">${timeText}</div>
+    `;
+    
+    div.onclick = () => selectGroup(group._id);
+    
+    list.appendChild(div);
+  });
+  
+  if(typeof feather !== 'undefined') feather.replace();
+}
+
+function openCreateGroupModal() {
+  const modal = document.getElementById('createGroupModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+  
+  // Populate members list
+  populateMembersCheckbox();
+  
+  // Reset form
+  document.getElementById('groupNameInput').value = '';
+  document.querySelectorAll('input[name="groupMembers"]').forEach(cb => cb.checked = false);
+  
+  if(typeof feather !== 'undefined') feather.replace();
+}
+
+async function populateMembersCheckbox() {
+  const container = document.getElementById('membersListContainer');
+  
+  if (!window.allUsers || window.allUsers.length === 0) {
+    container.innerHTML = '<div style="padding:10px; color:#94a3b8;">Tidak ada teman</div>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  
+  window.allUsers.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'member-checkbox';
+    
+    const id = `member-${user._id}`;
+    
+    div.innerHTML = `
+      <input type="checkbox" id="${id}" name="groupMembers" value="${user._id}">
+      <label for="${id}">${user.nama}</label>
+    `;
+    
+    container.appendChild(div);
+  });
+}
+
+async function createGroup() {
+  const groupName = document.getElementById('groupNameInput').value.trim();
+  
+  if (!groupName) {
+    Toast.show('Nama group tidak boleh kosong', 'error');
+    return;
+  }
+  
+  if (groupName.length > 50) {
+    Toast.show('Nama group terlalu panjang (max 50 karakter)', 'error');
+    return;
+  }
+  
+  // Ambil member yang dipilih
+  const selectedMembers = Array.from(document.querySelectorAll('input[name="groupMembers"]:checked'))
+    .map(cb => cb.value);
+  
+  if (selectedMembers.length === 0) {
+    Toast.show('Pilih minimal 1 anggota', 'error');
+    return;
+  }
+  
+  const btn = document.getElementById('createGroupBtn');
+  const originalText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = 'Membuat...';
+  
+  try {
+    const res = await fetch(`${API_URL}/groups`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nama: groupName,
+        createdBy: currentUser.id || currentUser._id,
+        members: selectedMembers
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      Toast.show('Group berhasil dibuat!', 'success');
+      
+      // Tambah ke local list
+      allGroups.unshift(data.group);
+      displayGroups();
+      
+      // Add to chat history
+      chatHistory[data.group._id] = {
+        id: data.group._id,
+        name: data.group.nama,
+        lastMessage: 'Mulai chat...',
+        timestamp: new Date(),
+        unreadCount: 0,
+        isGroup: true
+      };
+      updateRecentChatsDisplay();
+      
+      // Tutup modal
+      document.getElementById('createGroupModal').classList.remove('active');
+      document.getElementById('createGroupModal').classList.add('hidden');
+      
+      // Select group yang baru dibuat
+      setTimeout(() => selectGroup(data.group._id), 300);
+    } else {
+      Toast.show(data.error || 'Gagal membuat group', 'error');
+    }
+  } catch (err) {
+
+    Toast.show('Terjadi kesalahan saat membuat group', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = originalText;
+  }
+}
+
+function selectGroup(groupId) {
+  selectedGroup = allGroups.find(g => g._id === groupId);
+  selectedUser = null; // Clear selectedUser saat membuka group
+  
+  if (!selectedGroup) return;
+  
+  // Clear unread count for this group
+  clearUnread(groupId);
+  
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.add('hidden-mobile');
+    document.getElementById('chatArea').classList.add('active');
+  }
+  
+  document.getElementById('welcomeScreen').classList.add('hidden');
+  document.getElementById('chatRoom').classList.remove('hidden');
+  
+  // Update chat header untuk group
+  document.getElementById('chatName').textContent = selectedGroup.nama;
+  document.getElementById('chatAvatar').textContent = selectedGroup.avatar || 'G';
+  document.getElementById('chatStatus').textContent = `${selectedGroup.members.length} anggota`;
+  
+  // Highlight active group
+  document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+  
+  const activeGroup = document.getElementById(`group-item-${groupId}`);
+  if (activeGroup) activeGroup.classList.add('active');
+  
+  const activeChatItem = document.getElementById(`chat-item-${groupId}`);
+  if (activeChatItem) activeChatItem.classList.add('active');
+  
+  loadGroupMessages(groupId);
+}
+
+async function loadGroupMessages(groupId) {
+  const container = document.getElementById('messagesContainer');
+  container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Memuat pesan...</div>';
+
+  try {
+    const res = await fetch(`${API_URL}/groups/${groupId}/messages`);
+    const data = await res.json();
+    container.innerHTML = '';
+
+    if (data.messages.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Belum ada pesan. Mulai percakapan! 💬</div>';
+    } else {
+      data.messages.forEach(msg => addGroupMessageToUI(msg));
+    }
+    scrollToBottom();
+  } catch (err) {
+
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">Gagal memuat pesan.</div>';
+  }
+}
+
+function addGroupMessageToUI(msg) {
+  const container = document.getElementById('messagesContainer');
+  if (container.innerText.includes('Belum ada pesan') || container.innerText.includes('Memuat') || container.innerText.includes('Gagal')) {
+    container.innerHTML = '';
+  }
+
+  const isMe = msg.from === currentUser.username;
+  
+  // Jika ada image, jangan kasih background/padding
+  const hasImage = msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('image/');
+  
+  const div = document.createElement('div');
+  if (hasImage && !msg.message) {
+    div.className = `message-img ${isMe ? 'outgoing' : 'incoming group-message'}`;
+  } else {
+    div.className = `message ${isMe ? 'outgoing' : 'incoming group-message'}`;
+  }
+
+  let content = '';
+  if (!isMe) {
+    content += `<small style="color: var(--primary); font-weight: 600; display: block; margin-bottom: 4px;">${msg.from}</small>`;
+  }
+  
+  if (msg.file && msg.file.data) {
+    if (msg.file.type && msg.file.type.startsWith('image/')) {
+      content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
+    } else {
+      content += `<div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; margin-bottom:5px;">
+                    <a href="${msg.file.data}" download="${msg.file.name || 'file'}" style="color:white; text-decoration:none; display:flex; align-items:center; gap:5px;">
+                      <i data-feather="download"></i> ${msg.file.name || 'Download File'}
+                    </a>
+                  </div>`;
+    }
+  }
+  if (msg.message) content += `<p style="margin:0;">${msg.message}</p>`;
+  content += `<span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+
+  div.innerHTML = content;
+  container.appendChild(div);
+  if(typeof feather !== 'undefined') feather.replace();
+  scrollToBottom();
+}
+
+function sendGroupMessage() {
+  if (!selectedGroup) return;
+  
+  const input = document.getElementById('messageInput');
+  const msg = input.value.trim();
+  const fileInput = document.getElementById('fileInput');
+  const file = fileInput.files[0];
+
+  if (!msg && !file) return;
+
+  if (file) {
+    if (file.size > 50 * 1024 * 1024) {
+      Toast.show('File terlalu besar (Maks 50MB)', 'error');
+      return;
+    }
+    
+    // Kirim file langsung tanpa kompresi
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      socket.emit('send_message', {
+        from: currentUser.username,
+        to: selectedGroup._id,
+        message: msg,
+        file: { name: file.name, type: file.type, data: reader.result },
+        groupId: selectedGroup._id
+      });
+      const displayMsg = msg || `📎 ${file.name}`;
+      saveLastMessageGroup(selectedGroup._id, displayMsg, new Date());
+      input.value = '';
+      clearFile();
+    };
+  } else {
+    socket.emit('send_message', {
+      from: currentUser.username,
+      to: selectedGroup._id,
+      message: msg,
+      groupId: selectedGroup._id
+    });
+    // Save last message untuk group
+    saveLastMessageGroup(selectedGroup._id, msg, new Date());
+    input.value = '';
+  }
+}
+
+// Update socket listener untuk group messages
+socket.on('receive_message', function(msg) {
+  // Track chat history
+  if (msg.groupId) {
+    addToChatHistory(msg.groupId, msg.groupName || 'Group', msg.message, true);
+    
+    // Group message
+    if (selectedGroup && msg.groupId === selectedGroup._id) {
+      addGroupMessageToUI(msg);
+    } else {
+      // Cari group yang menerima message
+      const group = allGroups.find(g => g._id === msg.groupId);
+      if (group) {
+        Toast.show(`Pesan baru di ${group.nama}`, 'info');
+      }
+      incrementUnread(msg.groupId);
+    }
+  } else {
+    addToChatHistory(msg.from, msg.from, msg.message, false);
+    
+    // Private message (handle seperti sebelumnya)
+    if (selectedUser && (msg.from === selectedUser.username || msg.to === selectedUser.username)) {
+      addMessageToUI(msg);
+    } else {
+      Toast.show(`Pesan baru dari ${msg.from}`, 'info');
+      const userItem = document.getElementById(`user-item-${msg.from}`);
+      if(userItem) {
+          userItem.style.background = "rgba(99, 102, 241, 0.1)"; 
+          setTimeout(() => userItem.style.background = "", 3000);
+      }
+      incrementUnread(msg.from);
+    }
+  }
+});
+
+// --- HELPER FUNCTIONS FOR MESSAGE & CALL HISTORY ---
+
+// Get last message untuk user tertentu
+function getLastMessageForUser(username) {
+  try {
+    const storage = localStorage.getItem(`lastMsg-${currentUser.username}-${username}`);
+    if (storage) return JSON.parse(storage);
+  } catch (err) {
+
+  }
+  return null;
+}
+
+// Save last message
+function saveLastMessage(username, message, timestamp) {
+  try {
+    const lastMsg = { message, timestamp };
+    localStorage.setItem(`lastMsg-${currentUser.username}-${username}`, JSON.stringify(lastMsg));
+  } catch (err) {
+
+  }
+}
+
+// Format message time untuk display
+function formatMessageTime(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
+}
+
+// --- CALL HISTORY TRACKING ---
+
+// Save call ke history dengan status
+function saveCallToHistoryWithStatus(targetUsername, targetName, type, duration, status) {
+  const call = {
+    id: Date.now(),
+    username: targetUsername,
+    name: targetName,
+    type: type, // 'voice' or 'video'
+    duration: duration,
+    timestamp: new Date(),
+    status: status // 'completed', 'missed', 'rejected'
+  };
+  
+  callHistory.unshift(call);
+  
+  // Simpan ke localStorage (limit 50 call terakhir)
+  try {
+    const stored = JSON.parse(localStorage.getItem(`callHistory-${currentUser.username}`) || '[]');
+    stored.unshift(call);
+    localStorage.setItem(`callHistory-${currentUser.username}`, JSON.stringify(stored.slice(0, 50)));
+  } catch (err) {
+
+  }
+}
+
+// Keep old function for backward compatibility
+function saveCallToHistory(targetUsername, targetName, type, duration) {
+  saveCallToHistoryWithStatus(targetUsername, targetName, type, duration, 'completed');
+}
+
+// Load call history dari localStorage
+function loadCallHistory() {
+  try {
+    const stored = localStorage.getItem(`callHistory-${currentUser.username}`);
+    callHistory = stored ? JSON.parse(stored) : [];
+    displayCallHistory();
+  } catch (err) {
+
+    displayCallHistory();
+  }
+}
+
+// Display call history
+function displayCallHistory() {
+  const list = document.getElementById('callsList');
+  
+  if (!list) return;
+  
+  list.innerHTML = '';
+
+  if (!callHistory || callHistory.length === 0) {
+    list.innerHTML = `
+      <div class="call-empty">
+        <i data-feather="phone" style="width: 48px; height: 48px; opacity: 0.5; margin-bottom: 15px;"></i>
+        <p>No call history yet</p>
+      </div>
+    `;
+    if(typeof feather !== 'undefined') feather.replace();
+    return;
+  }
+
+  callHistory.forEach(call => {
+    const div = document.createElement('div');
+    div.className = 'call-item';
+    
+    // Hanya tampilkan durasi untuk completed call
+    let durationText = '';
+    if (call.status === 'completed' && call.duration) {
+      durationText = formatDuration(call.duration);
+    }
+    
+    const typeIcon = call.type === 'video' ? 'video' : 'phone';
+    const callDate = new Date(call.timestamp);
+    
+    // Tombol call sesuai dengan tipe history
+    const callButtonIcon = call.type === 'video' ? 'video' : 'phone';
+    const callButtonText = call.type === 'video' ? 'Video Call' : 'Voice Call';
+    
+    // Tentukan status badge
+    let statusBadge = '';
+    if (call.status === 'missed') {
+      statusBadge = '<span class="call-status missed" title="Tidak Terjawab"><i data-feather="phone-missed" style="width:14px; height:14px;"></i></span>';
+    } else if (call.status === 'rejected') {
+      statusBadge = '<span class="call-status rejected" title="Ditolak"><i data-feather="phone-off" style="width:14px; height:14px;"></i></span>';
+    } else if (call.status === 'completed') {
+      statusBadge = '<span class="call-status completed" title="Diterima"><i data-feather="check" style="width:14px; height:14px;"></i></span>';
+    }
+    
+    div.innerHTML = `
+      <div class="avatar small" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+        ${call.name.charAt(0).toUpperCase()}
+      </div>
+      <div class="call-item-info">
+        <h4>${call.name}</h4>
+      </div>
+      <div class="call-item-time">
+        ${statusBadge}
+        <small>${formatCallDate(callDate)}</small>
+      </div>
+      <button onclick="initiateCallFromHistory(event, '${call.username}', '${call.type}')" class="icon-btn" title="${callButtonText}">
+        <i data-feather="${callButtonIcon}" style="width:18px; height:18px;"></i>
+      </button>
+    `;
+    
+    list.appendChild(div);
+  });
+  
+  if(typeof feather !== 'undefined') feather.replace();
+}
+
+// Format duration call (seconds to mm:ss)
+function formatDuration(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+}
+
+// Format call date untuk display
+function formatCallDate(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
+}
+
+// --- KEYBOARD DETECTION UNTUK MOBILE ---
+let previousInnerHeight = window.innerHeight;
+
+window.addEventListener('resize', () => {
+  const currentInnerHeight = window.innerHeight;
+  const keyboardHeight = previousInnerHeight - currentInnerHeight;
+  
+  // Jika tinggi window berkurang, keyboard mungkin sedang terbuka
+  if (currentInnerHeight < previousInnerHeight) {
+    // Keyboard sedang terbuka - scroll ke bawah otomatis
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (messagesContainer) {
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }, 100);
+    }
+  }
+  
+  previousInnerHeight = currentInnerHeight;
+});
+
+// Juga handle input focus untuk scroll
+document.addEventListener('focusin', (e) => {
+  if (e.target.matches('.input-area input, textarea')) {
+    setTimeout(() => {
+      const messagesContainer = document.getElementById('messagesContainer');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }, 100);
+  }
+});
+
+// --- IMAGE PREVIEW FUNCTIONS ---
+
+// Store current preview image for download
+let currentPreviewImage = null;
+let currentPreviewImageName = 'image.jpg';
+
+function openImagePreview(imageSrc) {
+  currentPreviewImage = imageSrc;
+  const modal = document.getElementById('imagePreviewModal');
+  const imgElement = document.getElementById('previewImageSrc');
+  
+  imgElement.src = imageSrc;
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+  
+  // Disable body scroll
+  document.body.style.overflow = 'hidden';
+}
+
+function closeImagePreview() {
+  const modal = document.getElementById('imagePreviewModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('active');
+  currentPreviewImage = null;
+  
+  // Enable body scroll
+  document.body.style.overflow = 'auto';
+}
+
+function downloadPreviewImage() {
+  if (!currentPreviewImage) return;
+  
+  // Create link element
+  const link = document.createElement('a');
+  link.href = currentPreviewImage;
+  link.download = currentPreviewImageName || 'image.jpg';
+  
+  // Trigger download
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  Toast.show('Gambar sedang diunduh...', 'success');
+}
+
+// Close preview when clicking outside the image
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('imagePreviewModal');
+  if (modal && modal.classList.contains('active')) {
+    if (e.target === modal || e.target.id === 'imagePreviewModal') {
+      closeImagePreview();
+    }
+  }
+});
+
+// Close preview with ESC key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('imagePreviewModal');
+    if (modal && modal.classList.contains('active')) {
+      closeImagePreview();
+    }
+  }
+});
+
+// --- GROUP CALL FUNCTIONS ---
+
+function startGroupCall(type) {
+  if (!selectedGroup) return;
+  
+  const callType = type === 'video' ? 'Video Call' : 'Voice Call';
+  const message = `📞 ${currentUser.nama} mengajukan ${callType} kepada grup ini`;
+  
+  // Kirim notifikasi call ke group
+  socket.emit('send_message', {
+    from: currentUser.username,
+    to: selectedGroup._id,
+    message: message,
+    groupId: selectedGroup._id,
+    isCallNotification: true,
+    callType: type
+  });
+}
+
+// --- USER PROFILE MODAL FUNCTIONS ---
+function openUserProfile() {
+  if (!selectedUser) return;
+  
+  // Save user data to localStorage
+  localStorage.setItem('selectedUserProfile', JSON.stringify({
+    ...selectedUser,
+    status: window.userStatusMap?.[selectedUser.username] === 'online' ? 'online' : 'offline'
+  }));
+  
+  // Redirect to profiles.html
+  window.location.href = 'profiles.html';
+}
+
+function closeUserProfile() {
+  // Not needed anymore since we use profiles.html
+}
+
+function blockUser() {
+  if (!selectedUser) return;
+  
+  if (!confirm(`Block @${selectedUser.username}?`)) return;
+  
+  fetch(`${API_URL}/users/block/${selectedUser._id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blockerId: currentUser.id })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      Toast.show(`${selectedUser.nama} has been blocked`, 'success');
+      window.history.back();
+      closeChat();
+      loadFriendsAndRequests();
+    } else {
+      Toast.show(data.message || 'Failed to block user', 'error');
+    }
+  })
+  .catch(err => {
+    Toast.show('Error blocking user', 'error');
+  });
 }

@@ -2,11 +2,11 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>FluxChat</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <script src="/socket.io/socket.io.js"></script>
+ <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
@@ -15,12 +15,12 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2 class="brand-name">FluxChat</h2>
-        <div style="display: flex; gap: 8px;">
-          <button class="icon-btn" onclick="toggleSearchBar()" title="Cari">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="icon-btn" onclick="toggleSearchBar()" title="Cari Kontak">
             <i data-feather="search"></i>
           </button>
-          <button class="icon-btn" onclick="openAddUserModal()" title="Tambah User">
-            <i data-feather="user-plus"></i>
+          <button class="icon-btn" onclick="openCreateGroupModal()" title="Buat Group Chat">
+            <i data-feather="plus"></i>
           </button>
           <div class="dropdown" id="userDropdown">
             <button class="icon-btn" onclick="toggleUserMenu()" title="Menu">
@@ -45,10 +45,39 @@
       </div>
 
       <div class="search-bar hidden" id="searchBar">
-        <input type="text" id="searchInput" placeholder="Cari pengguna..." autocomplete="off" autofocus>
+        <input type="text" id="searchInput" placeholder="Filter kontak..." autocomplete="off">
       </div>
 
-      <div class="users-list" id="usersList">
+      <!-- TAB NAVIGATION (Horizontal) -->
+      <div class="tabs-container">
+        <button class="tab-btn active" data-tab="chats" onclick="switchTab('chats')">Chats</button>
+        <button class="tab-btn" data-tab="groups" onclick="switchTab('groups')">Groups</button>
+        <button class="tab-btn" data-tab="contacts" onclick="switchTab('contacts')">Contacts</button>
+        <button class="tab-btn" data-tab="calls" onclick="switchTab('calls')">Calls</button>
+      </div>
+
+      <div class="users-list" style="display: flex; flex-direction: column;">
+        
+        <div id="friendRequestsList" style="padding: 0 10px;"></div>
+        
+        <!-- CHATS SECTION (Recently Active) -->
+        <div id="chats-tab" class="tab-content active" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div id="recentChatsList" style="flex: 1; overflow-y: auto;"></div>
+        </div>
+        
+        <!-- GROUPS SECTION -->
+        <div id="groups-tab" class="tab-content hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div id="groupsList" style="flex: 1; overflow-y: auto;"></div>
+        </div>
+
+        <!-- CONTACTS SECTION (All Users) -->
+        <div id="contacts-tab" class="tab-content hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div id="usersList" style="flex: 1; overflow-y: auto;"></div>
+        </div>
+
+        <!-- CALLS SECTION (Call History) -->
+        <div id="calls-tab" class="tab-content hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div id="callsList" style="flex: 1; overflow-y: auto;"></div>
         </div>
     </aside>
 
@@ -58,7 +87,7 @@
           <i data-feather="message-square" style="width: 60px; height: 60px;"></i>
         </div>
         <h2>Selamat Datang di FluxChat</h2>
-        <p>Pilih kontak di menu sebelah kiri untuk memulai chat.</p>
+        <p>Cari teman atau pilih kontak untuk memulai obrolan.</p>
       </div>
 
       <div class="chat-room hidden" id="chatRoom">
@@ -67,7 +96,7 @@
             <i data-feather="arrow-left"></i>
           </button>
           
-          <div class="chat-info">
+          <div class="chat-info" onclick="openUserProfile()">
             <div class="avatar small" id="chatAvatar">U</div>
             <div>
               <h3 id="chatName">User</h3>
@@ -76,13 +105,12 @@
           </div>
           
           <div class="header-actions">
-            <button class="icon-btn" onclick="startCall('voice')"><i data-feather="phone"></i></button>
-            <button class="icon-btn" onclick="startCall('video')"><i data-feather="video"></i></button>
+            <button class="icon-btn" id="voiceCallBtn" onclick="if(selectedGroup) startGroupCall('voice'); else startCall('voice');"><i data-feather="phone"></i></button>
+            <button class="icon-btn" id="videoCallBtn" onclick="if(selectedGroup) startGroupCall('video'); else startCall('video');"><i data-feather="video"></i></button>
           </div>
         </header>
 
-        <div class="messages-container" id="messagesContainer">
-          </div>
+        <div class="messages-container" id="messagesContainer"></div>
 
         <div id="filePreview" class="file-preview hidden">
           <div style="display:flex; align-items:center; gap:10px;">
@@ -93,11 +121,10 @@
         </div>
 
         <div class="input-area">
-          <label for="fileInput" class="icon-btn">
+          <label for="fileInput" class="icon-btn" style="cursor: pointer;">
             <i data-feather="paperclip"></i>
           </label>
           <input type="file" id="fileInput" hidden>
-          
           <input type="text" id="messageInput" placeholder="Ketik pesan..." autocomplete="off">
           <button class="send-btn" onclick="sendMessage()">
             <i data-feather="send"></i>
@@ -107,36 +134,16 @@
     </main>
   </div>
 
-  <div id="addUserModal" class="modal hidden">
-    <div class="glass-panel" style="max-width: 350px;">
-      <h2 style="margin-top: 0; margin-bottom: 20px;">Tambah Pengguna</h2>
-      <form id="addUserForm" style="display: flex; flex-direction: column; gap: 15px;">
-        <div>
-          <label style="display: block; margin-bottom: 5px; font-size: 0.9rem; color: #94a3b8;">Nama</label>
-          <input type="text" id="addNama" placeholder="Masukkan nama pengguna" style="width: 100%; padding: 10px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: white; outline: none;">
-        </div>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button type="button" onclick="closeAddUserModal()" class="btn-secondary" style="padding: 10px 20px; border: 1px solid #334155; border-radius: 8px; background: transparent; color: white; cursor: pointer; transition: 0.2s;">
-            Batal
-          </button>
-          <button type="submit" class="btn-primary" style="padding: 10px 20px; border: none; border-radius: 8px; background: #6366f1; color: white; cursor: pointer; transition: 0.2s;">
-            Tambah
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <div id="callModal" class="modal hidden">
-    <div class="glass-panel">
+    <div class="glass-panel" style="padding: 40px 30px;">
       <div class="video-container hidden" id="videoContainer">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay muted playsinline></video>
       </div>
 
-      <div class="call-status" id="callStatus" style="margin-bottom: 15px; color: #94a3b8;">Memanggil...</div>
-      <div class="avatar large pulse" id="callAvatar" style="font-size: 2rem; width: 80px; height: 80px; margin: 0 auto;">U</div>
-      <h2 id="callTargetName" style="margin-top: 15px;">User Name</h2>
+      <div class="call-status" id="callStatus" style="margin-bottom: 20px; color: #94a3b8;">Memanggil...</div>
+      <div class="avatar large pulse" id="callAvatar" style="font-size: 2rem; width: 80px; height: 80px; margin-bottom: 20px;">U</div>
+      <h2 id="callTargetName" style="margin: 0 0 10px 0; font-size: 1.3rem; font-weight: 600;">User Name</h2>
 
       <div id="incomingActions" class="call-actions hidden">
         <button class="btn-call reject" onclick="rejectCall()"><i data-feather="phone-off"></i></button>
@@ -147,6 +154,185 @@
         <button class="btn-call secondary" onclick="toggleMute()" id="muteBtn"><i data-feather="mic"></i></button>
         <button class="btn-call reject" onclick="endCall()"><i data-feather="phone-off"></i></button>
         <button class="btn-call secondary" onclick="toggleCamera()" id="camBtn"><i data-feather="video"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="profileModal" class="modal hidden">
+    <div class="glass-panel" style="width: 90%; max-width: 450px; border-radius: 20px; overflow: hidden; background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(148, 163, 184, 0.2); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+      
+      <!-- Close Button -->
+      <button class="icon-btn close-modal" onclick="closeProfileModal()" style="position: absolute; top: 15px; right: 15px; background: rgba(100, 116, 139, 0.3); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10; border: none; cursor: pointer;">
+        <i data-feather="x" style="width: 20px; height: 20px;"></i>
+      </button>
+
+      <!-- Header with Avatar -->
+      <div style="padding: 30px 25px; background: transparent; border-bottom: 1px solid rgba(148, 163, 184, 0.2); text-align: center;">
+        <div style="position: relative; width: 80px; height: 80px; margin: 0 auto 15px;">
+          <div class="avatar large" id="profileAvatarDisplay" style="font-size: 3.5rem; width: 160px; height: 160px; background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3); background-image: url(''); background-size: cover; background-position: center;">U</div>
+          <label for="profilePhotoInput" style="position: absolute; bottom: 0; right: 0; width: 32px; height: 32px; background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid rgba(30, 41, 59, 0.95); transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+            <i data-feather="camera" style="width: 16px; height: 16px; color: white;"></i>
+          </label>
+          <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;">
+        </div>
+        <h2 style="margin: 0 0 8px 0; font-size: 1.3rem; font-weight: 700; color: #f1f5f9;">Profile saya</h2>
+        <p style="margin: 0; color: #94a3b8; font-size: 0.9rem;">@<span id="profileUsernameDisplay">user</span></p>
+      </div>
+
+      <!-- Form Section -->
+      <div style="padding: 25px;">
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+            <i data-feather="image" style="width: 16px; height: 16px; color: #818cf8;"></i>
+            Foto Profil
+          </label>
+          <div class="profile-photo-preview" id="profilePhotoPreview">
+            <img id="profilePhotoImg" src="" class="profile-photo-img">
+            <div id="profilePhotoPlaceholder" class="profile-photo-placeholder">
+              <i data-feather="upload-cloud" style="width: 40px; height: 40px; margin-bottom: 8px;"></i>
+              <p style="margin: 0; font-size: 1rem;">Klik untuk upload foto</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+            <i data-feather="user" style="width: 16px; height: 16px; color: #818cf8;"></i>
+            Nama Lengkap
+          </label>
+          <input type="text" id="editNama" placeholder="Nama kamu" style="width: 100%; padding: 12px 16px; background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 10px; color: #f1f5f9; font-size: 0.95rem; transition: all 0.3s ease; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+            <i data-feather="lock" style="width: 16px; height: 16px; color: #818cf8;"></i>
+            Password Baru (Opsional)
+          </label>
+          <input type="password" id="editPassword" placeholder="Kosongkan jika tidak diubah" style="width: 100%; padding: 12px 16px; background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 10px; color: #f1f5f9; font-size: 0.95rem; transition: all 0.3s ease; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 25px;">
+          <label style="display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+            <i data-feather="mail" style="width: 16px; height: 16px; color: #818cf8;"></i>
+            Email
+          </label>
+          <p id="editEmail" style="margin: 0; color: #cbd5e1; font-size: 0.95rem; font-weight: 500; word-break: break-all; padding: 12px 16px; background: rgba(148, 163, 184, 0.05); border-radius: 10px; border: 1px solid rgba(148, 163, 184, 0.2);">user@example.com</p>
+        </div>
+
+        <!-- Divider -->
+        <div style="height: 1px; background: rgba(148, 163, 184, 0.1); margin-bottom: 20px;"></div>
+
+        <!-- Modal Footer -->
+        <div style="display: flex; gap: 12px;">
+          <button class="icon-btn close-modal" onclick="closeProfileModal()" style="flex: 1; background: rgba(100, 116, 139, 0.2); border-radius: 10px; padding: 12px; font-size: 0.95rem; font-weight: 600; color: #94a3b8; transition: all 0.3s ease; border: 1px solid rgba(100, 116, 139, 0.3); cursor: pointer;">
+            <i data-feather="x" style="width: 18px; height: 18px; margin-right: 8px; display: inline;"></i> Batal
+          </button>
+          <button id="saveProfile" style="flex: 1; background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%); border-radius: 10px; padding: 12px; font-size: 0.95rem; font-weight: 600; color: white; transition: all 0.3s ease; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i data-feather="check" style="width: 18px; height: 18px;"></i> Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Create Group -->
+  <div id="createGroupModal" class="modal hidden">
+    <div class="glass-panel" style="width: 90%; max-width: 400px;">
+      <h2 style="margin-bottom: 20px;">Buat Group Chat</h2>
+      
+      <div class="form-group">
+        <label>Nama Group</label>
+        <input type="text" id="groupNameInput" placeholder="Nama group..." maxlength="50">
+      </div>
+
+      <div class="form-group">
+        <label>Pilih Anggota</label>
+        <div id="membersListContainer" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+          <!-- Dinamis diisi dari JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="icon-btn close-modal" style="background: var(--bg-dark); border-radius: 5px; width: auto; padding: 8px 15px; font-size: 0.9rem;">Batal</button>
+        <button id="createGroupBtn" class="icon-btn" style="background: var(--primary); color: white; border-radius: 5px; width: auto; padding: 8px 15px; font-size: 0.9rem;">Buat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Preview Gambar -->
+  <div id="imagePreviewModal" class="modal hidden">
+    <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+      <button class="icon-btn" onclick="closeImagePreview()" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.5); z-index: 100;">
+        <i data-feather="x" style="width: 24px; height: 24px;"></i>
+      </button>
+      
+      <img id="previewImageSrc" src="" style="max-width: 90%; max-height: 80%; object-fit: contain;">
+      
+      <div style="position: absolute; bottom: 20px; display: flex; gap: 10px; z-index: 100;">
+        <button class="icon-btn" onclick="downloadPreviewImage()" style="background: var(--primary); color: white; padding: 12px 20px; width: auto; border-radius: 8px; font-size: 0.95rem;">
+          <i data-feather="download" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+          Download
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal User Profile (Chat Info) -->
+  <div id="userProfileModal" class="modal hidden">
+    <div class="glass-panel" style="width: 90%; max-width: 420px; border-radius: 20px; overflow: hidden; background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(148, 163, 184, 0.2); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+      
+      <!-- Close Button -->
+      <button class="icon-btn" onclick="closeUserProfile()" style="position: absolute; top: 15px; right: 15px; background: rgba(100, 116, 139, 0.3); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;">
+        <i data-feather="x" style="width: 20px; height: 20px;"></i>
+      </button>
+
+      <!-- Profile Info Section -->
+      <div style="padding: 40px 25px;">
+        
+        <!-- Avatar -->
+        <div style="display: flex; justify-content: center; margin-bottom: 25px;">
+          <div class="avatar large user-profile-avatar" id="userProfileAvatar">U</div>
+        </div>
+
+        <!-- Name and Username -->
+        <h2 id="userProfileName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 700; color: #f1f5f9; letter-spacing: -0.5px; text-align: center;">User Name</h2>
+        <p id="userProfileUsername" style="margin: 0 0 15px 0; color: #94a3b8; font-size: 0.95rem; font-weight: 500; text-align: center;">@username</p>
+        
+        <!-- Status Badge -->
+        <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+          <span id="userProfileStatus" style="display: inline-block; padding: 6px 16px; border-radius: 20px; background: rgba(34, 197, 94, 0.2); color: #22c55e; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px;">Online</span>
+        </div>
+
+        <!-- Divider -->
+        <div style="height: 1px; background: rgba(148, 163, 184, 0.1); margin-bottom: 25px;"></div>
+        
+        <!-- Email -->
+        <div style="margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <i data-feather="mail" style="width: 18px; height: 18px; color: #818cf8;"></i>
+            <label style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Email</label>
+          </div>
+          <p id="userProfileEmail" style="margin: 0; color: #cbd5e1; font-size: 0.95rem; font-weight: 500; word-break: break-all;">user@example.com</p>
+        </div>
+
+        <!-- Last Seen -->
+        <div style="margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <i data-feather="clock" style="width: 18px; height: 18px; color: #818cf8;"></i>
+            <label style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Last Seen</label>
+          </div>
+          <p id="userProfileLastSeen" style="margin: 0; color: #cbd5e1; font-size: 0.95rem; font-weight: 500;">Just now</p>
+        </div>
+
+        <!-- Divider -->
+        <div style="height: 1px; background: rgba(148, 163, 184, 0.1); margin: 25px 0;"></div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 12px;">
+          <button class="icon-btn" id="blockUserBtn" onclick="blockUser()" style="flex: 1; background: rgba(239, 68, 68, 0.15); border-radius: 10px; padding: 12px; font-size: 0.95rem; font-weight: 600; color: #ff6b6b; transition: all 0.3s ease; border: 1px solid rgba(239, 68, 68, 0.3);">
+            <i data-feather="slash" style="width: 18px; height: 18px; margin-right: 8px; display: inline;"></i> Block
+          </button>
+        </div>
       </div>
     </div>
   </div>

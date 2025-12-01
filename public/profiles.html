@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - FluxChat</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .profile-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .profile-content {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .close-btn-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .close-btn {
+            background: rgba(100, 116, 139, 0.3);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .close-btn:hover {
+            background: rgba(100, 116, 139, 0.5);
+        }
+
+        .avatar-container {
+            margin-bottom: 40px;
+        }
+
+        .profile-avatar {
+            font-size: 8rem;
+            width: 360px;
+            height: 360px;
+            background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 60px rgba(99, 102, 241, 0.4);
+            border-radius: 50%;
+            margin: 0 auto;
+        }
+
+        .profile-name {
+            margin: 0 0 12px 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: -0.5px;
+        }
+
+        .profile-username {
+            margin: 0 0 20px 0;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 40px;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(148, 163, 184, 0.1);
+            margin: 40px 0;
+        }
+
+        .info-item {
+            margin-bottom: 40px;
+        }
+
+        .info-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .info-label i {
+            width: 20px;
+            height: 20px;
+            color: #818cf8;
+        }
+
+        .info-value {
+            margin: 0;
+            color: #cbd5e1;
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            border: 1px solid;
+            border-radius: 10px;
+            padding: 14px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-block {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ff6b6b;
+        }
+
+        .btn-block:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-back {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.3);
+            color: #818cf8;
+        }
+
+        .btn-back:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        /* Tablet */
+        @media (max-width: 768px) {
+            .profile-avatar {
+                font-size: 6rem;
+                width: 280px;
+                height: 280px;
+            }
+
+            .profile-name {
+                font-size: 2rem;
+            }
+
+            .profile-username {
+                font-size: 1rem;
+            }
+
+            .close-btn {
+                width: 44px;
+                height: 44px;
+            }
+
+            .close-btn i {
+                width: 20px;
+                height: 20px;
+            }
+
+            .info-item {
+                margin-bottom: 30px;
+            }
+
+            .divider {
+                margin: 30px 0;
+            }
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            .profile-container {
+                padding: 80px 16px 20px 16px;
+            }
+
+            .profile-avatar {
+                font-size: 5rem;
+                width: 220px;
+                height: 220px;
+            }
+
+            .profile-name {
+                font-size: 1.6rem;
+            }
+
+            .profile-username {
+                font-size: 0.9rem;
+            }
+
+            .info-label {
+                font-size: 0.75rem;
+            }
+
+            .info-value {
+                font-size: 0.95rem;
+            }
+
+            .btn {
+                padding: 12px 16px;
+                font-size: 0.9rem;
+            }
+
+            .action-buttons {
+                gap: 8px;
+            }
+
+            .info-item {
+                margin-bottom: 25px;
+            }
+
+            .divider {
+                margin: 25px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="profile-container">
+        <div class="profile-content">
+            
+            <!-- Close Button -->
+            <div class="close-btn-container">
+                <button class="close-btn" onclick="window.history.back()">
+                    <i data-feather="x" style="width: 24px; height: 24px;"></i>
+                </button>
+            </div>
+
+            <!-- Avatar -->
+            <div class="avatar-container">
+                <div class="profile-avatar" id="userProfileAvatar">U</div>
+            </div>
+
+            <!-- Name and Username -->
+            <h1 class="profile-name" id="userProfileName">User Name</h1>
+            <p class="profile-username" id="userProfileUsername">@username</p>
+            
+            <!-- Status Badge -->
+            <div style="margin-bottom: 40px;">
+                <span class="status-badge" id="userProfileStatus">Online</span>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider"></div>
+            
+            <!-- Email -->
+            <div class="info-item">
+                <div class="info-label">
+                    <i data-feather="mail"></i>
+                    Email
+                </div>
+                <p class="info-value" id="userProfileEmail">user@example.com</p>
+            </div>
+
+            <!-- Last Seen -->
+            <div class="info-item">
+                <div class="info-label">
+                    <i data-feather="clock"></i>
+                    Last Seen
+                </div>
+                <p class="info-value" id="userProfileLastSeen">Just now</p>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-block" id="blockUserBtn" onclick="blockUser()">
+                    <i data-feather="lock"></i>
+                    Block User
+                </button>
+                <button class="btn btn-back" onclick="window.history.back()">
+                    <i data-feather="arrow-left"></i>
+                    Back to Chat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get user data from localStorage
+        function getProfileData() {
+            const userData = JSON.parse(localStorage.getItem('selectedUserProfile') || '{}');
+            return userData;
+        }
+
+        function displayProfile() {
+            const user = getProfileData();
+            if (!user.username) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Avatar
+            const avatarEl = document.getElementById('userProfileAvatar');
+            if (avatarEl) {
+                if (user.avatar && user.avatar !== 'default' && (user.avatar.startsWith('data:') || user.avatar.startsWith('http'))) {
+                    avatarEl.style.backgroundImage = `url("${user.avatar}")`;
+                    avatarEl.style.backgroundSize = 'cover';
+                    avatarEl.style.backgroundPosition = 'center';
+                    avatarEl.textContent = '';
+                } else {
+                    const initial = user.nama ? user.nama.charAt(0).toUpperCase() : 'U';
+                    avatarEl.textContent = initial;
+                }
+            }
+
+            // Name
+            const nameEl = document.getElementById('userProfileName');
+            if (nameEl) nameEl.textContent = user.nama || 'Unknown User';
+
+            // Username
+            const usernameEl = document.getElementById('userProfileUsername');
+            if (usernameEl) usernameEl.textContent = `@${user.username || 'user'}`;
+
+            // Email
+            const emailEl = document.getElementById('userProfileEmail');
+            if (emailEl) emailEl.textContent = user.email || 'Not provided';
+
+            // Last Seen
+            const lastSeenEl = document.getElementById('userProfileLastSeen');
+            if (lastSeenEl) {
+                if (user.lastSeen) {
+                    const date = new Date(user.lastSeen);
+                    const now = new Date();
+                    const diff = now - date;
+                    const seconds = Math.floor(diff / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const hours = Math.floor(minutes / 60);
+                    const days = Math.floor(hours / 24);
+
+                    let timeStr = 'Just now';
+                    if (seconds < 60) timeStr = 'Just now';
+                    else if (minutes < 60) timeStr = `${minutes}m ago`;
+                    else if (hours < 24) timeStr = `${hours}h ago`;
+                    else timeStr = `${days}d ago`;
+
+                    lastSeenEl.textContent = timeStr;
+                } else {
+                    lastSeenEl.textContent = 'Unknown';
+                }
+            }
+
+            // Status
+            const statusEl = document.getElementById('userProfileStatus');
+            if (statusEl) {
+                statusEl.textContent = user.status === 'online' ? 'Online' : 'Offline';
+                if (user.status === 'online') {
+                    statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
+                    statusEl.style.color = '#22c55e';
+                } else {
+                    statusEl.style.background = 'rgba(100, 116, 139, 0.2)';
+                    statusEl.style.color = '#64748b';
+                }
+            }
+        }
+
+        function blockUser() {
+            const user = getProfileData();
+            if (confirm(`Block ${user.nama}? You won't be able to see their messages.`)) {
+                // TODO: Call API to block user
+                alert('User blocked!');
+                window.history.back();
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if(typeof feather !== 'undefined') feather.replace();
+            displayProfile();
+        });
+    </script>
+</body>
+</html>

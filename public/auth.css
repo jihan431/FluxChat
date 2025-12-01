@@ -24,47 +24,34 @@ body {
   overflow: hidden;
 }
 
-/* --- MODERN BACKGROUND ANIMATION --- */
-.background-blobs .blob {
-  position: absolute;
-  filter: blur(80px);
-  opacity: 0.5;
-  border-radius: 50%;
-}
-.blob-1 { width: 350px; height: 350px; background: #a855f7; top: -80px; left: -80px; }
-.blob-2 { width: 450px; height: 450px; background: #3b82f6; bottom: -100px; right: -100px; }
 
-@keyframes float-organic {
-  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  50% { transform: translate(40px, 30px) scale(1.1) rotate(10deg); }
-  100% { transform: translate(-20px, 50px) scale(0.9) rotate(-10deg); }
-}
-
-.auth-container {
-  width: 100%;
-  max-width: 550px; /* Sedikit lebih ramping agar lebih elegan */
-  padding: 20px;
-  z-index: 10;
-}
 
 .otp-message { padding-bottom: 20px; line-height: 1.5; color: var(--text-light);}
 
 /* --- GLASSMORPHISM CARD WITH ENTRANCE ANIMATION --- */
 .auth-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 24px;
-  padding: 20px 30px;
-  box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.4), 
-    inset 0 0 0 1px rgba(255,255,255,0.05);
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 40px 50px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
   
-  /* Animasi Masuk */
+  /* Animasi Masuk - Simplified */
   opacity: 0;
-  transform: translateY(20px);
-  animation: cardEntrance 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transform: translateY(10px);
+  animation: cardEntrance 0.5s ease-out forwards;
+  
+  /* Smooth height transition */
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: auto;
+  
+  /* Untuk efek scaling saat height berubah */
+  transform-origin: center top;
+  
+  /* PC display - larger card */
+  width: 500px;
+  max-width: 90vw;
 }
 
 @keyframes cardEntrance {
@@ -74,15 +61,18 @@ body {
 .auth-header { text-align: center; margin-bottom: 30px; }
 .logo-wrapper { 
   background: linear-gradient(135deg, var(--primary), #a855f7);
-  width: 50px; height: 50px; 
-  border-radius: 14px; 
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 15px;
-  box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
+  width: 45px; 
+  height: 45px; 
+  border-radius: 12px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  margin: 0 auto 12px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
-.app-logo { width: 28px; color: white; }
-h1 { margin: 0; font-size: 1.8rem; font-weight: 600; letter-spacing: -0.5px; }
-.subtitle { color: var(--text-dim); font-size: 0.9rem; margin-top: 8px; }
+.app-logo { width: 24px; color: white; }
+h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
+.subtitle { color: var(--text-dim); font-size: 0.85rem; margin-top: 6px; }
 
 .auth-tabs {
   display: flex;
@@ -90,6 +80,25 @@ h1 { margin: 0; font-size: 1.8rem; font-weight: 600; letter-spacing: -0.5px; }
   padding: 4px;
   border-radius: 14px;
   margin-bottom: 25px;
+  position: relative;
+}
+
+.auth-tabs::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: 10px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.auth-tabs.tab-daftar::after {
+  left: calc(50% + 2px);
 }
 
 .tab-btn {
@@ -100,120 +109,160 @@ h1 { margin: 0; font-size: 1.8rem; font-weight: 600; letter-spacing: -0.5px; }
   padding: 12px;
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 500;
+  position: relative;
+  z-index: 1;
 }
 
 .tab-btn.active {
-  background: rgba(255, 255, 255, 0.1);
   color: white;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 /* Floating Label Inputs */
-.input-group { position: relative; margin-bottom: 20px; }
+.input-group { position: relative; margin-bottom: 16px; }
 input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  padding: 16px 16px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 14px 14px;
   color: white;
-  font-size: 1rem;
+  font-size: 0.95rem;
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 input:focus { 
   border-color: var(--primary); 
-  background: rgba(0, 0, 0, 0.3);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 label {
   position: absolute;
-  left: 16px;
-  top: 16px;
+  left: 14px;
+  top: 14px;
   color: var(--text-dim);
   pointer-events: none;
-  transition: 0.3s ease;
-  font-size: 1rem;
+  transition: 0.2s ease;
+  font-size: 0.95rem;
 }
 input:focus ~ label, input:not(:placeholder-shown) ~ label {
-  top: -10px;
-  left: 12px;
-  font-size: 0.75rem;
-  background: var(--bg-dark); /* Fallback jika blur tidak support */
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: var(--primary);
+  top: -8px;
+  left: 10px;
+  font-size: 0.65rem;
+  background: var(--primary);
+  padding: 2px 6px;
+  border-radius: 20px;
+  color: white;
   font-weight: 600;
 }
 
 .btn-submit {
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   border: none;
-  border-radius: 14px;
+  border-radius: 10px;
   color: white;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 
 .btn-submit:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px -5px rgba(99, 102, 241, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
 }
 
-.btn-submit:active { transform: translateY(1px) scale(0.98); }
+.btn-submit:active { 
+  transform: translateY(0px);
+}
 
 .hidden { display: none; }
+
+/* --- FORM TRANSITION ANIMATIONS --- */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.auth-form.hidden {
+  display: none;
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+/* Animasi staggered pada input-group */
+.auth-form:not(.hidden) .input-group {
+  animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+}
+
+.auth-form:not(.hidden) .input-group:nth-child(1) { animation-delay: 0.1s; }
+.auth-form:not(.hidden) .input-group:nth-child(2) { animation-delay: 0.2s; }
+.auth-form:not(.hidden) .input-group:nth-child(3) { animation-delay: 0.3s; }
+.auth-form:not(.hidden) .input-group:nth-child(4) { animation-delay: 0.4s; }
+
+.auth-form:not(.hidden) .btn-submit {
+  animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.5s;
+  opacity: 0;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 .auth-footer { margin-top: 30px; text-align: center; font-size: 0.85rem; color: var(--text-dim); }
 .auth-footer a { color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.2s; }
 .auth-footer a:hover { color: #a855f7; }
 
-/* --- MODERN TOAST NOTIFICATION --- */
+/* --- MODERN TOAST NOTIFICATION - OPTIMIZED --- */
 #toastBox { 
   position: fixed; 
-  top: 30px; 
-  right: 30px; 
+  top: 20px; 
+  right: 20px; 
   display: flex; 
   flex-direction: column; 
-  gap: 12px; 
+  gap: 10px; 
   z-index: 9999; 
 }
 
 .toast {
-  min-width: 320px;
-  background: rgba(15, 23, 42, 0.85);
+  min-width: 300px;
+  background: rgba(15, 23, 42, 0.9);
   color: #f8fafc;
-  padding: 16px 20px;
-  border-radius: 16px;
-  font-size: 0.95rem;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
   font-weight: 500;
-  
-  /* Glassmorphism style */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 
-    0 10px 30px -5px rgba(0, 0, 0, 0.5),
-    0 4px 10px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   position: relative;
   overflow: hidden;
 
-  /* Spring Animation */
+  /* Spring Animation - Simplified */
   transform-origin: top center;
-  animation: toastSpring 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: toastSpring 0.4s ease-out forwards;
 }
 
 /* Accent line pada toast */
@@ -221,30 +270,31 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   content: '';
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  width: 4px;
+  width: 3px;
 }
-.toast.success::before { background: var(--success-color); box-shadow: 0 0 15px var(--success-color); }
-.toast.error::before { background: var(--error-color); box-shadow: 0 0 15px var(--error-color); }
+.toast.success::before { background: var(--success-color); }
+.toast.error::before { background: var(--error-color); }
 .toast.info::before { background: var(--info-color); }
 
 .toast-icon {
   display: flex; 
   align-items: center; 
   justify-content: center;
+  flex-shrink: 0;
 }
 
 @keyframes toastSpring {
-  0% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+  0% { opacity: 0; transform: translateY(-15px) scale(0.95); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .toast.hide {
-  animation: toastExit 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: toastExit 0.3s ease-in forwards;
 }
 
 @keyframes toastExit {
   0% { opacity: 1; transform: translateX(0); }
-  100% { opacity: 0; transform: translateX(100%) scale(0.9); }
+  100% { opacity: 0; transform: translateX(110%) scale(0.9); }
 }
 
 /* --- RESPONSIVE DESIGN --- */
@@ -252,130 +302,54 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
 /* Mobile (Android) - max-width: 768px */
 @media (max-width: 768px) {
   body {
-    padding: 10px;
-    overflow-y: auto; /* Allow scrolling if needed */
-    overflow-x: hidden; /* Prevent horizontal scroll */
+    padding: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
     min-height: 100vh;
     height: auto;
-    align-items: center; /* Align to top on mobile for better usability */
-  }
-
-  .auth-container {
-    max-width: 100%;
-    padding: 10px;
-    width: 100%;
+    align-items: center;
   }
 
   .auth-card {
-    padding: 20px 20px;
-    border-radius: 20px;
+    padding: 18px 18px;
+    border-radius: 14px;
     max-width: 100%;
     box-sizing: border-box;
+    width: auto;
   }
 
   .auth-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .logo-wrapper {
-    width: 45px;
-    height: 45px;
+    width: 40px;
+    height: 40px;
   }
 
   .app-logo {
-    width: 24px;
+    width: 20px;
   }
 
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
 
   .subtitle {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .auth-tabs {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .tab-btn {
     padding: 10px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
   .input-group {
-    margin-bottom: 15px;
-  }
-
-  input {
-    padding: 14px 14px;
-    font-size: 0.95rem;
-  }
-
-  label {
-    left: 14px;
-    top: 14px;
-    font-size: 0.95rem;
-  }
-
-  input:focus ~ label, input:not(:placeholder-shown) ~ label {
-    top: -8px;
-    left: 10px;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-  }
-
-  .btn-submit {
-    padding: 14px;
-    font-size: 0.95rem;
-  }
-
-  .auth-footer {
-    margin-top: 20px;
-    font-size: 0.8rem;
-  }
-
-  /* Adjust background blobs for mobile */
-  .blob-1 {
-    width: 250px;
-    height: 250px;
-    top: -50px;
-    left: -50px;
-  }
-
-  .blob-2 {
-    width: 300px;
-    height: 300px;
-    bottom: -50px;
-    right: -50px;
-  }
-
-  /* Toast adjustments for mobile */
-  #toastBox {
-    top: 20px;
-    right: 20px;
-    left: 20px;
-    right: auto;
-  }
-
-  .toast {
-    min-width: auto;
-    width: 100%;
-  }
-}
-
-/* Small mobile devices - max-width: 480px */
-@media (max-width: 480px) {
-  .auth-card {
-    padding: 15px 15px;
-  }
-
-  h1 {
-    font-size: 1.3rem;
-  }
-
-  .subtitle {
-    font-size: 0.8rem;
+    margin-bottom: 12px;
   }
 
   input {
@@ -392,8 +366,8 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   input:focus ~ label, input:not(:placeholder-shown) ~ label {
     top: -6px;
     left: 8px;
-    font-size: 0.65rem;
-    padding: 1px 4px;
+    font-size: 0.6rem;
+    padding: 1px 5px;
   }
 
   .btn-submit {
@@ -402,6 +376,158 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   }
 
   .auth-footer {
+    margin-top: 16px;
     font-size: 0.75rem;
   }
+
+  #toastBox {
+    top: 15px;
+    right: 15px;
+    left: 15px;
+    right: auto;
+  }
+
+  .toast {
+    min-width: auto;
+    width: 100%;
+    font-size: 0.85rem;
+    padding: 12px 14px;
+  }
+}
+
+/* Small mobile devices - max-width: 480px */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 14px 14px;
+  }
+
+  .auth-header {
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+  }
+
+  input {
+    padding: 11px 11px;
+    font-size: 0.85rem;
+  }
+
+  label {
+    left: 11px;
+    top: 11px;
+    font-size: 0.85rem;
+  }
+
+  input:focus ~ label, input:not(:placeholder-shown) ~ label {
+    top: -5px;
+    left: 7px;
+    font-size: 0.55rem;
+    padding: 1px 4px;
+  }
+
+  .btn-submit {
+    padding: 11px;
+    font-size: 0.85rem;
+  }
+
+  .tab-btn {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+
+  .auth-footer {
+    font-size: 0.7rem;
+  }
+}
+
+/* Optimized Background dengan Gradient Animasi */
+body {
+  background: linear-gradient(-45deg, #0f172a, #1e293b, #312e81, #0f172a);
+  background-size: 300% 300%;
+  animation: gradientBG 20s ease infinite;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Outfit', sans-serif;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Efek Partikel Melayang - Optimized untuk Low-End Device */
+.circles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.circles li {
+  position: absolute;
+  display: block;
+  list-style: none;
+  background: rgba(99, 102, 241, 0.15);
+  animation: animate 25s linear infinite;
+  bottom: -150px;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+/* Partikel lebih banyak untuk visual lebih menarik */
+.circles li:nth-child(1) { left: 25%; width: 60px; height: 60px; animation-delay: 0s; }
+.circles li:nth-child(2) { left: 10%; width: 18px; height: 18px; animation-delay: 2s; animation-duration: 100s; }
+.circles li:nth-child(3) { left: 60%; width: 18px; height: 18px; animation-delay: 4s; }
+.circles li:nth-child(4) { left: 40%; width: 50px; height: 50px; animation-delay: 0s; animation-duration: 18s; }
+.circles li:nth-child(5) { left: 55%; width: 18px; height: 18px; animation-delay: 0s; }
+.circles li:nth-child(6) { left: 65%; width: 80px; height: 80px; animation-delay: 3s; }
+.circles li:nth-child(7) { left: 35%; width: 100px; height: 100px; animation-delay: 7s; }
+.circles li:nth-child(8) { left: 50%; width: 22px; height: 22px; animation-delay: 15s; animation-duration: 45s; }
+.circles li:nth-child(9) { left: 20%; width: 14px; height: 14px; animation-delay: 2s; animation-duration: 35s; }
+.circles li:nth-child(10) { left: 85%; width: 90px; height: 90px; animation-delay: 0s; animation-duration: 11s; }
+.circles li:nth-child(11) { left: 15%; width: 40px; height: 40px; animation-delay: 5s; }
+.circles li:nth-child(12) { left: 75%; width: 25px; height: 25px; animation-delay: 1s; animation-duration: 50s; }
+.circles li:nth-child(13) { left: 45%; width: 70px; height: 70px; animation-delay: 8s; }
+.circles li:nth-child(14) { left: 30%; width: 20px; height: 20px; animation-delay: 3s; animation-duration: 40s; }
+.circles li:nth-child(15) { left: 70%; width: 55px; height: 55px; animation-delay: 6s; }
+.circles li:nth-child(16) { left: 12%; width: 35px; height: 35px; animation-delay: 4s; animation-duration: 32s; }
+.circles li:nth-child(17) { left: 80%; width: 30px; height: 30px; animation-delay: 7s; animation-duration: 55s; }
+.circles li:nth-child(18) { left: 52%; width: 16px; height: 16px; animation-delay: 9s; }
+.circles li:nth-child(19) { left: 38%; width: 65px; height: 65px; animation-delay: 2s; animation-duration: 28s; }
+.circles li:nth-child(20) { left: 22%; width: 28px; height: 28px; animation-delay: 10s; animation-duration: 42s; }
+
+@keyframes animate {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-1000px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Login Container di depan */
+.login-container, .glass-panel {
+  position: relative;
+  z-index: 10;
+}
+
+/* Background blobs tersembunyi */
+.background-blobs {
+  display: none;
 }

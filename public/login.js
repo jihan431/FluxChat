@@ -21,25 +21,42 @@ function setMode(mode) {
   const loginForm = document.getElementById('loginForm');
   const registerForm = document.getElementById('registerForm');
   const otpForm = document.getElementById('otpForm');
+  const authCard = document.querySelector('.auth-card');
+  const authTabs = document.querySelector('.auth-tabs');
   const tabButtons = document.querySelectorAll('.tab-btn');
 
   tabButtons.forEach(btn => btn.classList.remove('active'));
 
+  // Function untuk update card height
+  const updateCardHeight = (form) => {
+    // Hitung height dari form yang akan ditampilkan
+    setTimeout(() => {
+      const height = form.scrollHeight + 150; // 150px untuk header dan padding
+      authCard.style.minHeight = height + 'px';
+    }, 0);
+  };
+
   if (mode === 'login') {
     tabButtons[0].classList.add('active');
-    loginForm.classList.remove('hidden');
+    authTabs.classList.remove('tab-daftar');
     registerForm.classList.add('hidden');
     otpForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+    updateCardHeight(loginForm);
   } else if (mode === 'register') {
     tabButtons[1].classList.add('active');
+    authTabs.classList.add('tab-daftar');
     loginForm.classList.add('hidden');
-    registerForm.classList.remove('hidden');
     otpForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+    updateCardHeight(registerForm);
   } else if (mode === 'otp') {
     tabButtons.forEach(btn => btn.classList.remove('active'));
+    authTabs.classList.remove('tab-daftar');
     loginForm.classList.add('hidden');
     registerForm.classList.add('hidden');
     otpForm.classList.remove('hidden');
+    updateCardHeight(otpForm);
   }
 }
 
@@ -53,14 +70,14 @@ function showNotification(message, type = 'info') {
   const toast = document.createElement('div');
   toast.classList.add('toast', type);
 
-  // Icon SVG based on type
+  // Icon SVG based on type - Inline untuk performa lebih baik
   let iconHtml = '';
   if (type === 'success') {
-    iconHtml = `<i data-feather="check-circle" style="color: #4ade80"></i>`;
+    iconHtml = `<span style="color: #4ade80; font-size: 1.2rem;">✓</span>`;
   } else if (type === 'error') {
-    iconHtml = `<i data-feather="alert-circle" style="color: #f87171"></i>`;
+    iconHtml = `<span style="color: #f87171; font-size: 1.2rem;">✕</span>`;
   } else {
-    iconHtml = `<i data-feather="info" style="color: #60a5fa"></i>`;
+    iconHtml = `<span style="color: #60a5fa; font-size: 1.2rem;">ℹ</span>`;
   }
 
   toast.innerHTML = `
@@ -70,18 +87,13 @@ function showNotification(message, type = 'info') {
 
   toastBox.appendChild(toast);
 
-  // Render icon feather
-  if (typeof feather !== 'undefined') {
-    feather.replace();
-  }
-
-  // Auto remove after 4s
+  // Auto remove after 3.5s
   setTimeout(() => {
     toast.classList.add('hide');
     toast.addEventListener('animationend', () => {
       toast.remove();
     });
-  }, 4000);
+  }, 3500);
 }
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -210,7 +222,10 @@ if (localStorage.getItem('currentUser')) {
   window.location.href = 'index.html';
 }
 
-// Inisialisasi icon saat load
+// Set initial card height saat halaman dimuat
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof feather !== 'undefined') feather.replace();
+  const loginForm = document.getElementById('loginForm');
+  const authCard = document.querySelector('.auth-card');
+  const initialHeight = loginForm.scrollHeight + 150;
+  authCard.style.minHeight = initialHeight + 'px';
 });
