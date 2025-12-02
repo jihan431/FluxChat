@@ -64,6 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load Call History
   loadCallHistory();
 
+  // Cek lebar layar saat pertama kali load
+  checkScreenSize();
+  
+  // Event listener untuk resize window
+  window.addEventListener('resize', checkScreenSize);
+
   // --- Event Listeners ---
   document.getElementById('messageInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
@@ -128,15 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const avatarDisplay = document.getElementById('profileAvatarDisplay');
           avatarDisplay.style.backgroundImage = `url('${evt.target.result}')`;
           avatarDisplay.textContent = '';
-          
-          // Update photo preview in form
-          const profilePhotoImg = document.getElementById('profilePhotoImg');
-          const profilePhotoPlaceholder = document.getElementById('profilePhotoPlaceholder');
-          
-          profilePhotoImg.src = evt.target.result;
-          profilePhotoImg.style.display = 'block';
-          profilePhotoPlaceholder.style.display = 'none';
-        };
+        }
         reader.readAsDataURL(file);
       }
     });
@@ -154,6 +152,32 @@ document.addEventListener('DOMContentLoaded', () => {
     createGroupBtn.addEventListener('click', createGroup);
   }
 });
+
+// --- FUNGSI CEK UKURAN LAYAR ---
+function checkScreenSize() {
+  const isMobile = window.innerWidth <= 768;
+  const sidebar = document.getElementById('sidebar');
+  const chatArea = document.getElementById('chatArea');
+  const chatRoom = document.getElementById('chatRoom');
+  const welcomeScreen = document.getElementById('welcomeScreen');
+  
+  if (isMobile) {
+    // Di mobile, tampilkan sidebar atau chat area sesuai state
+    if (selectedUser || selectedGroup) {
+      // Jika sedang dalam chat, tampilkan chat area
+      sidebar.classList.add('hidden-mobile');
+      chatArea.classList.add('active');
+    } else {
+      // Jika tidak dalam chat, tampilkan sidebar
+      sidebar.classList.remove('hidden-mobile');
+      chatArea.classList.remove('active');
+    }
+  } else {
+    // Di desktop, tampilkan kedua-duanya (sidebar dan chat area)
+    sidebar.classList.remove('hidden-mobile');
+    chatArea.classList.remove('active');
+  }
+}
 
 // --- HELPER: Update Sidebar User Avatar (DEPRECATED - Removed from HTML) ---
 function updateSidebarUserAvatar() {
@@ -237,32 +261,41 @@ function openProfile(e) {
   e.preventDefault();
   document.getElementById('userMenu').classList.add('hidden');
   
+  // Input nama
   const nameInput = document.getElementById('editNama');
-  if(nameInput) nameInput.value = currentUser.nama;
-  
+  if (nameInput) nameInput.value = currentUser.nama;
+
+  // Input password (kosong tiap buka)
   const passInput = document.getElementById('editPassword');
-  if(passInput) passInput.value = '';
+  if (passInput) passInput.value = '';
 
+  // Email (readonly)
   const emailInput = document.getElementById('editEmail');
-  if(emailInput) emailInput.textContent = currentUser.email || 'user@example.com';
+  if (emailInput) emailInput.textContent = currentUser.email || 'user@example.com';
 
+  // Username
   const usernameDisplay = document.getElementById('profileUsernameDisplay');
-  if(usernameDisplay) usernameDisplay.textContent = currentUser.username || 'user';
+  if (usernameDisplay) usernameDisplay.textContent = currentUser.username || 'user';
 
+  // Avatar di atas modal
   const avatarDisplay = document.getElementById('profileAvatarDisplay');
-  if(currentUser.avatar && currentUser.avatar !== 'default' && (currentUser.avatar.startsWith('data:') || currentUser.avatar.startsWith('http'))) {
-    avatarDisplay.setAttribute('style', `
+  if (
+    currentUser.avatar &&
+    currentUser.avatar !== 'default' &&
+    (currentUser.avatar.startsWith('data:') || currentUser.avatar.startsWith('http'))
+  ) {
+    avatarDisplay.style = `
       background-image: url("${currentUser.avatar}") !important;
       background-size: cover !important;
       background-position: center !important;
       background-color: transparent !important;
       display: block !important;
-    `);
+    `;
     avatarDisplay.textContent = '';
   } else {
     const initial = currentUser.nama.charAt(0).toUpperCase();
     const gradient = getAvatarGradient(currentUser.nama || 'User');
-    avatarDisplay.setAttribute('style', `
+    avatarDisplay.style = `
       background: ${gradient} !important;
       display: flex !important;
       align-items: center !important;
@@ -270,26 +303,16 @@ function openProfile(e) {
       color: white !important;
       font-weight: 600 !important;
       font-size: 1.5rem !important;
-    `);
+    `;
     avatarDisplay.textContent = initial;
   }
 
-  // Load profile photo preview
-  const profilePhotoImg = document.getElementById('profilePhotoImg');
-  const profilePhotoPlaceholder = document.getElementById('profilePhotoPlaceholder');
-  if(currentUser.avatar && currentUser.avatar !== 'default' && (currentUser.avatar.startsWith('data:') || currentUser.avatar.startsWith('http'))) {
-    profilePhotoImg.src = currentUser.avatar;
-    profilePhotoImg.style.display = 'block';
-    profilePhotoPlaceholder.style.display = 'none';
-  } else {
-    profilePhotoImg.style.display = 'none';
-    profilePhotoPlaceholder.style.display = 'block';
-  }
-
+  // Buka modal
   const modal = document.getElementById('profileModal');
   modal.classList.remove('hidden');
   modal.classList.add('active');
 }
+
 
 function closeProfileModal() {
   const modal = document.getElementById('profileModal');
@@ -660,7 +683,6 @@ function selectUserFromSearch(userId) {
 }
 
 // Di dalam file app.js
-
 async function sendFriendRequest(e, targetId) {
   e.stopPropagation(); // Mencegah chat terbuka saat klik tombol add
   
@@ -668,18 +690,13 @@ async function sendFriendRequest(e, targetId) {
   const originalContent = btn.innerHTML;
   btn.innerHTML = "⏳"; 
   
-  // DEBUG: Cek apakah ID terbaca
-
-
-
   try {
     const res = await fetch(`${API_URL}/friends/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // PERBAIKAN DISINI: Gunakan _id atau id
       body: JSON.stringify({ 
-          fromId: currentUser._id || currentUser.id, 
-          toId: targetId 
+        fromId: currentUser._id || currentUser.id, 
+        toId: targetId 
       })
     });
     
@@ -690,15 +707,25 @@ async function sendFriendRequest(e, targetId) {
       btn.innerHTML = "Pending ⏳";
       btn.disabled = true;
       btn.style.cursor = "default";
-      // Opsional: Ubah class agar terlihat disabled
-      btn.classList.remove('icon-btn');
+      btn.classList.add('disabled');
+      
+      // Update UI untuk menunjukkan status pending
+      const userItem = document.querySelector(`#search-user-${data.targetUsername}`);
+      if (userItem) {
+        const btnContainer = userItem.querySelector('button');
+        if (btnContainer) {
+          btnContainer.innerHTML = "Pending ⏳";
+          btnContainer.disabled = true;
+          btnContainer.classList.add('disabled');
+        }
+      }
     } else {
       Toast.show(data.error || "Gagal mengirim request", "error");
       btn.innerHTML = originalContent;
       if(typeof feather !== 'undefined') feather.replace();
     }
   } catch (err) {
-
+    console.error('Send friend request error:', err);
     Toast.show("Gagal mengirim request (Koneksi)", "error");
     btn.innerHTML = originalContent;
     if(typeof feather !== 'undefined') feather.replace();
@@ -738,7 +765,10 @@ function selectUser(user) {
   // Clear unread count for this user
   clearUnread(user.username);
 
-  if (window.innerWidth <= 768) {
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isMobile) {
+    // Di mobile, sembunyikan sidebar dan tampilkan chat area
     document.getElementById('sidebar').classList.add('hidden-mobile');
     document.getElementById('chatArea').classList.add('active');
   }
@@ -796,12 +826,23 @@ function selectUser(user) {
 
 function closeChat() {
   selectedUser = null;
-  if (window.innerWidth <= 768) {
+  selectedGroup = null;
+  
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isMobile) {
+    // Di mobile, tampilkan kembali sidebar dan sembunyikan chat area
     document.getElementById('sidebar').classList.remove('hidden-mobile');
     document.getElementById('chatArea').classList.remove('active');
   }
+  
   document.getElementById('welcomeScreen').classList.remove('hidden');
   document.getElementById('chatRoom').classList.add('hidden');
+  
+  // Clear selection highlights
+  document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
 }
 
 async function loadMessages(otherUser) {
@@ -1697,7 +1738,9 @@ function selectGroup(groupId) {
   // Clear unread count for this group
   clearUnread(groupId);
   
-  if (window.innerWidth <= 768) {
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isMobile) {
     document.getElementById('sidebar').classList.add('hidden-mobile');
     document.getElementById('chatArea').classList.add('active');
   }

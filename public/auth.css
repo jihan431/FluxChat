@@ -30,7 +30,7 @@ body {
 
 /* --- GLASSMORPHISM CARD WITH ENTRANCE ANIMATION --- */
 .auth-card {
-  background: rgba(30, 41, 59, 0.5);
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 40px 50px;
@@ -306,7 +306,7 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 100vh;
-    height: auto;
+    height: 100%;
     align-items: center;
   }
 
@@ -315,7 +315,7 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
     border-radius: 14px;
     max-width: 100%;
     box-sizing: border-box;
-    width: auto;
+    width: 43vh;
   }
 
   .auth-header {
@@ -342,12 +342,7 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   .auth-tabs {
     margin-bottom: 16px;
   }
-
-  .tab-btn {
-    padding: 10px;
-    font-size: 0.85rem;
-  }
-
+  
   .input-group {
     margin-bottom: 12px;
   }
@@ -530,4 +525,50 @@ body {
 /* Background blobs tersembunyi */
 .background-blobs {
   display: none;
+}
+
+/* TAMBAHKAN DI AKHIR FILE auth.css */
+
+/* --- FORGOT PASSWORD SPECIFIC STYLES --- */
+#loginForm.hidden {
+  display: none;
+}
+
+#registerForm:not(.hidden) {
+  display: block;
+}
+
+.otp-message {
+  margin-bottom: 20px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Recovery specific styles */
+.recovery-link {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.recovery-link a {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.recovery-link a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive untuk recovery page */
+@media (max-width: 768px) {
+  .auth-card {
+    padding: 20px !important;
+  }
+  
+  .otp-message {
+    font-size: 0.8rem;
+  }
 }
