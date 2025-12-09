@@ -1,23 +1,68 @@
 /* ==================== ROOT & GLOBAL ==================== */
 :root {
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --primary-light: #818cf8;
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-dark: #334155;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --border: rgba(148, 163, 184, 0.2);
+  --primary: #8b5cf6;
+  --primary-dark: #7c3aed;
+  --primary-light: #a78bfa;
+  --accent: #22d3ee;
+  --bg-primary: #0c1222;
+  --bg-secondary: rgba(22, 30, 48, 0.75);
+  --bg-elevated: rgba(255, 255, 255, 0.04);
+  --bg-dark: #1f2937;
+  --text-primary: #f8fafc;
+  --text-secondary: #9ca3af;
+  --border: rgba(148, 163, 184, 0.18);
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
   --online: #22c55e;
   --offline: #64748b;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.35);
+  --glass: blur(18px);
+  --transition: all 0.22s ease;
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 14px 40px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+/* Perf-lite mode: tambahkan class .perf-lite di <body> untuk device lemah/ngrok */
+body.perf-lite {
+  background: #0c1222;
+}
+
+body.perf-lite *,
+body.perf-lite *::before,
+body.perf-lite *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+body.perf-lite {
+  --glass: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --border: rgba(148, 163, 184, 0.12);
+}
+
+body.perf-lite .app-layout {
+  padding: 8px;
+  gap: 8px;
+  background: #0c1222;
+}
+
+body.perf-lite .sidebar,
+body.perf-lite .chat-area,
+body.perf-lite .glass-panel {
+  backdrop-filter: none;
+  box-shadow: none;
+  background: rgba(17, 24, 39, 0.9);
+}
+
+body.perf-lite .messages-container {
+  background: #0f172a;
+}
+
+body.perf-lite .message {
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 * {
@@ -28,7 +73,9 @@
 
 body {
   font-family: 'Outfit', sans-serif;
-  background: var(--bg-primary);
+  background: radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.07), transparent 35%),
+              radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.06), transparent 30%),
+              var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
   height: 100vh;
@@ -44,32 +91,64 @@ body {
   height: 100dvh;
   overflow: hidden;
   width: 100%;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(120deg, rgba(139, 92, 246, 0.08), rgba(34, 211, 238, 0.08));
+  align-items: stretch;
 }
 
 /* ==================== SIDEBAR ==================== */
 .sidebar {
   width: 320px;
-  background: transparent;
-  border-right: 1px solid var(--border);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   transition: var(--transition);
   z-index: 10;
   box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass);
+  border-radius: 20px;
+  min-width: 260px;
+  max-width: 420px;
+}
+
+.sidebar-resizer {
+  width: 8px;
+  cursor: col-resize;
+  position: relative;
+  z-index: 11;
+}
+
+.sidebar-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  border-radius: 4px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.sidebar-resizer:hover::before {
+  opacity: 0.9;
 }
 
 .sidebar-header {
-  padding: 24px 20px;
+  padding: 22px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border);
 }
 
 .brand-name {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, var(--primary-light), var(--accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -79,8 +158,8 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 99px;
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
@@ -90,8 +169,8 @@ body {
 }
 
 .icon-btn:hover {
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--primary);
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--text-primary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
@@ -100,44 +179,58 @@ body {
 .search-bar {
   padding: 15px 20px;
   border-bottom: 1px solid var(--border);
+  background: transparent;
 }
 
 .search-bar input {
   width: 100%;
   padding: 12px 16px;
-  background: rgba(148, 163, 184, 0.08);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   transition: var(--transition);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 .search-bar input:focus {
   outline: none;
   border-color: var(--primary);
-  background: rgba(99, 102, 241, 0.05);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: rgba(139, 92, 246, 0.08);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
 }
 
 /* ==================== TABS ==================== */
 .tabs-container {
   display: flex;
-  padding: 10px 20px;
-  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 12px;
+  gap: 8px;
   justify-content: space-between;
+  background-color: transparent;
+  min-width: 0;
 }
 
 .tab-btn {
-  padding: 12px 8px;
-  background: none;
+  padding: 8px 10px;
   border: none;
   color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.86rem;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: 8px;
   position: relative;
+  background-color: transparent;
+  border-radius: 8px;
+  transition: color 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  flex: 1 1 0;
+  text-align: center;
+  min-width: 0;
 }
 
 .tab-btn:hover {
@@ -146,21 +239,25 @@ body {
 
 .tab-btn.active {
   color: var(--primary);
+  font-weight: 700;
 }
 
 .tab-btn.active::after {
   content: '';
   position: absolute;
-  left: 0;
-  width: 100%;
-  height: 2.5px;
-  border-radius: 2px;
+  left: 8px;
+  right: 8px;
+  bottom: -6px;
+  height: 3px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
 }
 
 /* ==================== USER LIST ==================== */
 .users-list {
   flex: 1;
   overflow-y: auto;
+  padding: 0 6px 10px;
 }
 
 .list-item {
@@ -170,14 +267,20 @@ body {
   gap: 12px;
   cursor: pointer;
   transition: var(--transition);
+  border-radius: 14px;
+  border: 1px solid transparent;
+  margin: 4px 4px 0 4px;
 }
 
 .list-item:hover {
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(139, 92, 246, 0.18);
 }
 
 .list-item.active {
-  background: rgba(99, 102, 241, 0.12);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(34, 211, 238, 0.12));
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ==================== AVATAR ==================== */
@@ -192,8 +295,6 @@ body {
 .avatar.small {
   width: 42px;
   height: 42px;
-  font-size: 1rem;
-  font-weight: 600;
 }
 
 .avatar.medium {
@@ -252,6 +353,12 @@ body {
   position: relative;
   height: 100%;
   overflow: hidden;
+  background: radial-gradient(circle at 30% 10%, rgba(139, 92, 246, 0.06), transparent 32%),
+              radial-gradient(circle at 80% 20%, rgba(34, 211, 238, 0.05), transparent 30%),
+              rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow-md);
 }
 
 .welcome-screen {
@@ -289,17 +396,20 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  border-radius: 22px;
 }
 
 .chat-header {
-  padding: 15px 20px;
-  background: transparent;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 15px;
   grid-row: 1;
-  backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass);
+  position: sticky;
+  top: 0;
 }
 
 .back-btn {
@@ -331,32 +441,34 @@ body {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  background: var(--bg-primary);
+  background: linear-gradient(180deg, rgba(12, 18, 34, 0.92), rgba(12, 18, 34, 0.88));
   min-height: 0;
 }
 
 .message {
   max-width: 70%;
   padding: 12px 16px;
-  border-radius: 18px;
+  border-radius: 16px;
   position: relative;
   word-wrap: break-word;
   animation: fadeInUp 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: var(--glass);
 }
 
 .message.incoming {
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.03);
   align-self: flex-start;
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 6px;
   box-shadow: var(--shadow-sm);
 }
 
 .message.outgoing {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: linear-gradient(135deg, #5b21b6, #4338ca);
   align-self: flex-end;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 6px;
   color: white;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.35);
 }
 
 @keyframes fadeInUp {
@@ -373,7 +485,6 @@ body {
 .message-img {
   max-width: 300px;
   border-radius: 10px;
-  overflow: hidden;
 }
 
 .message-img.incoming {
@@ -387,7 +498,6 @@ body {
 .msg-img {
   max-width: 100%;
   border-radius: 10px;
-  cursor: pointer;
   transition: var(--transition);
   box-shadow: var(--shadow-sm);
 }
@@ -407,17 +517,18 @@ body {
 /* ==================== INPUT AREA ==================== */
 .input-area {
   position: sticky;
-  padding: 15px 20px;
-  padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
-  background: var(--bg-secondary);
+  padding: 14px 18px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  background: rgba(255, 255, 255, 0.03);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: nowrap;
   width: 100%;
-  z-index: 10000;
+  z-index: 50; /* biarkan modal overlay di atas */
   grid-row: 4;
+  backdrop-filter: var(--glass);
 }
 
 .input-area input {
@@ -426,20 +537,21 @@ body {
   padding: 12px 16px;
   font-size: 16px; /* Ukuran font untuk mencegah zoom */
   min-height: 44px;
-  border-radius: 99px;
-  border: 1.5px solid var(--border);
-  background: rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   transition: var(--transition);
   -webkit-appearance: none;
   appearance: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .input-area input:focus {
   outline: none;
   border-color: var(--primary);
-  background: rgba(99, 102, 241, 0.05);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: rgba(139, 92, 246, 0.08);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
 }
 
 /* Send button styling - tambahkan jika belum ada */
@@ -447,7 +559,7 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
   border: none;
   color: white;
   cursor: pointer;
@@ -461,29 +573,6 @@ body {
 .input-area .send-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-}
-.send-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 99px;
-  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
-  border: none;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.send-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-}
-
-.send-btn:active {
-  transform: translateY(0);
 }
 
 /* ==================== FILE PREVIEW ==================== */
@@ -509,18 +598,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 20000; /* pastikan lebih tinggi dari input-area */
   padding: 20px;
 }
 
 .glass-panel {
-  background: none;
+  background: rgba(12, 18, 34, 0.75);
   border-radius: 20px;
   padding: 30px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass);
   animation: slideInDown 0.3s ease;
+  justify-content: center;
+  align-items: center;
 }
 
 @keyframes slideInDown {
@@ -721,29 +812,41 @@ body {
 
 
 /* ==================== CALL MODAL ==================== */
+.call-modal-content {
+  width: min(900px, 90vw);
+  max-height: 90vh;
+}
+
 .video-container {
   position: relative;
+  display: flex;
+  gap: 12px;
   width: 100%;
-  height: 300px;
-  border-radius: 15px;
+  height: 420px;
+  border-radius: 16px;
   overflow: hidden;
   margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  padding: 10px;
+  box-sizing: border-box;
 }
 
 .video-container video {
+  flex: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 12px;
+  position: static;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .video-container #localVideo {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 100px;
-  height: 150px;
-  border-radius: 10px;
-  border: 2px solid white;
+  position: static;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .call-status {
@@ -766,6 +869,73 @@ body {
   font-size: 1rem;
   padding: 40px 0;
 } 
+.call-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 6px 6px 0 6px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  transition: var(--transition);
+}
+
+.call-item:hover {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.2);
+  transform: translateY(-1px);
+}
+
+.call-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.call-item-info h4 {
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.call-item-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.call-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.call-status.completed {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--success);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.call-status.missed {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.call-status.rejected {
+  background: rgba(244, 114, 182, 0.12);
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.3);
+}
 
 .btn-call {
   width: 60px;
@@ -822,30 +992,96 @@ body {
 
 /* ==================== CREATE GROUP MODAL ==================== */
 #createGroupModal .glass-panel {
-  width: 90%;
-  max-width: 400px;
+  width: 92%;
+  max-width: 520px;
+  padding: 26px 26px 22px;
+  background: linear-gradient(145deg, rgba(12, 18, 34, 0.9), rgba(22, 30, 48, 0.82));
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  box-shadow: var(--shadow-lg);
+}
+
+#createGroupModal h2 {
+  font-size: 1.4rem;
+  letter-spacing: 0.2px;
+  margin-bottom: 18px;
+}
+
+#createGroupModal .form-group label {
+  text-transform: none;
+  letter-spacing: 0.1px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+#createGroupModal .form-group input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  color: var(--text-primary);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#createGroupModal .form-group input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
 }
 
 .members-list-container {
   max-height: 250px;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
-  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: var(--glass);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .member-checkbox {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px;
-  border-radius: 6px;
-  transition: background 0.3s ease;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: var(--transition);
+  color: var(--text-primary);
 }
 
 .member-checkbox:hover {
-  background: rgba(148, 163, 184, 0.1);
+  background: rgba(139, 92, 246, 0.12);
+  transform: translateY(-1px);
+}
+
+.member-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+#createGroupModal .modal-footer {
+  margin-top: 14px;
+}
+
+#createGroupModal .modal-footer button {
+  height: auto;
+  width: auto;
+  padding: 14px 18px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+#createGroupModal .modal-footer .cancel-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+#createGroupModal .modal-footer .save-btn {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border: none;
+  color: #fff;
+  box-shadow: var(--shadow-sm);
 }
 
 /* ==================== IMAGE PREVIEW MODAL ==================== */
@@ -958,24 +1194,91 @@ body {
 }
 
 /* ==================== RESPONSIVE ==================== */
+/* ==================== RESPONSIVE (Ganti bagian ini di style.css) ==================== */
 @media screen and (max-width: 768px) {
+  .tabs-container {
+    width: 100%;
+    padding: 0 10px 8px;
+    gap: 4px;
+    justify-content: space-between;
+    min-width: 0;
+  }
+  .sidebar-resizer {
+    display: none;
+  }
+
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 0;
+    min-height: 34px;
+    font-size: 0.8rem;
+    min-width: 0;
+  }
+
+  /* 1. Pastikan layout utama mengambil tinggi penuh viewport dinamis (dvh) */
   .app-layout {
     flex-direction: row;
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* Penting untuk mobile browser modern */
     overflow: hidden;
+    padding: 0;
+    gap: 0;
   }
-  
+
+  /* 2. Reset Chat Room menjadi Flex Column murni */
+  .chat-room {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: relative; /* Reset dari grid layout desktop */
+  }
+
+  /* 3. Area Pesan harus flex-grow tapi bisa mengecil (min-height: 0) */
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px 12px;
+    min-height: 0; /* SANGAT PENTING: mencegah flex item overflow */
+    scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
+    /* Hapus padding-bottom 120px yang lama, tidak diperlukan lagi */
+  }
+
+  /* Styling Sidebar Mobile (Tetap sama seperti sebelumnya) */
   .sidebar {
     width: 100%;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(0);
-    transition: var(--transition);
-    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
-    z-index: 999;
+    height: 100%;
+    position: absolute;
+    z-index: 30;
+    background: var(--bg-primary);
+    border-radius: 0;
+    border: none;
+  }
+
+  /* Call modal: portrait split 2: penerima di atas, penelpon di bawah */
+  .call-modal-content {
+    width: 96vw;
+    max-height: 88vh;
+  }
+
+  .video-container {
+    flex-direction: column;
+    height: 60vh;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .video-container video {
+    height: 50%;
+  }
+
+  .video-container #localVideo {
+    height: 50%;
   }
   
   .sidebar.hidden-mobile {
@@ -985,18 +1288,13 @@ body {
   
   .chat-area {
     width: 100%;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    right: 0;
-    transform: translateX(100%);
-    transition: var(--transition);
-    z-index: 998;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
   }
-  
   .chat-area.active {
     transform: translateX(0);
     z-index: 998;
@@ -1080,26 +1378,6 @@ body {
   .search-bar {
     display: flex;
     padding: 12px 16px;
-  }
-
-  
-  .input-area input {
-    padding: 10px 14px;
-    font-size: 16px;
-    min-height: 40px;
-    border-radius: 20px;
-  }
-  
-  .input-area .file-upload-btn {
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-  }
-  
-  .input-area .send-btn {
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
   }
 
   .chat-room {
@@ -1274,7 +1552,13 @@ body {
 }
 
 .call-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 40px 30px;
+  text-align: center;
+  gap: 20px;
 }
 
 .profile-modal-content {

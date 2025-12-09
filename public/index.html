@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>FluxChat</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -81,6 +81,7 @@
         </div>
       </div>
     </aside>
+    <div class="sidebar-resizer" id="sidebarResizer"></div>
 
     <main class="chat-area" id="chatArea">
       <div class="welcome-screen" id="welcomeScreen">
@@ -91,7 +92,7 @@
         <p>Cari teman atau pilih kontak untuk memulai obrolan.</p>
       </div>
 
-      <div class="chat-room hidden" id="chatRoom">
+      <div class="chat-room hidden no-screenshot" id="chatRoom">
         <header class="chat-header">
           <button class="back-btn" onclick="closeChat()">
             <i data-feather="arrow-left"></i>
@@ -143,8 +144,8 @@
 
   <!-- Call Modal -->
   <div id="callModal" class="modal hidden">
-    <div class="glass-panel call-modal-content">
-      <div class="video-container hidden" id="videoContainer">
+    <div class="glass-panel call-modal-content no-screenshot">
+      <div class="video-container hidden no-screenshot" id="videoContainer">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay muted playsinline></video>
       </div>
@@ -344,6 +345,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Screenshot Protection Overlay -->
+  <div class="screenshot-overlay" id="screenshotOverlay"></div>
 
   <script src="app.js"></script>
 </body>

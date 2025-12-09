@@ -45,11 +45,138 @@ const Toast = {
   }
 };
 
+// --- ANTI-SCREENSHOT PROTECTION SYSTEM ---
+const ScreenshotProtection = {
+  init() {
+    this.setupEventListeners();
+    this.setupContextMenu();
+    this.setupDevTools();
+  },
+
+  setupEventListeners() {
+    // Detect Print Screen key
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'PrintScreen') {
+        this.showProtectionWarning();
+        this.blockScreenshot();
+      }
+    });
+
+    // Detect Volume Down + Power (Android screenshot)
+    let volumeDown = false;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'VolumeDown') volumeDown = true;
+      if (e.key === 'Power' && volumeDown) {
+        this.showProtectionWarning();
+        this.blockScreenshot();
+        volumeDown = false;
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'VolumeDown') volumeDown = false;
+    });
+
+    // Detect Ctrl+Print Screen
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'PrintScreen') {
+        e.preventDefault();
+        this.showProtectionWarning();
+        this.blockScreenshot();
+      }
+    });
+
+    // Detect Shift+Print Screen
+    document.addEventListener('keydown', (e) => {
+      if (e.shiftKey && e.key === 'PrintScreen') {
+        e.preventDefault();
+        this.showProtectionWarning();
+        this.blockScreenshot();
+      }
+    });
+  },
+
+  setupContextMenu() {
+    // Disable right-click on no-screenshot elements
+    document.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.no-screenshot')) {
+        e.preventDefault();
+        Toast.show('Screenshots tidak diizinkan di area ini', 'warning');
+        return false;
+      }
+    });
+
+    // Disable copy on no-screenshot elements
+    document.addEventListener('copy', (e) => {
+      if (e.target.closest('.no-screenshot')) {
+        e.preventDefault();
+        Toast.show('Copy/paste tidak diizinkan di area ini', 'warning');
+        return false;
+      }
+    });
+  },
+
+  setupDevTools() {
+    // Detect when DevTools is opened
+    const devToolsCheck = setInterval(() => {
+      const start = new Date();
+      debugger;
+      const end = new Date();
+      
+      if (end - start > 100) {
+        this.showProtectionWarning();
+      }
+    }, 5000);
+  },
+
+  showProtectionWarning() {
+    Toast.show('⚠️ Screenshot terdeteksi! Aktivitas ini sedang dipantau.', 'warning');
+    this.flashOverlay();
+  },
+
+  blockScreenshot() {
+    // Add visual feedback when screenshot is attempted
+    const chatRoom = document.getElementById('chatRoom');
+    const videoContainer = document.getElementById('videoContainer');
+    
+    if (chatRoom && !chatRoom.classList.contains('hidden')) {
+      chatRoom.style.opacity = '0.5';
+      setTimeout(() => {
+        chatRoom.style.opacity = '1';
+      }, 500);
+    }
+
+    if (videoContainer && !videoContainer.classList.contains('hidden')) {
+      videoContainer.style.filter = 'blur(20px)';
+      setTimeout(() => {
+        videoContainer.style.filter = 'blur(0)';
+      }, 500);
+    }
+  },
+
+  flashOverlay() {
+    const overlay = document.getElementById('screenshotOverlay');
+    if (overlay) {
+      overlay.style.display = 'block';
+      overlay.style.background = 'rgba(255, 0, 0, 0.3)';
+      setTimeout(() => {
+        overlay.style.background = 'rgba(0, 0, 0, 0.1)';
+      }, 100);
+      setTimeout(() => {
+        overlay.style.display = 'none';
+      }, 1000);
+    }
+  }
+};
+
 // --- 2. AUTH & INITIALIZATION ---
 if (!currentUser) window.location.href = 'login.html';
 
 document.addEventListener('DOMContentLoaded', () => {
   if(typeof feather !== 'undefined') feather.replace();
+
+  // Initialize Screenshot Protection
+  ScreenshotProtection.init();
 
   // Sembunyikan modal saat load
   document.getElementById('callModal').classList.add('hidden');
@@ -70,22 +197,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event listener untuk resize window
   window.addEventListener('resize', checkScreenSize);
 
+  // Sidebar resizer
+  setupSidebarResizer();
+
   // --- Event Listeners ---
   document.getElementById('messageInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
   });
+// Typing indicator
+let typingTimeout;
 
-  // Typing indicator
-  let typingTimeout;
-  document.getElementById('messageInput').addEventListener('input', () => {
-    if (selectedUser) {
-      socket.emit('typing', { to: selectedUser.username, from: currentUser.username });
-    }
+document.getElementById('messageInput').addEventListener('input', () => {
+    // Kalo belum milih user, jangan ngapa-ngapain
+    if (!selectedUser) return;
+
+    socket.emit('typing', { 
+        to: selectedUser.username, 
+        from: currentUser.username 
+    });
+
     clearTimeout(typingTimeout);
+
     typingTimeout = setTimeout(() => {
-      socket.emit('stop_typing', { to: selectedUser.username, from: currentUser.username });
+        // cek sekali lagi biar aman
+        if (!selectedUser) return;
+        socket.emit('stop_typing', { 
+            to: selectedUser.username, 
+            from: currentUser.username 
+        });
     }, 1000);
-  });
+});
 
   // Listener Search Input (Debounce)
   document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -443,47 +584,123 @@ function createAvatarHTML(user, cssClass = 'avatar small', isOnline = false) {
 
 // --- 5. FRIEND & SEARCH SYSTEM (CORE NEW LOGIC) ---
 
-// A. Load Teman & Request saat start
-async function loadFriendsAndRequests() {
+// A. Load Teman & Request saat start (dengan cache ringan untuk percepat load/ngrok)
+const FRIENDS_CACHE_TTL = 2 * 60 * 1000; // 2 menit
+let friendsFetchPromise = null;
+
+function renderFriendRequests(requests = []) {
+  const requestContainer = document.getElementById('friendRequestsList');
+  if (!requestContainer) return;
+
+  requestContainer.innerHTML = '';
+  if (requests.length === 0) return;
+
+  requests.forEach(req => {
+    const div = document.createElement('div');
+    div.className = 'request-item';
+    div.style.cssText = "background: rgba(255, 165, 0, 0.1); border: 1px solid orange; padding: 8px; border-radius: 5px; margin-bottom: 5px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; color: #ddd;";
+    div.innerHTML = `
+      <span>Wait! <b>${req.from.nama}</b> ingin berteman.</span>
+      <div>
+        <button onclick="respondFriend('${req.from._id}', 'accept')" style="border:none; cursor:pointer; background:none;">✅</button>
+        <button onclick="respondFriend('${req.from._id}', 'reject')" style="border:none; cursor:pointer; background:none;">❌</button>
+      </div>
+    `;
+    requestContainer.appendChild(div);
+  });
+  Toast.show(`Ada ${requests.length} permintaan pertemanan baru!`, 'info');
+}
+
+function applyFriendsPayload(payload) {
+  if (!payload) return;
+  const { friends = [], requests = [] } = payload;
+  window.allUsers = friends;
+  displaySearchResults(friends, true);
+  renderFriendRequests(requests);
+  updateRecentChatsDisplay();
+}
+
+async function loadFriendsAndRequests(forceRefresh = false) {
+  const cacheKey = `friends-cache-${currentUser.id}`;
+
+  // 1) Gunakan cache jika masih fresh untuk kurangi waktu tunggu di koneksi lambat/ngrok
   try {
-    const res = await fetch(`${API_URL}/friends/list/${currentUser.id}`);
-    const data = await res.json();
-
-    if (data.success) {
-      // Simpan teman ke global variable untuk keperluan chat
-      window.allUsers = data.friends; 
-      // Tampilkan daftar teman (mode normal)
-      displaySearchResults(data.friends, true); 
-
-      // Cek Request Masuk
-      const requestContainer = document.getElementById('friendRequestsList');
-      if (requestContainer) {
-        requestContainer.innerHTML = '';
-        
-        if (data.requests.length > 0) {
-          data.requests.forEach(req => {
-            const div = document.createElement('div');
-            div.className = 'request-item'; // Pastikan ada CSS untuk ini
-            div.style.cssText = "background: rgba(255, 165, 0, 0.1); border: 1px solid orange; padding: 8px; border-radius: 5px; margin-bottom: 5px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; color: #ddd;";
-            div.innerHTML = `
-              <span>Wait! <b>${req.from.nama}</b> ingin berteman.</span>
-              <div>
-                <button onclick="respondFriend('${req.from._id}', 'accept')" style="border:none; cursor:pointer; background:none;">✅</button>
-                <button onclick="respondFriend('${req.from._id}', 'reject')" style="border:none; cursor:pointer; background:none;">❌</button>
-              </div>
-            `;
-            requestContainer.appendChild(div);
-          });
-          Toast.show(`Ada ${data.requests.length} permintaan pertemanan baru!`, 'info');
-        }
+    const cached = localStorage.getItem(cacheKey);
+    if (!forceRefresh && cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.ts && (Date.now() - parsed.ts) < FRIENDS_CACHE_TTL) {
+        applyFriendsPayload(parsed.data);
       }
     }
   } catch (err) {
-    Toast.show('Gagal memuat data teman', 'error');
+    // abaikan cache error
   }
-  
-  // Initialize recent chats display
-  updateRecentChatsDisplay();
+
+  // 2) Hindari fetch paralel yang sama
+  if (friendsFetchPromise && !forceRefresh) {
+    return friendsFetchPromise;
+  }
+
+  // 3) Fetch terbaru di background, lalu update UI + cache
+  friendsFetchPromise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/friends/list/${currentUser.id}`);
+      const data = await res.json();
+
+      if (data.success) {
+        applyFriendsPayload({ friends: data.friends, requests: data.requests });
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: { friends: data.friends, requests: data.requests } }));
+        } catch (err) {
+          // abaikan write error
+        }
+      }
+    } catch (err) {
+      Toast.show('Gagal memuat data teman', 'error');
+    } finally {
+      friendsFetchPromise = null;
+    }
+  })();
+
+  return friendsFetchPromise;
+}
+
+// Sidebar resizer (desktop)
+function setupSidebarResizer() {
+  const sidebar = document.getElementById('sidebar');
+  const resizer = document.getElementById('sidebarResizer');
+  if (!sidebar || !resizer) return;
+
+  const MIN = 260;
+  const MAX = 600;
+  let startX = 0;
+  let startWidth = 0;
+  let dragging = false;
+
+  const applyWidth = (w) => {
+    const clamped = Math.min(MAX, Math.max(MIN, w));
+    sidebar.style.width = `${clamped}px`;
+  };
+
+  resizer.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startWidth = sidebar.getBoundingClientRect().width;
+    document.body.style.userSelect = 'none';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const delta = e.clientX - startX;
+    applyWidth(startWidth + delta);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (dragging) {
+      dragging = false;
+      document.body.style.userSelect = '';
+    }
+  });
 }
 
 // B. Fungsi Search dengan Debounce
@@ -2204,22 +2421,18 @@ function startGroupCall(type) {
   });
 }
 
-// --- USER PROFILE MODAL FUNCTIONS ---
 function openUserProfile() {
   if (!selectedUser) return;
   
-  // Save user data to localStorage
   localStorage.setItem('selectedUserProfile', JSON.stringify({
     ...selectedUser,
     status: window.userStatusMap?.[selectedUser.username] === 'online' ? 'online' : 'offline'
   }));
   
-  // Redirect to profiles.html
   window.location.href = 'profiles.html';
 }
 
 function closeUserProfile() {
-  // Not needed anymore since we use profiles.html
 }
 
 function blockUser() {
