@@ -1,16 +1,159 @@
 :root {
-  --primary: #7a80ff;
-  --primary-dark: #5e66d6;
-  --primary-light: #a8acff;
-  --accent: #7a80ff;
-  --bg-dark: #0f1726;
-  --glass-bg: rgba(20, 28, 44, 0.9);
-  --glass-border: rgba(148, 163, 184, 0.14);
-  --text-light: #eef1f7;
-  --text-dim: #a4adbe;
-  --success-color: #22c55e;
-  --error-color: #ef4444;
-  --info-color: #7a80ff;
+  /* Palet warna dari gambar: dark blue-gray, lighter blue-gray, muted teal, light gray */
+  --primary: #5a8a8c;
+  --primary-dark: #4a7c7e;
+  --primary-light: #7ba5a7;
+  --accent: #6b9a9c;
+  --bg-dark: #1a1f2e;
+  --glass-bg: rgba(42, 52, 65, 0.9);
+  --glass-border: rgba(90, 138, 140, 0.2);
+  --text-light: #f5f6f8;
+  --text-dim: #b8c5d0;
+  --success-color: #4ade80;
+  --error-color: #f87171;
+  --info-color: #5a8a8c;
+}
+
+/* ==================== LOADING SCREEN ==================== */
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+  visibility: visible;
+  overflow: hidden;
+}
+
+/* Background dengan blur */
+.loading-screen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #0a0a0a url('loading.jpg') center center / cover no-repeat fixed;
+  filter: blur(10px);
+  -webkit-filter: blur(10px);
+  z-index: 0;
+}
+
+.loading-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+.loading-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-logo {
+  width: 60px;
+  height: 60px;
+  background: var(--primary);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+.loading-logo svg {
+  width: 32px;
+  height: 32px;
+}
+
+.loading-title {
+  color: var(--text-light);
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.5px;
+  animation: titleFade 3s ease-in-out infinite;
+}
+
+.loading-spinner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: spinnerBounce 2s ease-in-out infinite;
+}
+
+.spinner-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.spinner-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.spinner-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes titleFade {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes spinnerBounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
 }
 
 * { box-sizing: border-box; font-family: 'Outfit', sans-serif; }
@@ -32,32 +175,52 @@ body {
 
 /* --- GLASSMORPHISM CARD WITH ENTRANCE ANIMATION --- */
 .auth-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 18px;
+  /* Enhanced Glassmorphism Effect */
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   padding: 40px 50px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(16px);
   
-  /* Animasi Masuk - Simplified */
+  /* Animasi Masuk - Hidden saat loading */
   opacity: 0;
-  transform: translateY(10px);
-  animation: cardEntrance 0.5s ease-out forwards;
+  transform: translateY(30px) scale(0.95);
+  animation: none;
   
   /* Smooth height transition */
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: auto;
-  
-  /* Untuk efek scaling saat height berubah */
-  transform-origin: center top;
-  
   /* PC display - larger card */
-  width: 500px;
+  width: 600px;
   max-width: 90vw;
+  position: relative;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* Animasi card saat loading selesai */
+.auth-card.loaded {
+  animation: cardEntranceComplete 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 @keyframes cardEntrance {
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cardEntranceComplete {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .auth-header { text-align: center; margin-bottom: 30px; }
@@ -70,7 +233,6 @@ body {
   align-items: center; 
   justify-content: center;
   margin: 0 auto 12px;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 .app-logo { width: 24px; color: white; }
 h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
@@ -78,12 +240,14 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
 
 .auth-tabs {
   display: flex;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 4px;
   border-radius: 14px;
   margin-bottom: 25px;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .auth-tabs::after {
@@ -97,7 +261,6 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
   border-radius: 10px;
   transition: all 0.3s ease;
   z-index: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 .auth-tabs.tab-daftar::after {
@@ -126,8 +289,10 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
 .input-group { position: relative; margin-bottom: 16px; }
 input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: 14px 14px;
   color: white;
@@ -137,8 +302,7 @@ input {
 }
 input:focus { 
   border-color: var(--primary); 
-  background: rgba(139, 92, 246, 0.1);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  background: rgba(90, 138, 140, 0.1);
 }
 label {
   position: absolute;
@@ -153,7 +317,7 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   top: -8px;
   left: 10px;
   font-size: 0.65rem;
-  background: rgba(122, 128, 255, 0.1);
+  background: rgba(90, 138, 140, 0.15);
   padding: 2px 6px;
   border-radius: 20px;
   color: var(--text-light);
@@ -173,12 +337,10 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   position: relative;
   overflow: hidden;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 
 .btn-submit:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
 }
 
 .btn-submit:active { 
@@ -207,8 +369,10 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   width: 100%;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text-light);
   font-weight: 600;
   cursor: pointer;
@@ -279,7 +443,7 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
 
 .auth-footer { margin-top: 30px; text-align: center; font-size: 0.85rem; color: var(--text-dim); }
 .auth-footer a { color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.2s; }
-.auth-footer a:hover { color: #a855f7; }
+.auth-footer a:hover { color: var(--primary-light); }
 
 /* --- MODERN TOAST NOTIFICATION - OPTIMIZED --- */
 #toastBox { 
@@ -294,14 +458,13 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
 
 .toast {
   min-width: 300px;
-  background: rgba(15, 23, 42, 0.9);
-  color: #f8fafc;
+  background: rgba(26, 31, 46, 0.95);
+  color: var(--text-light);
   padding: 14px 16px;
   border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 500;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 
   display: flex;
   align-items: center;
@@ -490,11 +653,9 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   }
 }
 
-/* Optimized Background dengan Gradient Animasi */
+/* Background dengan gambar background.jpg */
 body {
-  background: var(--bg-dark);
-  background-size: 100% 100%;
-  animation: none;
+  background: #0a0a0a;
   height: 100vh;
   margin: 0;
   overflow: hidden;
@@ -502,52 +663,58 @@ body {
   font-family: 'Outfit', sans-serif;
 }
 
-@keyframes gradientBG {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Background image layer */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #0a0a0a url('background.jpg') center center / cover no-repeat;
+  z-index: 0;
+  transition: filter 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  filter: brightness(0.5);
+  transform-origin: center center;
 }
 
-/* Efek Partikel Melayang - Optimized untuk Low-End Device */
+/* Overlay gelap untuk meningkatkan kontras dan readability */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* Efek blur, opacity, zoom dan rotate saat input focused - hanya pada background */
+body.input-focused::after {
+  opacity: 0.5;
+  transform: scale(1.1) rotate(1.1deg);
+}
+
+body.input-focused::before {
+  opacity: 0.1;
+}
+
+/* Efek Partikel Melayang - DISABLED */
 .circles {
   display: none;
 }
 
-/* Partikel lebih banyak untuk visual lebih menarik */
-.circles li:nth-child(1) { left: 25%; width: 60px; height: 60px; animation-delay: 0s; }
-.circles li:nth-child(2) { left: 10%; width: 18px; height: 18px; animation-delay: 2s; animation-duration: 100s; }
-.circles li:nth-child(3) { left: 60%; width: 18px; height: 18px; animation-delay: 4s; }
-.circles li:nth-child(4) { left: 40%; width: 50px; height: 50px; animation-delay: 0s; animation-duration: 18s; }
-.circles li:nth-child(5) { left: 55%; width: 18px; height: 18px; animation-delay: 0s; }
-.circles li:nth-child(6) { left: 65%; width: 80px; height: 80px; animation-delay: 3s; }
-.circles li:nth-child(7) { left: 35%; width: 100px; height: 100px; animation-delay: 7s; }
-.circles li:nth-child(8) { left: 50%; width: 22px; height: 22px; animation-delay: 15s; animation-duration: 45s; }
-.circles li:nth-child(9) { left: 20%; width: 14px; height: 14px; animation-delay: 2s; animation-duration: 35s; }
-.circles li:nth-child(10) { left: 85%; width: 90px; height: 90px; animation-delay: 0s; animation-duration: 11s; }
-.circles li:nth-child(11) { left: 15%; width: 40px; height: 40px; animation-delay: 5s; }
-.circles li:nth-child(12) { left: 75%; width: 25px; height: 25px; animation-delay: 1s; animation-duration: 50s; }
-.circles li:nth-child(13) { left: 45%; width: 70px; height: 70px; animation-delay: 8s; }
-.circles li:nth-child(14) { left: 30%; width: 20px; height: 20px; animation-delay: 3s; animation-duration: 40s; }
-.circles li:nth-child(15) { left: 70%; width: 55px; height: 55px; animation-delay: 6s; }
-.circles li:nth-child(16) { left: 12%; width: 35px; height: 35px; animation-delay: 4s; animation-duration: 32s; }
-.circles li:nth-child(17) { left: 80%; width: 30px; height: 30px; animation-delay: 7s; animation-duration: 55s; }
-.circles li:nth-child(18) { left: 52%; width: 16px; height: 16px; animation-delay: 9s; }
-.circles li:nth-child(19) { left: 38%; width: 65px; height: 65px; animation-delay: 2s; animation-duration: 28s; }
-.circles li:nth-child(20) { left: 22%; width: 28px; height: 28px; animation-delay: 10s; animation-duration: 42s; }
-
-@keyframes animate {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 0.6;
-  }
-  100% {
-    transform: translateY(-1000px) rotate(360deg);
-    opacity: 0;
-  }
-}
-
 /* Login Container di depan */
 .login-container, .glass-panel {
+  position: relative;
+  z-index: 10;
+}
+
+.auth-container {
   position: relative;
   z-index: 10;
 }
@@ -559,7 +726,7 @@ body {
 
 /* Perf-lite mode untuk halaman auth: tambahkan class .perf-lite di <body> */
 body.perf-lite {
-  background: #0c1222;
+  background: #1a1f2e;
   animation: none;
 }
 
@@ -577,7 +744,7 @@ body.perf-lite .circles {
 body.perf-lite .auth-card {
   backdrop-filter: none;
   box-shadow: none;
-  background: rgba(17, 24, 39, 0.92);
+  background: rgba(42, 52, 65, 0.92);
 }
 
 body.perf-lite .auth-tabs {

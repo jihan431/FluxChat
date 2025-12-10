@@ -375,12 +375,105 @@ if (localStorage.getItem('currentUser')) {
   window.location.href = 'index.html';
 }
 
+// Function untuk hide loading screen
+function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loadingScreen');
+  const authCard = document.querySelector('.auth-card');
+  
+  if (loadingScreen) {
+    loadingScreen.classList.add('hidden');
+    // Hapus dari DOM setelah animasi selesai
+    setTimeout(() => {
+      loadingScreen.remove();
+    }, 500);
+  }
+  
+  // Trigger animasi auth card setelah loading screen mulai fade out
+  if (authCard) {
+    setTimeout(() => {
+      authCard.classList.add('loaded');
+    }, 100);
+  }
+}
+
+// Function untuk wait semua resource ter-load
+function waitForResources() {
+  const resources = [];
+  
+  // Wait untuk images
+  const images = document.querySelectorAll('img');
+  images.forEach(img => {
+    if (!img.complete) {
+      resources.push(new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve; // Continue even if image fails
+      }));
+    }
+  });
+  
+  // Wait untuk background image
+  const bgImage = new Image();
+  bgImage.src = 'background.jpg';
+  resources.push(new Promise(resolve => {
+    bgImage.onload = resolve;
+    bgImage.onerror = resolve; // Continue even if image fails
+  }));
+  
+  // Wait untuk fonts
+  if (document.fonts && document.fonts.ready) {
+    resources.push(document.fonts.ready);
+  }
+  
+  // Wait untuk Google script (optional)
+  const googleScript = document.querySelector('script[src*="accounts.google.com"]');
+  if (googleScript && typeof google === 'undefined') {
+    resources.push(new Promise(resolve => {
+      let attempts = 0;
+      const checkGoogle = setInterval(() => {
+        attempts++;
+        if (typeof google !== 'undefined' || attempts > 20) {
+          clearInterval(checkGoogle);
+          resolve();
+        }
+      }, 100);
+    }));
+  }
+  
+  // Minimum loading time untuk smooth UX (2000ms - 2 detik)
+  const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000));
+  resources.push(minLoadTime);
+  
+  // Wait semua resource atau timeout setelah 5 detik
+  Promise.race([
+    Promise.all(resources),
+    new Promise(resolve => setTimeout(resolve, 5000))
+  ]).then(() => {
+    hideLoadingScreen();
+  });
+}
+
 // Set initial card height saat halaman dimuat
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
   const authCard = document.querySelector('.auth-card');
   const initialHeight = loginForm.scrollHeight + 150;
   authCard.style.minHeight = initialHeight + 'px';
+  
+  // Tambahkan efek blur dan opacity pada background saat input focused
+  const allInputs = document.querySelectorAll('input[type="email"], input[type="password"], input[type="text"]');
+  
+  allInputs.forEach(input => {
+    input.addEventListener('focus', () => {
+      document.body.classList.add('input-focused');
+    });
+    
+    input.addEventListener('blur', () => {
+      document.body.classList.remove('input-focused');
+    });
+  });
+  
+  // Wait untuk semua resource ter-load
+  waitForResources();
   
   // Cek jika ada credential di URL setelah redirect dari Google
   const urlParams = new URLSearchParams(window.location.search);
