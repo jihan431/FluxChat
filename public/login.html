@@ -64,6 +64,17 @@
           <label>Kata Sandi</label>
         </div>
         <button type="submit" class="btn-submit">Masuk Sekarang</button>
+        <div class="divider">
+          <span></span>
+          <p>atau</p>
+          <span></span>
+        </div>
+        <div class="social-login">
+          <button type="button" id="googleLoginBtn" class="btn-google">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+            <span>Masuk dengan Google</span>
+          </button>
+        </div>
       </form>
 
       <form id="registerForm" class="auth-form hidden">
@@ -105,6 +116,7 @@
   </div>
 
   <div id="toastBox"></div>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="/login.js"></script>
 </body>
 </html>

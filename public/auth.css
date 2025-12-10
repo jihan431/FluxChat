@@ -1,25 +1,23 @@
 :root {
-  --primary: #8b5cf6;
-  --primary-dark: #7c3aed;
-  --primary-light: #a78bfa;
-  --accent: #22d3ee;
-  --bg-dark: #0c1222;
-  --glass-bg: rgba(12, 18, 34, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --text-light: #f8fafc;
-  --text-dim: #9ca3af;
+  --primary: #7a80ff;
+  --primary-dark: #5e66d6;
+  --primary-light: #a8acff;
+  --accent: #7a80ff;
+  --bg-dark: #0f1726;
+  --glass-bg: rgba(20, 28, 44, 0.9);
+  --glass-border: rgba(148, 163, 184, 0.14);
+  --text-light: #eef1f7;
+  --text-dim: #a4adbe;
   --success-color: #22c55e;
   --error-color: #ef4444;
-  --info-color: #60a5fa;
+  --info-color: #7a80ff;
 }
 
 * { box-sizing: border-box; font-family: 'Outfit', sans-serif; }
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.08), transparent 32%),
-              radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.08), transparent 28%),
-              #0b1220;
+  background: var(--bg-dark);
   color: var(--text-light);
   height: 100vh;
   display: flex;
@@ -64,7 +62,7 @@ body {
 
 .auth-header { text-align: center; margin-bottom: 30px; }
 .logo-wrapper { 
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: var(--primary);
   width: 45px; 
   height: 45px; 
   border-radius: 12px; 
@@ -95,11 +93,11 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
   left: 4px;
   width: calc(50% - 4px);
   height: calc(100% - 8px);
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: var(--primary);
   border-radius: 10px;
   transition: all 0.3s ease;
   z-index: 0;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 .auth-tabs.tab-daftar::after {
@@ -155,17 +153,17 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   top: -8px;
   left: 10px;
   font-size: 0.65rem;
-  background: var(--primary);
+  background: rgba(122, 128, 255, 0.1);
   padding: 2px 6px;
   border-radius: 20px;
-  color: white;
+  color: var(--text-light);
   font-weight: 600;
 }
 
 .btn-submit {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: var(--primary);
   border: none;
   border-radius: 10px;
   color: white;
@@ -185,6 +183,52 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
 
 .btn-submit:active { 
   transform: translateY(0px);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 14px 0;
+}
+.divider span {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.btn-google {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-light);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+.btn-google img {
+  width: 20px;
+  height: 20px;
+}
+.btn-google:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+.btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .hidden { display: none; }
@@ -448,9 +492,9 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
 
 /* Optimized Background dengan Gradient Animasi */
 body {
-  background: linear-gradient(-45deg, #0f172a, #121b30, #1d1f50, #0f172a);
-  background-size: 250% 250%;
-  animation: gradientBG 18s ease infinite;
+  background: var(--bg-dark);
+  background-size: 100% 100%;
+  animation: none;
   height: 100vh;
   margin: 0;
   overflow: hidden;
@@ -466,26 +510,7 @@ body {
 
 /* Efek Partikel Melayang - Optimized untuk Low-End Device */
 .circles {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  z-index: 0;
-  pointer-events: none;
-  will-change: transform;
-}
-
-.circles li {
-  position: absolute;
-  display: block;
-  list-style: none;
-  background: rgba(99, 102, 241, 0.15);
-  animation: animate 25s linear infinite;
-  bottom: -150px;
-  border-radius: 50%;
-  opacity: 0.6;
+  display: none;
 }
 
 /* Partikel lebih banyak untuk visual lebih menarik */

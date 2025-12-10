@@ -7,6 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
 const crypto = require('crypto');
 
 const app = express();
@@ -24,9 +25,15 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
 
-mongoose.connect('mongodb://localhost:27017/chatapp')
-  .then(() => {})
-  .catch(err => {});
+const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/chatapp';
+
+mongoose.connect(mongoUri)
+  .then(() => {
+    console.info(`[MongoDB] Connected: ${mongoUri}`);
+  })
+  .catch(err => {
+    console.error('[MongoDB] Connection error:', err.message);
+  });
 
 
 const userSchema = new mongoose.Schema({
@@ -98,6 +105,38 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Google OAuth (Login Sosial)
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
+
+// File validation
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
+const ALLOWED_FILE_TYPES = [
+  'image/',
+  'video/',
+  'audio/',
+  'application/pdf',
+  'text/plain'
+];
+
+function getFileSizeFromBase64(base64Data) {
+  try {
+    if (!base64Data) return 0;
+    const stripped = base64Data.split(';base64,').pop() || '';
+    return Math.floor((stripped.length * 3) / 4);
+  } catch {
+    return 0;
+  }
+}
+
+function isFileTypeAllowed(mime) {
+  if (!mime) return false;
+  return ALLOWED_FILE_TYPES.some(type => {
+    if (type.endsWith('/')) return mime.startsWith(type);
+    return mime === type;
+  });
+}
+
 app.post('/api/register', async (req, res) => {
   try {
     const { username, nama, email, password } = req.body;
@@ -141,6 +180,98 @@ app.post('/api/register', async (req, res) => {
     res.json({ success: true, message: 'OTP terkirim' });
   } catch (error) {
     res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// --- CONFIG PUBLIC (untuk frontend) ---
+app.get('/api/config', (req, res) => {
+  res.json({
+    googleClientId: googleClientId || null
+  });
+});
+
+// --- GOOGLE LOGIN (SOSIAL) ---
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!googleClientId || !googleClient) {
+      return res.status(500).json({ error: 'Google login belum dikonfigurasi' });
+    }
+
+    if (!token) {
+      return res.status(400).json({ error: 'Token tidak ditemukan' });
+    }
+
+    // Verifikasi token dengan Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: googleClientId
+    });
+    const payload = ticket.getPayload();
+
+    const email = payload?.email;
+    if (!email) return res.status(400).json({ error: 'Email tidak tersedia dari Google' });
+
+    const displayName = payload.name || email.split('@')[0];
+    const avatar = payload.picture || 'default';
+    const googleSub = payload.sub;
+
+    // Cek user berdasarkan email
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Generate username unik dari email
+      const baseUsername = (email.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 18) || 'user';
+      let usernameCandidate = baseUsername;
+      let attempt = 0;
+      while (await User.findOne({ username: usernameCandidate })) {
+        attempt += 1;
+        usernameCandidate = `${baseUsername}${Math.floor(100 + Math.random() * 900)}`;
+        if (attempt > 5) {
+          usernameCandidate = `${baseUsername}${Date.now().toString().slice(-4)}`;
+          break;
+        }
+      }
+
+      const randomPass = crypto.randomBytes(12).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPass, 10);
+
+      user = new User({
+        username: usernameCandidate,
+        nama: displayName,
+        email,
+        password: hashedPassword,
+        avatar,
+        otpHash: undefined,
+        otpExpires: undefined,
+        lastSeen: new Date()
+      });
+
+      await user.save();
+    } else {
+      // Pastikan akun dianggap terverifikasi
+      user.otpHash = undefined;
+      user.otpExpires = undefined;
+      user.avatar = avatar || user.avatar;
+      user.lastSeen = new Date();
+      await user.save();
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        username: user.username,
+        nama: user.nama,
+        email: user.email,
+        id: user._id,
+        avatar: user.avatar,
+        provider: 'google',
+        googleSub
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Login Google gagal' });
   }
 });
 
@@ -268,6 +399,63 @@ app.get('/api/messages/:user1/:user2', async (req, res) => {
     ]
   }).sort({ timestamp: 1 });
   res.json({ success: true, messages });
+});
+
+// Cari pesan (private & group) dengan kata kunci
+app.get('/api/messages/search', async (req, res) => {
+  try {
+    const { userId, q, limit = 20, skip = 0 } = req.query;
+    if (!q || !userId) return res.json({ success: true, results: [] });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
+
+    const blockedUsers = await User.find({ _id: { $in: user.blockedUsers || [] } }).select('username');
+    const blockedNames = blockedUsers.map(u => u.username);
+
+    const groups = await GroupChat.find({ members: userId }).select('_id nama');
+    const groupIds = groups.map(g => g._id);
+    const groupNameMap = new Map(groups.map(g => [g._id.toString(), g.nama]));
+
+    const regex = new RegExp(q, 'i');
+
+    const messages = await Message.find({
+      $and: [
+        { $or: [{ message: regex }, { 'file.name': regex }] },
+        {
+          $or: [
+            { from: user.username, to: { $nin: blockedNames } },
+            { to: user.username, from: { $nin: blockedNames } },
+            { groupId: { $in: groupIds } }
+          ]
+        }
+      ]
+    })
+      .sort({ timestamp: -1 })
+      .skip(parseInt(skip) || 0)
+      .limit(Math.min(parseInt(limit) || 20, 100));
+
+    const results = messages.map(m => {
+      const isGroup = !!m.groupId;
+      const chatId = isGroup ? m.groupId.toString() : (m.from === user.username ? m.to : m.from);
+      const chatName = isGroup ? (groupNameMap.get(m.groupId?.toString()) || 'Group') : chatId;
+      return {
+        id: m._id,
+        chatId,
+        chatName,
+        isGroup,
+        from: m.from,
+        to: m.to,
+        message: m.message,
+        file: m.file,
+        timestamp: m.timestamp
+      };
+    });
+
+    res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 const onlineUsers = new Map();
@@ -608,14 +796,36 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     const { from, to, message, file, groupId } = data;
 
+    let sanitizedFile = null;
+    if (file && file.data) {
+      const fileSize = file.size || getFileSizeFromBase64(file.data);
+
+      if (fileSize > MAX_FILE_BYTES) {
+        socket.emit('message_error', { error: 'File terlalu besar (maks 50MB)' });
+        return;
+      }
+
+      if (file.type && !isFileTypeAllowed(file.type)) {
+        socket.emit('message_error', { error: 'Tipe file tidak diizinkan' });
+        return;
+      }
+
+      sanitizedFile = {
+        name: file.name || 'file',
+        size: fileSize,
+        type: file.type || 'application/octet-stream',
+        data: file.data
+      };
+    }
+
     if (groupId) {
       // Pesan ke group
-      const newMsg = new Message({ from, to: groupId, message, file, groupId });
+      const newMsg = new Message({ from, to: groupId, message, file: sanitizedFile, groupId });
       await newMsg.save();
       io.to(groupId).emit('receive_message', newMsg);
     } else {
       // Pesan private seperti biasa
-      const newMsg = new Message({ from, to, message, file });
+      const newMsg = new Message({ from, to, message, file: sanitizedFile });
       await newMsg.save();
       io.to(to).emit('receive_message', newMsg);
       socket.emit('message_sent', newMsg);
@@ -662,4 +872,9 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {});
+server.listen(PORT, () => {
+  console.info(`[Server] Listening on port ${PORT}`);
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('[Email] Using fallback credentials, set EMAIL_USER and EMAIL_PASS in .env');
+  }
+});

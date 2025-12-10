@@ -25,12 +25,13 @@
             </div>
 
             <!-- Name and Username -->
-            <h1 class="profile-name" id="userProfileName">User Name</h1>
-            <p class="profile-username" id="userProfileUsername">@username</p>
-            
-            <!-- Status Badge -->
-            <div style="margin-bottom: 40px;">
-                <span class="status-badge" id="userProfileStatus">Online</span>
+            <div class="profile-header">
+                <h1 class="profile-name" id="userProfileName">User Name</h1>
+                <p class="profile-username" id="userProfileUsername">@username</p>
+                <div class="meta-row">
+                    <span class="status-badge" id="userProfileStatus">Online</span>
+                    <span class="last-seen" id="userProfileLastSeen">Just now</span>
+                </div>
             </div>
 
             <!-- Divider -->
@@ -49,9 +50,9 @@
             <div class="info-item">
                 <div class="info-label">
                     <i data-feather="clock"></i>
-                    Last Seen
+                    Terakhir aktif
                 </div>
-                <p class="info-value" id="userProfileLastSeen">Just now</p>
+                <p class="info-value" id="userProfileLastSeenDetail">Just now</p>
             </div>
 
             <!-- Divider -->
@@ -62,10 +63,6 @@
                 <button class="btn btn-block" id="blockUserBtn" onclick="blockUser()">
                     <i data-feather="lock"></i>
                     Block User
-                </button>
-                <button class="btn btn-back" onclick="window.history.back()">
-                    <i data-feather="arrow-left"></i>
-                    Back to Chat
                 </button>
             </div>
         </div>
@@ -113,7 +110,8 @@
 
             // Last Seen
             const lastSeenEl = document.getElementById('userProfileLastSeen');
-            if (lastSeenEl) {
+            const lastSeenDetailEl = document.getElementById('userProfileLastSeenDetail');
+            if (lastSeenEl || lastSeenDetailEl) {
                 if (user.lastSeen) {
                     const date = new Date(user.lastSeen);
                     const now = new Date();
@@ -123,29 +121,27 @@
                     const hours = Math.floor(minutes / 60);
                     const days = Math.floor(hours / 24);
 
-                    let timeStr = 'Just now';
-                    if (seconds < 60) timeStr = 'Just now';
-                    else if (minutes < 60) timeStr = `${minutes}m ago`;
-                    else if (hours < 24) timeStr = `${hours}h ago`;
-                    else timeStr = `${days}d ago`;
+                    let timeStr = 'Baru saja';
+                    if (seconds < 60) timeStr = 'Baru saja';
+                    else if (minutes < 60) timeStr = `${minutes} menit lalu`;
+                    else if (hours < 24) timeStr = `${hours} jam lalu`;
+                    else timeStr = `${days} hari lalu`;
 
-                    lastSeenEl.textContent = timeStr;
+                    if (lastSeenEl) lastSeenEl.textContent = timeStr;
+                    if (lastSeenDetailEl) lastSeenDetailEl.textContent = date.toLocaleString();
                 } else {
-                    lastSeenEl.textContent = 'Unknown';
+                    if (lastSeenEl) lastSeenEl.textContent = 'Tidak diketahui';
+                    if (lastSeenDetailEl) lastSeenDetailEl.textContent = 'Tidak diketahui';
                 }
             }
 
             // Status
             const statusEl = document.getElementById('userProfileStatus');
             if (statusEl) {
-                statusEl.textContent = user.status === 'online' ? 'Online' : 'Offline';
-                if (user.status === 'online') {
-                    statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
-                    statusEl.style.color = '#22c55e';
-                } else {
-                    statusEl.style.background = 'rgba(100, 116, 139, 0.2)';
-                    statusEl.style.color = '#64748b';
-                }
+                statusEl.classList.remove('online', 'offline');
+                const isOnline = user.status === 'online';
+                statusEl.textContent = isOnline ? 'Online' : 'Offline';
+                statusEl.classList.add(isOnline ? 'online' : 'offline');
             }
         }
 

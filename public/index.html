@@ -113,15 +113,30 @@
             <button class="icon-btn" id="videoCallBtn" onclick="if(selectedGroup) startGroupCall('video'); else startCall('video');">
               <i data-feather="video"></i>
             </button>
+            <button class="icon-btn" id="chatSearchToggle" title="Cari pesan">
+              <i data-feather="more-horizontal"></i>
+            </button>
           </div>
         </header>
+
+        <div class="chat-search-panel hidden" id="chatSearchPanel">
+          <div class="chat-search-input">
+            <input type="text" id="chatSearchInput" placeholder="Cari pesan di chat ini..." autocomplete="off">
+          </div>
+          <div class="chat-search-results" id="chatSearchResults">
+            <div class="empty-state">Ketik untuk mencari pesan</div>
+          </div>
+        </div>
 
         <div class="messages-container" id="messagesContainer"></div>
 
         <div id="filePreview" class="file-preview hidden">
           <div class="file-info">
             <i data-feather="file"></i>
-            <span id="fileName">file.jpg</span>
+            <div class="file-text">
+              <span id="fileName">file.jpg</span>
+              <small id="fileMeta" class="file-meta-text"></small>
+            </div>
           </div>
           <button class="icon-btn danger" onclick="clearFile()">
             <i data-feather="x"></i>
@@ -132,8 +147,11 @@
           <label for="fileInput" class="icon-btn file-upload-btn">
             <i data-feather="paperclip"></i>
           </label>
-          <input type="file" id="fileInput" hidden>
+          <input type="file" id="fileInput" hidden accept="image/*,video/*,audio/*,.pdf,.txt">
           <input type="text" id="messageInput" placeholder="Ketik pesan..." autocomplete="off">
+          <button class="icon-btn" id="voiceNoteBtn" type="button" title="Voice note">
+            <i data-feather="mic"></i>
+          </button>
           <button class="send-btn" onclick="sendMessage()">
             <i data-feather="send"></i>
           </button>

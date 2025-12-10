@@ -18,6 +18,10 @@ let typingUsers = {}; // { username: true/false }
 let callHistory = []; // Array untuk menyimpan history call
 let recentChats = []; // Array untuk riwayat chat (user + group)
 let currentTab = 'chats'; // Track tab mana yang aktif
+const FILE_MAX_BYTES = 50 * 1024 * 1024; // 50MB
+const ALLOWED_FILE_TYPES = ['image/', 'video/', 'audio/', 'application/pdf', 'text/plain'];
+let voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null };
+let chatSearchTimeout = null;
 
 // --- 1. TOAST NOTIFICATION SYSTEM ---
 const Toast = {
@@ -44,6 +48,260 @@ const Toast = {
     }, 3000);
   }
 };
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  if (!bytes) return '';
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
+}
+
+function getFileIcon(type) {
+  if (!type) return 'paperclip';
+  if (type.startsWith('image/')) return 'image';
+  if (type.startsWith('video/')) return 'video';
+  if (type.startsWith('audio/')) return 'music';
+  if (type === 'application/pdf') return 'file-text';
+  return 'paperclip';
+}
+
+function isFileTypeAllowed(mime) {
+  if (!mime) return false;
+  return ALLOWED_FILE_TYPES.some(type => type.endsWith('/') ? mime.startsWith(type) : mime === type);
+}
+
+function formatRelativeTime(date) {
+  if (!date) return '';
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'baru saja';
+  if (minutes < 60) return `${minutes}m lalu`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}j lalu`;
+  const days = Math.floor(hours / 24);
+  return `${days}h lalu`;
+}
+
+function getUserStatusText(user) {
+  if (!user) return 'Offline';
+  const statusMap = window.userStatusMap || {};
+  if (statusMap[user.username] === 'online') return 'Online';
+  if (user.lastSeen) {
+    const last = new Date(user.lastSeen);
+    return `Terakhir dilihat ${formatRelativeTime(last)}`;
+  }
+  return 'Offline';
+}
+
+function updateChatStatusHeader() {
+  if (!selectedUser) return;
+  const statusEl = document.getElementById('chatStatus');
+  if (statusEl) statusEl.textContent = getUserStatusText(selectedUser);
+}
+
+function toggleChatSearchPanel(forceHide = false) {
+  const panel = document.getElementById('chatSearchPanel');
+  const input = document.getElementById('chatSearchInput');
+  const results = document.getElementById('chatSearchResults');
+  if (!panel) return;
+
+  if (forceHide) {
+    panel.classList.add('hidden');
+    return;
+  }
+
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) {
+    if (results) results.innerHTML = '<div class="empty-state">Ketik untuk mencari pesan</div>';
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
+}
+
+function renderChatSearchResults(items) {
+  const container = document.getElementById('chatSearchResults');
+  if (!container) return;
+
+  if (!items || items.length === 0) {
+    container.innerHTML = '<div class="empty-state">Tidak ada hasil</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'chat-search-result-item';
+    const ts = new Date(item.timestamp).toLocaleString();
+    const snippet = item.message || (item.file && item.file.name ? `📎 ${item.file.name}` : 'Pesan media');
+    div.innerHTML = `
+      <div class="meta">
+        <span>${item.chatName}</span>
+        <span>${ts}</span>
+      </div>
+      <div class="snippet">${snippet}</div>
+    `;
+    div.onclick = () => openSearchResult(item);
+    container.appendChild(div);
+  });
+}
+
+function openSearchResult(item) {
+  if (!item) return;
+  if (item.isGroup) {
+    if (selectGroupById(item.chatId)) {
+      toggleChatSearchPanel(true);
+    } else {
+      Toast.show('Group tidak ditemukan', 'error');
+    }
+  } else {
+    const user = (window.allUsers || []).find(u => u.username === item.chatId) || { username: item.chatId, nama: item.chatName || item.chatId };
+    selectUser(user);
+    toggleChatSearchPanel(true);
+  }
+}
+
+function handleChatSearchInput(e) {
+  const q = e.target.value.trim();
+  const results = document.getElementById('chatSearchResults');
+
+  if (chatSearchTimeout) clearTimeout(chatSearchTimeout);
+
+  if (!q) {
+    if (results) results.innerHTML = '<div class="empty-state">Ketik untuk mencari pesan</div>';
+    return;
+  }
+
+  if (results) results.innerHTML = '<div class="empty-state">Mencari...</div>';
+
+  chatSearchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(`${API_URL}/messages/search?userId=${currentUser.id}&q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (data.success) {
+        renderChatSearchResults(data.results);
+      } else {
+        if (results) results.innerHTML = '<div class="empty-state">Gagal mencari pesan</div>';
+      }
+    } catch (err) {
+      if (results) results.innerHTML = '<div class="empty-state">Error jaringan</div>';
+    }
+  }, 300);
+}
+
+async function toggleVoiceRecording() {
+  if (!selectedUser && !selectedGroup) {
+    Toast.show('Pilih chat dulu sebelum merekam suara', 'warning');
+    return;
+  }
+
+  // Stop jika sedang merekam
+  if (voiceRecorder.recorder && voiceRecorder.recorder.state === 'recording') {
+    stopVoiceRecording(true);
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voiceRecorder.stream = stream;
+    voiceRecorder.chunks = [];
+
+    const recorder = new MediaRecorder(stream);
+    voiceRecorder.recorder = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) voiceRecorder.chunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(voiceRecorder.chunks, { type: recorder.mimeType || 'audio/webm' });
+      cleanupVoiceRecording();
+
+      if (blob.size === 0) return;
+
+      if (blob.size > FILE_MAX_BYTES) {
+        Toast.show('Voice note terlalu besar (>50MB)', 'error');
+        return;
+      }
+
+      sendVoiceNoteBlob(blob);
+    };
+
+    recorder.start();
+    updateVoiceButtonState(true);
+    Toast.show('Merekam voice note...', 'info');
+
+    voiceRecorder.timer = setTimeout(() => stopVoiceRecording(), 120000); // auto stop 2 menit
+  } catch (err) {
+    Toast.show('Gagal mengakses mikrofon: ' + err.message, 'error');
+    cleanupVoiceRecording();
+    updateVoiceButtonState(false);
+  }
+}
+
+function stopVoiceRecording(manual = false) {
+  if (voiceRecorder.timer) {
+    clearTimeout(voiceRecorder.timer);
+    voiceRecorder.timer = null;
+  }
+
+  if (voiceRecorder.recorder && voiceRecorder.recorder.state === 'recording') {
+    voiceRecorder.recorder.stop();
+  }
+  updateVoiceButtonState(false);
+}
+
+function cleanupVoiceRecording() {
+  if (voiceRecorder.stream) {
+    voiceRecorder.stream.getTracks().forEach(track => track.stop());
+  }
+  voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null };
+}
+
+function sendVoiceNoteBlob(blob) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const filePayload = {
+      name: `Voice-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`,
+      type: blob.type || 'audio/webm',
+      size: blob.size,
+      data: reader.result
+    };
+
+    if (selectedGroup) {
+      socket.emit('send_message', {
+        from: currentUser.username,
+        to: selectedGroup._id,
+        message: '',
+        file: filePayload,
+        groupId: selectedGroup._id
+      });
+      saveLastMessageGroup(selectedGroup._id, '🎤 Voice note', new Date());
+    } else if (selectedUser) {
+      socket.emit('send_message', {
+        from: currentUser.username,
+        to: selectedUser.username,
+        message: '',
+        file: filePayload
+      });
+      saveLastMessage(selectedUser.username, '🎤 Voice note', new Date());
+    }
+  };
+  reader.readAsDataURL(blob);
+}
+
+function updateVoiceButtonState(isRecording) {
+  const btn = document.getElementById('voiceNoteBtn');
+  if (!btn) return;
+  btn.classList.toggle('recording', isRecording);
+  const icon = btn.querySelector('i');
+  if (icon) {
+    icon.setAttribute('data-feather', isRecording ? 'square' : 'mic');
+    if (typeof feather !== 'undefined') feather.replace();
+  }
+}
 
 // --- ANTI-SCREENSHOT PROTECTION SYSTEM ---
 const ScreenshotProtection = {
@@ -199,6 +457,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Sidebar resizer
   setupSidebarResizer();
+
+  const chatSearchToggle = document.getElementById('chatSearchToggle');
+  const chatSearchInput = document.getElementById('chatSearchInput');
+  if (chatSearchToggle) {
+    chatSearchToggle.addEventListener('click', () => toggleChatSearchPanel());
+  }
+  if (chatSearchInput) {
+    chatSearchInput.addEventListener('input', handleChatSearchInput);
+  }
+
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('chatSearchPanel');
+    const toggle = document.getElementById('chatSearchToggle');
+    if (panel && !panel.classList.contains('hidden')) {
+      if (!panel.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
+        toggleChatSearchPanel(true);
+      }
+    }
+  });
+
+  const voiceBtn = document.getElementById('voiceNoteBtn');
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', toggleVoiceRecording);
+  }
 
   // --- Event Listeners ---
   document.getElementById('messageInput').addEventListener('keypress', (e) => {
@@ -1024,8 +1306,7 @@ function selectUser(user) {
     chatAvatarEl.textContent = initial;
   }
 
-  const userStatus = window.userStatusMap && window.userStatusMap[user.username] ? window.userStatusMap[user.username] : 'offline';
-  document.getElementById('chatStatus').textContent = userStatus === 'online' ? 'Online' : 'Offline';
+  updateChatStatusHeader();
 
   // Highlight active items
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
@@ -1100,8 +1381,15 @@ function sendPrivateMessage() {
   if ((!msg && !file) || !selectedUser) return;
 
   if (file) {
-    if (file.size > 50 * 1024 * 1024) {
+    if (!isFileTypeAllowed(file.type)) {
+      Toast.show('Tipe file tidak diizinkan', 'error');
+      clearFile();
+      return;
+    }
+
+    if (file.size > FILE_MAX_BYTES) {
       Toast.show('File terlalu besar (Maks 50MB)', 'error');
+      clearFile();
       return;
     }
     
@@ -1113,7 +1401,7 @@ function sendPrivateMessage() {
         from: currentUser.username,
         to: selectedUser.username,
         message: msg,
-        file: { name: file.name, type: file.type, data: reader.result }
+        file: { name: file.name, type: file.type, size: file.size, data: reader.result }
       };
       socket.emit('send_message', payload);
       const displayMsg = msg || `📎 ${file.name}`;
@@ -1194,22 +1482,29 @@ function addMessageToUI(msg) {
   
   // Jika ada image, jangan kasih background/padding
   const hasImage = msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('image/');
+  const fileOnly = msg.file && msg.file.data && !msg.message && !hasImage;
   
   if (hasImage && !msg.message) {
     // Hanya gambar tanpa text
     div.className = `message-img ${isMe ? 'outgoing' : 'incoming'}`;
   } else {
-    div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
+    div.className = `message ${isMe ? 'outgoing' : 'incoming'}${fileOnly ? ' file-only' : ''}`;
   }
 
   let content = '';
   if (msg.file && msg.file.data) {
-    if (msg.file.type && msg.file.type.startsWith('image/')) {
+    if (msg.file.type && msg.file.type.startsWith('audio/')) {
+      content += `<audio controls src="${msg.file.data}" class="audio-msg"></audio>`;
+    } else if (msg.file.type && msg.file.type.startsWith('image/')) {
       content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
     } else {
-      content += `<div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; margin-bottom:5px;">
-                    <a href="${msg.file.data}" download="${msg.file.name || 'file'}" style="color:white; text-decoration:none; display:flex; align-items:center; gap:5px;">
-                      <i data-feather="download"></i> ${msg.file.name || 'Download File'}
+      content += `<div class="file-bubble">
+                    <a href="${msg.file.data}" download="${msg.file.name || 'file'}" class="file-bubble-link">
+                      <i data-feather="${getFileIcon(msg.file.type)}"></i> 
+                      <span class="file-bubble-text">
+                        <span>${msg.file.name || 'Download File'}</span>
+                        <small>${msg.file.size ? formatBytes(msg.file.size) : ''} ${msg.file.type ? '• ' + msg.file.type : ''}</small>
+                      </span>
                     </a>
                   </div>`;
     }
@@ -1224,7 +1519,9 @@ function addMessageToUI(msg) {
 
   // Save last message for display in contacts
   if (selectedUser && !isMe) {
-    const messageText = msg.message || (msg.file && msg.file.name ? `📎 ${msg.file.name}` : '');
+    const messageText = msg.message 
+      || (msg.file && msg.file.type && msg.file.type.startsWith('audio/') ? '🎤 Voice note' : '')
+      || (msg.file && msg.file.name ? `📎 ${msg.file.name}` : '');
     saveLastMessage(selectedUser.username, messageText, msg.timestamp);
   }
 }
@@ -1239,15 +1536,31 @@ if(fileInput){
     fileInput.addEventListener('change', function() {
       if (this.files[0]) {
         const file = this.files[0];
-        // Validasi file size - 50MB max
-        if (file.size > 50 * 1024 * 1024) {
-          Toast.show('File terlalu besar (Maks 50MB)', 'error');
-          this.value = '';
-          document.getElementById('filePreview').classList.add('hidden');
+        // Validasi tipe & ukuran
+        if (!isFileTypeAllowed(file.type)) {
+          Toast.show('Tipe file tidak diizinkan', 'error');
+          clearFile();
           return;
         }
-        document.getElementById('filePreview').classList.remove('hidden');
-        document.getElementById('fileName').textContent = file.name;
+
+        if (file.size > FILE_MAX_BYTES) {
+          Toast.show('File terlalu besar (Maks 50MB)', 'error');
+          clearFile();
+          return;
+        }
+
+        const preview = document.getElementById('filePreview');
+        const nameEl = document.getElementById('fileName');
+        const metaEl = document.getElementById('fileMeta');
+        const iconEl = document.querySelector('#filePreview i');
+
+        if (preview) preview.classList.remove('hidden');
+        if (nameEl) nameEl.textContent = file.name;
+        if (metaEl) metaEl.textContent = `${formatBytes(file.size)} • ${file.type || 'file'}`;
+        if (iconEl) {
+          iconEl.setAttribute('data-feather', getFileIcon(file.type));
+          if (typeof feather !== 'undefined') feather.replace();
+        }
       }
     });
 }
@@ -1262,6 +1575,8 @@ function clearFile() {
   if (preview) {
     preview.classList.add('hidden');
     document.getElementById('fileName').textContent = '';
+    const metaEl = document.getElementById('fileMeta');
+    if (metaEl) metaEl.textContent = '';
   }
 }
 
@@ -1436,6 +1751,11 @@ socket.on('message_sent', (msg) => {
   }
 });
 
+socket.on('message_error', (payload) => {
+  const message = payload?.error || 'Gagal mengirim pesan';
+  Toast.show(message, 'error');
+});
+
 socket.on('user_status_change', (data) => {
   const statusEl = document.getElementById(`status-${data.username}`);
   if (statusEl) statusEl.className = `user-status ${data.status}`;
@@ -1444,7 +1764,10 @@ socket.on('user_status_change', (data) => {
   window.userStatusMap[data.username] = data.status;
 
   if (selectedUser && selectedUser.username === data.username) {
-    document.getElementById('chatStatus').textContent = data.status === 'online' ? 'Online' : 'Offline';
+    if (data.status === 'offline') {
+      selectedUser.lastSeen = new Date();
+    }
+    updateChatStatusHeader();
   }
 
   // Update avatar status indicator di list items
@@ -1489,7 +1812,7 @@ socket.on('user_typing', (data) => {
     // Clear after 3 seconds
     if (window.typingTimeout) clearTimeout(window.typingTimeout);
     window.typingTimeout = setTimeout(() => {
-      document.getElementById('chatStatus').textContent = 'Offline';
+      updateChatStatusHeader();
     }, 3000);
   }
   
@@ -1514,6 +1837,9 @@ socket.on('stop_typing', (data) => {
         msg.textContent = chatHistory[data.from].lastMessage;
       }
     }
+  }
+  if (selectedUser && selectedUser.username === data.from) {
+    updateChatStatusHeader();
   }
 });
 
@@ -1946,6 +2272,14 @@ async function createGroup() {
   }
 }
 
+function selectGroupById(groupId) {
+  if (!Array.isArray(allGroups)) return false;
+  const found = allGroups.find(g => g._id === groupId);
+  if (!found) return false;
+  selectGroup(groupId);
+  return true;
+}
+
 function selectGroup(groupId) {
   selectedGroup = allGroups.find(g => g._id === groupId);
   selectedUser = null; // Clear selectedUser saat membuka group
@@ -2017,10 +2351,11 @@ function addGroupMessageToUI(msg) {
   const hasImage = msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('image/');
   
   const div = document.createElement('div');
+  const fileOnly = msg.file && msg.file.data && !msg.message && !hasImage;
   if (hasImage && !msg.message) {
     div.className = `message-img ${isMe ? 'outgoing' : 'incoming group-message'}`;
   } else {
-    div.className = `message ${isMe ? 'outgoing' : 'incoming group-message'}`;
+    div.className = `message ${isMe ? 'outgoing' : 'incoming group-message'}${fileOnly ? ' file-only' : ''}`;
   }
 
   let content = '';
@@ -2029,12 +2364,18 @@ function addGroupMessageToUI(msg) {
   }
   
   if (msg.file && msg.file.data) {
-    if (msg.file.type && msg.file.type.startsWith('image/')) {
+    if (msg.file.type && msg.file.type.startsWith('audio/')) {
+      content += `<audio controls src="${msg.file.data}" class="audio-msg"></audio>`;
+    } else if (msg.file.type && msg.file.type.startsWith('image/')) {
       content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
     } else {
-      content += `<div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; margin-bottom:5px;">
-                    <a href="${msg.file.data}" download="${msg.file.name || 'file'}" style="color:white; text-decoration:none; display:flex; align-items:center; gap:5px;">
-                      <i data-feather="download"></i> ${msg.file.name || 'Download File'}
+      content += `<div class="file-bubble">
+                    <a href="${msg.file.data}" download="${msg.file.name || 'file'}" class="file-bubble-link">
+                      <i data-feather="${getFileIcon(msg.file.type)}"></i> 
+                      <span class="file-bubble-text">
+                        <span>${msg.file.name || 'Download File'}</span>
+                        <small>${msg.file.size ? formatBytes(msg.file.size) : ''} ${msg.file.type ? '• ' + msg.file.type : ''}</small>
+                      </span>
                     </a>
                   </div>`;
     }
@@ -2059,8 +2400,15 @@ function sendGroupMessage() {
   if (!msg && !file) return;
 
   if (file) {
-    if (file.size > 50 * 1024 * 1024) {
+    if (!isFileTypeAllowed(file.type)) {
+      Toast.show('Tipe file tidak diizinkan', 'error');
+      clearFile();
+      return;
+    }
+
+    if (file.size > FILE_MAX_BYTES) {
       Toast.show('File terlalu besar (Maks 50MB)', 'error');
+      clearFile();
       return;
     }
     
@@ -2072,7 +2420,7 @@ function sendGroupMessage() {
         from: currentUser.username,
         to: selectedGroup._id,
         message: msg,
-        file: { name: file.name, type: file.type, data: reader.result },
+        file: { name: file.name, type: file.type, size: file.size, data: reader.result },
         groupId: selectedGroup._id
       });
       const displayMsg = msg || `📎 ${file.name}`;
@@ -2095,9 +2443,13 @@ function sendGroupMessage() {
 
 // Update socket listener untuk group messages
 socket.on('receive_message', function(msg) {
+  const summaryText = msg.message 
+    || (msg.file && msg.file.type && msg.file.type.startsWith('audio/') ? '🎤 Voice note' : '')
+    || (msg.file && msg.file.name ? `📎 ${msg.file.name}` : '');
+
   // Track chat history
   if (msg.groupId) {
-    addToChatHistory(msg.groupId, msg.groupName || 'Group', msg.message, true);
+    addToChatHistory(msg.groupId, msg.groupName || 'Group', summaryText, true);
     
     // Group message
     if (selectedGroup && msg.groupId === selectedGroup._id) {
@@ -2111,7 +2463,7 @@ socket.on('receive_message', function(msg) {
       incrementUnread(msg.groupId);
     }
   } else {
-    addToChatHistory(msg.from, msg.from, msg.message, false);
+    addToChatHistory(msg.from, msg.from, summaryText, false);
     
     // Private message (handle seperti sebelumnya)
     if (selectedUser && (msg.from === selectedUser.username || msg.to === selectedUser.username)) {

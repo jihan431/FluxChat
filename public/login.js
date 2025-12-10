@@ -1,4 +1,157 @@
 const API_URL = window.location.origin;
+let googleInitTried = false;
+
+async function initGoogleLogin() {
+  const btn = document.getElementById('googleLoginBtn');
+  if (!btn || googleInitTried) return;
+  googleInitTried = true;
+
+  const setBtnState = (text, disabled = false) => {
+    const span = btn.querySelector('span');
+    if (span) span.textContent = text;
+    btn.disabled = disabled;
+  };
+
+  try {
+    const res = await fetch(`${API_URL}/api/config`);
+    if (!res.ok) {
+      setBtnState('Google tidak tersedia', true);
+      return;
+    }
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      setBtnState('Google tidak tersedia', true);
+      return;
+    }
+    const clientId = data.googleClientId;
+
+    if (!clientId) {
+      setBtnState('Google login belum diaktifkan', true);
+      return;
+    }
+
+    const startInit = () => {
+      if (typeof google === 'undefined' || !google.accounts?.id) {
+        setBtnState('Google tidak tersedia', true);
+        return;
+      }
+
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredential,
+        ux_mode: 'popup',
+        login_uri: `${window.location.origin}/login.html`
+      });
+
+      // Buat container tersembunyi untuk Google button
+      const googleBtnContainer = document.createElement('div');
+      googleBtnContainer.id = 'googleBtnContainer';
+      googleBtnContainer.style.position = 'absolute';
+      googleBtnContainer.style.left = '-9999px';
+      googleBtnContainer.style.top = '-9999px';
+      googleBtnContainer.style.width = btn.offsetWidth + 'px';
+      googleBtnContainer.style.height = '40px';
+      document.body.appendChild(googleBtnContainer);
+
+      // Render Google button di container tersembunyi
+      google.accounts.id.renderButton(googleBtnContainer, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        width: btn.offsetWidth || 300
+      });
+
+      // Saat tombol custom diklik, trigger klik pada Google button
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Tunggu sebentar untuk memastikan button sudah di-render
+        setTimeout(() => {
+          const googleBtn = googleBtnContainer.querySelector('div[role="button"]');
+          if (googleBtn) {
+            googleBtn.click();
+          } else {
+            // Fallback: coba lagi setelah delay lebih lama
+            setTimeout(() => {
+              const retryBtn = googleBtnContainer.querySelector('div[role="button"]');
+              if (retryBtn) {
+                retryBtn.click();
+              } else {
+                showNotification('Gagal memuat Google login', 'error');
+              }
+            }, 500);
+          }
+        }, 100);
+      });
+
+      setBtnState('Masuk dengan Google', false);
+    };
+
+    // Tunggu script Google siap
+    if (typeof google !== 'undefined' && google.accounts?.id) {
+      startInit();
+    } else {
+      let attempts = 0;
+      const iv = setInterval(() => {
+        attempts += 1;
+        if (typeof google !== 'undefined' && google.accounts?.id) {
+          clearInterval(iv);
+          startInit();
+        } else if (attempts > 20) {
+          clearInterval(iv);
+          setBtnState('Google tidak tersedia', true);
+        }
+      }, 250);
+    }
+  } catch (error) {
+    console.error('Google init error', error);
+    setBtnState('Google tidak tersedia', true);
+  }
+}
+
+async function handleGoogleCredential(response) {
+  const btn = document.getElementById('googleLoginBtn');
+  const credential = response?.credential;
+  if (!credential) {
+    showNotification('Token Google tidak valid', 'error');
+    return;
+  }
+
+  const prevText = btn?.querySelector('span')?.textContent || 'Masuk dengan Google';
+  if (btn) {
+    btn.disabled = true;
+    if (btn.querySelector('span')) btn.querySelector('span').textContent = 'Memproses...';
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: credential })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      showNotification('Login Google sukses! Mengalihkan...', 'success');
+      setTimeout(() => window.location.href = 'index.html', 700);
+    } else {
+      showNotification(data.error || 'Login Google gagal', 'error');
+      if (btn) {
+        btn.disabled = false;
+        if (btn.querySelector('span')) btn.querySelector('span').textContent = prevText;
+      }
+    }
+  } catch (error) {
+    showNotification('Error Google login: ' + error.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      if (btn.querySelector('span')) btn.querySelector('span').textContent = prevText;
+    }
+  }
+}
 
 function validateEmail(email) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -228,4 +381,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const authCard = document.querySelector('.auth-card');
   const initialHeight = loginForm.scrollHeight + 150;
   authCard.style.minHeight = initialHeight + 'px';
+  
+  // Cek jika ada credential di URL setelah redirect dari Google
+  const urlParams = new URLSearchParams(window.location.search);
+  const credential = urlParams.get('credential');
+  if (credential) {
+    // Hapus credential dari URL untuk keamanan
+    window.history.replaceState({}, document.title, window.location.pathname);
+    handleGoogleCredential({ credential });
+  } else {
+    initGoogleLogin();
+  }
 });
