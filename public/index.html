@@ -45,7 +45,7 @@
       </div>
 
       <div class="search-bar hidden" id="searchBar">
-        <input type="text" id="searchInput" placeholder="Filter kontak..." autocomplete="off">
+        <input type="text" id="searchInput" placeholder="Cari atau tambahkan teman" autocomplete="off">
       </div>
 
       <!-- TAB NAVIGATION (Horizontal) -->
@@ -92,7 +92,7 @@
         <p>Cari teman atau pilih kontak untuk memulai obrolan.</p>
       </div>
 
-      <div class="chat-room hidden no-screenshot" id="chatRoom">
+      <div class="chat-room hidden" id="chatRoom">
         <header class="chat-header">
           <button class="back-btn" onclick="closeChat()">
             <i data-feather="arrow-left"></i>
@@ -162,14 +162,14 @@
 
   <!-- Call Modal -->
   <div id="callModal" class="modal hidden">
-    <div class="glass-panel call-modal-content no-screenshot">
-      <div class="video-container hidden no-screenshot" id="videoContainer">
+    <div class="glass-panel call-modal-content">
+      <div class="video-container hidden" id="videoContainer">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay muted playsinline></video>
       </div>
 
       <div class="call-status" id="callStatus">Memanggil...</div>
-      <div class="avatar large pulse" id="callAvatar">U</div>
+      <div class="avatar large pulse" id="callAvatar"></div>
       <h2 id="callTargetName">User Name</h2>
 
       <div id="incomingActions" class="call-actions hidden">

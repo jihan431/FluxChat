@@ -1142,7 +1142,6 @@ function displaySearchResults(results, isFriendList = false) {
       ${createAvatarHTML(user, 'avatar small', isOnline)}
       <div class="chat-item-info">
         <h4>${user.nama}</h4>
-        <small style="font-size: 0.75rem; color: #94a3b8;">@${user.username}</small>
         <small>${lastMessageText}</small>
       </div>
       <div style="font-size:0.7rem; color:#64748b; text-align:right;">${lastMessageTime}</div>
@@ -2631,7 +2630,7 @@ function displayCallHistory() {
   if(typeof feather !== 'undefined') feather.replace();
 }
 
-// Format duration call (seconds to mm:ss)
+
 function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;

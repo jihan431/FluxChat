@@ -684,7 +684,7 @@ body::before {
   content: '';
   position: fixed;
   top: 0;
-  left: 0;
+  left: 0;                                                                                                                                                 
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.25);
@@ -693,14 +693,16 @@ body::before {
   transition: opacity 0.3s ease;
 }
 
+
 /* Efek blur, opacity, zoom dan rotate saat input focused - hanya pada background */
 body.input-focused::after {
   opacity: 0.5;
-  transform: scale(1.1) rotate(1.1deg);
+  transform: scale(1.05);
+
 }
 
 body.input-focused::before {
-  opacity: 0.1;
+  opacity: 0;
 }
 
 /* Efek Partikel Melayang - DISABLED */
