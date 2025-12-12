@@ -32,24 +32,24 @@ async function seedDatabase() {
     // Buat 3 user test
     const user1 = new User({
       username: 'user1',
-      nama: 'Alice Johnson',
-      email: 'alice@example.com',
+      nama: 'Jihan Nugraha',
+      email: 'test@example.com',
       password: hashedPassword,
       lastSeen: new Date(),
     });
 
     const user2 = new User({
       username: 'user2',
-      nama: 'Bob Smith',
-      email: 'bob@example.com',
+      nama: 'Jihan tidak nugraha',
+      email: 'test2@example.com',
       password: hashedPassword,
       lastSeen: new Date(),
     });
 
     const user3 = new User({
       username: 'user3',
-      nama: 'Charlie Brown',
-      email: 'charlie@example.com',
+      nama: 'Nugraha',
+      email: 'test3@example.com',
       password: hashedPassword,
       lastSeen: new Date(),
     });

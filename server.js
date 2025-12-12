@@ -29,7 +29,7 @@ const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/chatapp';
 
 mongoose.connect(mongoUri)
   .then(() => {
-    console.info(`[MongoDB] Connected: ${mongoUri}`);
+    console.info(`[MongoDB] Connected: ${mongoUri} 🔆`);
   })
   .catch(err => {
     console.error('[MongoDB] Connection error:', err.message);
@@ -172,9 +172,36 @@ app.post('/api/register', async (req, res) => {
         from: 'FluxChat Security',
         to: email,
         subject: 'Kode Verifikasi FluxChat',
-        html: `<h3>Kode OTP Anda: <b>${otp}</b></h3><p>Kode ini berlaku selama 10 menit.</p>`
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+          <div style="text-align: center; padding: 20px 0;">
+            <h2 style="color: #4361ee;">FluxChat</h2>
+            <p style="color: #6c757d;">Verifikasi Akun Anda</p>
+          </div>
+          
+          <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
+            <div style="margin-bottom: 20px;">
+              <h3 style="color: #343a40;">Kode Verifikasi Anda</h3>
+              <p style="color: #6c757d;">Masukkan kode berikut untuk memverifikasi akun FluxChat Anda:</p>
+            </div>
+            
+            <div style="background-color: #e9ecef; padding: 15px; border-radius: 6px; margin: 20px 0; display: inline-block;">
+              <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #4361ee;">${otp}</span>
+            </div>
+            
+            <p style="color: #6c757d; font-size: 14px;">
+              Kode ini berlaku selama <strong>10 menit</strong>. Jangan bagikan kode ini kepada siapa pun.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px; padding: 15px; color: #6c757d; font-size: 12px;">
+            <p>Jika Anda tidak meminta kode ini, abaikan email ini.</p>
+            <p>&copy; 2025 FluxChat. Hak Cipta Dilindungi.</p>
+          </div>
+        </div>`
       });
     } catch (emailErr) {
+      console.error('[Email] Failed to send OTP:', emailErr);
     }
 
     res.json({ success: true, message: 'OTP terkirim' });
@@ -382,12 +409,34 @@ app.put('/api/profile', async (req, res) => {
 
 
 app.get('/api/users', async (req, res) => {
-  const users = await User.find({}, 'username nama lastSeen avatar');
-  const usersWithStatus = users.map(user => ({
-    ...user.toObject(),
-    status: onlineUsers.values().toArray().some(u => u === user.username) ? 'online' : 'offline'
-  }));
-  res.json({ success: true, users: usersWithStatus });
+  try {
+    const { currentUserId } = req.query;
+    const users = await User.find({}, 'username nama lastSeen avatar friends friendRequests');
+    
+    const usersWithStatus = users.map(user => {
+      const isOnline = onlineUsers.values().toArray().some(u => u === user.username);
+      
+      let isFriend = false;
+      let isPending = false;
+      
+      // Jika currentUserId diberikan, cek status relationship
+      if (currentUserId) {
+        isFriend = user.friends.includes(currentUserId);
+        isPending = user.friendRequests.some(req => req.from.toString() === currentUserId);
+      }
+      
+      return {
+        ...user.toObject(),
+        status: isOnline ? 'online' : 'offline',
+        isFriend,
+        isPending
+      };
+    });
+    
+    res.json({ success: true, users: usersWithStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/messages/:user1/:user2', async (req, res) => {
@@ -512,14 +561,26 @@ app.get('/api/users/search', async (req, res) => {
 app.get('/api/friends/list/:userId', async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
-      .populate('friends', 'username nama avatar lastSeen')
+      .populate('friends', 'username nama avatar lastSeen _id')
       .populate('friendRequests.from', 'username nama avatar');
       
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Add isFriend and isPending flags to friends list
+    const friendsWithFlag = user.friends.map(friend => {
+      const friendObj = friend.toObject ? friend.toObject() : friend;
+      const isPending = user.friendRequests.some(req => req.from._id.toString() === friendObj._id.toString());
+      
+      return {
+        ...friendObj,
+        isFriend: true,
+        isPending: isPending
+      };
+    });
+
     res.json({
       success: true,
-      friends: user.friends,
+      friends: friendsWithFlag,
       requests: user.friendRequests
     });
   } catch (err) {
@@ -791,6 +852,18 @@ io.on('connection', (socket) => {
     groupIds.forEach(groupId => socket.join(groupId));
 
     io.emit('user_status_change', { username, status: 'online' });
+    
+    // Broadcast updated online users list to all clients
+    const onlineUsersList = Array.from(new Set(onlineUsers.values()));
+    console.log(`[Socket] User ${username} joined. Broadcasting online users:`, onlineUsersList);
+    io.emit('online_users_list', onlineUsersList);
+  });
+
+  // Handle request for online users list
+  socket.on('get_online_users', () => {
+    const onlineUsersList = Array.from(new Set(onlineUsers.values()));
+    console.log(`[Socket] get_online_users requested. Sending:`, onlineUsersList);
+    socket.emit('online_users_list', onlineUsersList);
   });
 
   socket.on('send_message', async (data) => {
@@ -867,14 +940,18 @@ io.on('connection', (socket) => {
       User.findOneAndUpdate({ username }, { lastSeen: new Date() }).exec();
       io.emit('user_status_change', { username, status: 'offline' });
       onlineUsers.delete(socket.id);
+      
+      // Broadcast updated online users list to all clients
+      const onlineUsersList = Array.from(new Set(onlineUsers.values()));
+      io.emit('online_users_list', onlineUsersList);
     }
   });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.info(`[Server] Listening on port ${PORT}`);
+  console.info(`[Server] Listening on port ${PORT} 🔆`);
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[Email] Using fallback credentials, set EMAIL_USER and EMAIL_PASS in .env');
+    console.warn('[Email] Gmail Login 🔆');
   }
 });

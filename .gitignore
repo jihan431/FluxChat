@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Docker
+mongo-data/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Distribution / packaging
+*.tgz
+*.zip
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Encrypted files (keep these in version control)
+# Uncomment the following line if you want to commit encrypted files
+# *.encrypted
+
+# Decrypted sensitive files (DO NOT commit these)
+.env
+docker-compose.yml
+seed-db.js
+
+# Security
+SECURITY.md

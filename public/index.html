@@ -4,10 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>FluxChat</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -18,6 +20,9 @@
         <div class="header-actions-container">
           <button class="icon-btn" onclick="toggleSearchBar()" title="Cari Kontak">
             <i data-feather="search"></i>
+          </button>
+          <button class="icon-btn" id="themeToggle">
+            <i data-feather="sun"></i>
           </button>
           <button class="icon-btn" onclick="openCreateGroupModal()" title="Buat Group Chat">
             <i data-feather="plus"></i>
@@ -44,15 +49,10 @@
         </div>
       </div>
 
-      <div class="search-bar hidden" id="searchBar">
-        <input type="text" id="searchInput" placeholder="Cari atau tambahkan teman" autocomplete="off">
-      </div>
-
       <!-- TAB NAVIGATION (Horizontal) -->
       <div class="tabs-container">
         <button class="tab-btn active" data-tab="chats" onclick="switchTab('chats')">Chats</button>
         <button class="tab-btn" data-tab="groups" onclick="switchTab('groups')">Groups</button>
-        <button class="tab-btn" data-tab="contacts" onclick="switchTab('contacts')">Contacts</button>
         <button class="tab-btn" data-tab="calls" onclick="switchTab('calls')">Calls</button>
       </div>
 
@@ -68,11 +68,6 @@
         <!-- GROUPS SECTION -->
         <div id="groups-tab" class="tab-content hidden">
           <div id="groupsList" class="list-content"></div>
-        </div>
-
-        <!-- CONTACTS SECTION (All Users) -->
-        <div id="contacts-tab" class="tab-content hidden">
-          <div id="usersList" class="list-content"></div>
         </div>
 
         <!-- CALLS SECTION (Call History) -->
@@ -149,6 +144,13 @@
           </label>
           <input type="file" id="fileInput" hidden accept="image/*,video/*,audio/*,.pdf,.txt">
           <input type="text" id="messageInput" placeholder="Ketik pesan..." autocomplete="off">
+          
+          <!-- Voice recording elements -->
+          <div id="recordingIndicator" class="recording-indicator hidden">
+            <div class="recording-text">recording...</div>
+            <div class="recording-timer" id="recordingTimer">00:00</div>
+          </div>
+          
           <button class="icon-btn" id="voiceNoteBtn" type="button" title="Voice note">
             <i data-feather="mic"></i>
           </button>
@@ -367,6 +369,16 @@
   <!-- Screenshot Protection Overlay -->
   <div class="screenshot-overlay" id="screenshotOverlay"></div>
 
-  <script src="app.js"></script>
+  <!-- Contacts Modal -->
+  <div id="contactsModal" class="modal hidden">
+    <div class="glass-panel contacts-modal-content">
+      <!-- Modal header akan di-generate oleh contacts-modal.js -->
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/contacts-modal.js"></script>
+  <script src="js/toggle-theme.js" defer></script>
+
 </body>
 </html>

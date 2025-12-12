@@ -18,10 +18,12 @@ let typingUsers = {}; // { username: true/false }
 let callHistory = []; // Array untuk menyimpan history call
 let recentChats = []; // Array untuk riwayat chat (user + group)
 let currentTab = 'chats'; // Track tab mana yang aktif
+window.userStatusMap = {}; // Initialize status map globally
 const FILE_MAX_BYTES = 50 * 1024 * 1024; // 50MB
 const ALLOWED_FILE_TYPES = ['image/', 'video/', 'audio/', 'application/pdf', 'text/plain'];
-let voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null };
+let voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null, startTime: null, interval: null };
 let chatSearchTimeout = null;
+let callStartTime = null; // Timestamp when call started
 
 // --- 1. TOAST NOTIFICATION SYSTEM ---
 const Toast = {
@@ -208,6 +210,8 @@ async function toggleVoiceRecording() {
     voiceRecorder.stream = stream;
     voiceRecorder.chunks = [];
 
+
+
     const recorder = new MediaRecorder(stream);
     voiceRecorder.recorder = recorder;
 
@@ -231,13 +235,23 @@ async function toggleVoiceRecording() {
 
     recorder.start();
     updateVoiceButtonState(true);
-    Toast.show('Merekam voice note...', 'info');
+    
+    // Show recording indicator
+    showRecordingIndicator();
+    
+    // Start timer
+    voiceRecorder.startTime = Date.now();
+    updateRecordingTimer();
+    voiceRecorder.interval = setInterval(() => {
+      updateRecordingTimer();
+    }, 100);
 
     voiceRecorder.timer = setTimeout(() => stopVoiceRecording(), 120000); // auto stop 2 menit
   } catch (err) {
     Toast.show('Gagal mengakses mikrofon: ' + err.message, 'error');
     cleanupVoiceRecording();
     updateVoiceButtonState(false);
+    hideRecordingIndicator();
   }
 }
 
@@ -246,18 +260,29 @@ function stopVoiceRecording(manual = false) {
     clearTimeout(voiceRecorder.timer);
     voiceRecorder.timer = null;
   }
+  
+  if (voiceRecorder.interval) {
+    clearInterval(voiceRecorder.interval);
+    voiceRecorder.interval = null;
+  }
 
   if (voiceRecorder.recorder && voiceRecorder.recorder.state === 'recording') {
     voiceRecorder.recorder.stop();
   }
   updateVoiceButtonState(false);
+  hideRecordingIndicator();
 }
 
 function cleanupVoiceRecording() {
   if (voiceRecorder.stream) {
     voiceRecorder.stream.getTracks().forEach(track => track.stop());
   }
-  voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null };
+  
+  if (voiceRecorder.interval) {
+    clearInterval(voiceRecorder.interval);
+  }
+  
+  voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null, startTime: null, interval: null };
 }
 
 function sendVoiceNoteBlob(blob) {
@@ -302,6 +327,162 @@ function updateVoiceButtonState(isRecording) {
     if (typeof feather !== 'undefined') feather.replace();
   }
 }
+
+function showRecordingIndicator() {
+  const messageInput = document.getElementById('messageInput');
+  const recordingIndicator = document.getElementById('recordingIndicator');
+  const voiceNoteBtn = document.getElementById('voiceNoteBtn');
+  const sendBtn = document.querySelector('.send-btn');
+  
+  if (messageInput && recordingIndicator && voiceNoteBtn && sendBtn) {
+    messageInput.style.display = 'none';
+    recordingIndicator.classList.remove('hidden');
+    voiceNoteBtn.style.display = 'flex';
+    sendBtn.style.display = 'none';
+  }
+}
+
+function hideRecordingIndicator() {
+  const messageInput = document.getElementById('messageInput');
+  const recordingIndicator = document.getElementById('recordingIndicator');
+  const voiceNoteBtn = document.getElementById('voiceNoteBtn');
+  const sendBtn = document.querySelector('.send-btn');
+  
+  if (messageInput && recordingIndicator && voiceNoteBtn && sendBtn) {
+    messageInput.style.display = '';
+    recordingIndicator.classList.add('hidden');
+    
+    // Restore normal button visibility based on input content
+    const hasText = messageInput.value.trim().length > 0;
+    if (hasText) {
+      voiceNoteBtn.style.display = 'none';
+      sendBtn.style.display = 'flex';
+    } else {
+      voiceNoteBtn.style.display = 'flex';
+      sendBtn.style.display = 'none';
+    }
+  }
+}
+
+// Store wavesurfer instances
+const wavesurferInstances = {};
+
+function toggleAudioPlayback(audioId, audioSrc) {
+  // Get the wavesurfer instance (should already be initialized)
+  const wavesurfer = wavesurferInstances[audioId];
+  
+  if (!wavesurfer) return;
+  
+  if (wavesurfer.isPlaying()) {
+    wavesurfer.pause();
+  } else {
+    // Pause all other audio players
+    Object.keys(wavesurferInstances).forEach(key => {
+      if (key !== audioId && wavesurferInstances[key].isPlaying()) {
+        wavesurferInstances[key].pause();
+      }
+    });
+    wavesurfer.play();
+  }
+}
+
+function updateTimeDisplay(currentTime, duration, timeDisplay) {
+  const currentMinutes = Math.floor(currentTime / 60);
+  const currentSeconds = Math.floor(currentTime % 60);
+  const durationMinutes = Math.floor(duration / 60);
+  const durationSeconds = Math.floor(duration % 60);
+  
+  timeDisplay.textContent = `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`;
+}
+
+function initializeWaveform(audioId, audioSrc) {
+  const waveformContainer = document.getElementById(`waveform-${audioId}`);
+  
+  // Return if already initialized
+  if (wavesurferInstances[audioId]) return;
+  
+  // Initialize wavesurfer
+  const wavesurfer = WaveSurfer.create({
+    container: waveformContainer,
+    waveColor: 'rgba(90, 138, 140, 0.3)', // --primary with transparency
+    progressColor: '#5a8a8c', // --primary
+    cursorColor: '#5a8a8c', // --primary
+    barWidth: 2,
+    barRadius: 2,
+    barGap: 1,
+    height: 32,
+    responsive: true,
+    normalize: true
+  });
+  
+  wavesurfer.load(audioSrc);
+  wavesurferInstances[audioId] = wavesurfer;
+  
+  // Update time display when ready
+  wavesurfer.on('ready', () => {
+    const duration = wavesurfer.getDuration();
+    const timeDisplay = document.querySelector(`#${audioId} .audio-time`);
+    if (timeDisplay) {
+      updateTimeDisplay(0, duration, timeDisplay);
+    }
+  });
+  
+  // Update progress when playing
+  wavesurfer.on('audioprocess', () => {
+    const currentTime = wavesurfer.getCurrentTime();
+    const duration = wavesurfer.getDuration();
+    const timeDisplay = document.querySelector(`#${audioId} .audio-time`);
+    if (timeDisplay) {
+      updateTimeDisplay(currentTime, duration, timeDisplay);
+    }
+  });
+  
+  // Handle play/pause
+  wavesurfer.on('play', () => {
+    const playIcon = document.querySelector(`#${audioId} .play-icon`);
+    const pauseIcon = document.querySelector(`#${audioId} .pause-icon`);
+    if (playIcon) playIcon.style.display = 'none';
+    if (pauseIcon) pauseIcon.style.display = 'block';
+  });
+  
+  wavesurfer.on('pause', () => {
+    const playIcon = document.querySelector(`#${audioId} .play-icon`);
+    const pauseIcon = document.querySelector(`#${audioId} .pause-icon`);
+    if (playIcon) playIcon.style.display = 'block';
+    if (pauseIcon) pauseIcon.style.display = 'none';
+  });
+  
+  wavesurfer.on('finish', () => {
+    const playIcon = document.querySelector(`#${audioId} .play-icon`);
+    const pauseIcon = document.querySelector(`#${audioId} .pause-icon`);
+    if (playIcon) playIcon.style.display = 'block';
+    if (pauseIcon) pauseIcon.style.display = 'none';
+  });
+  
+  // Handle click on waveform container
+  const waveformParent = waveformContainer.parentElement;
+  waveformParent.addEventListener('click', (e) => {
+    // Don't trigger if clicking on the play button
+    if (e.target.closest('.audio-play-pause')) return;
+    
+    const rect = waveformParent.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    wavesurfer.seekTo(pos);
+  });
+}
+
+function updateRecordingTimer() {
+  const timerElement = document.getElementById('recordingTimer');
+  if (!timerElement || !voiceRecorder.startTime) return;
+  
+  const elapsed = Date.now() - voiceRecorder.startTime;
+  const seconds = Math.floor(elapsed / 1000) % 60;
+  const minutes = Math.floor(elapsed / 60000);
+  
+  timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+
 
 // --- ANTI-SCREENSHOT PROTECTION SYSTEM ---
 const ScreenshotProtection = {
@@ -436,9 +617,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Screenshot Protection
   ScreenshotProtection.init();
 
+  // Initialize Wavesurfer.js
+  if (typeof WaveSurfer === 'undefined') {
+    console.warn('Wavesurfer.js not loaded');
+  }
+
   // Sembunyikan modal saat load
   document.getElementById('callModal').classList.add('hidden');
   document.getElementById('profileModal').classList.remove('active');
+
+  // Load unread counts from localStorage
+  loadUnreadCounts();
 
   // Load Daftar Teman & Request (Logika Baru)
   loadFriendsAndRequests();
@@ -483,13 +672,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Event Listeners ---
-  document.getElementById('messageInput').addEventListener('keypress', (e) => {
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.querySelector('.send-btn');
+  
+  // Initialize button state on page load
+  updateSendButtonVisibility();
+  
+  messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
   });
-// Typing indicator
-let typingTimeout;
-
-document.getElementById('messageInput').addEventListener('input', () => {
+  
+  // Monitor input untuk toggle button
+  messageInput.addEventListener('input', () => {
+    updateSendButtonVisibility();
+    
     // Kalo belum milih user, jangan ngapa-ngapain
     if (!selectedUser) return;
 
@@ -508,12 +704,11 @@ document.getElementById('messageInput').addEventListener('input', () => {
             from: currentUser.username 
         });
     }, 1000);
-});
-
-  // Listener Search Input (Debounce)
-  document.getElementById('searchInput').addEventListener('input', (e) => {
-    searchUsers(e.target.value);
   });
+  
+  
+// Typing indicator
+let typingTimeout;
 
   // Close dropdown user menu
   document.addEventListener('click', (e) => {
@@ -632,6 +827,35 @@ function updateSidebarUserAvatar() {
 
 // --- 3. UI HELPERS ---
 
+// Function to update button visibility based on input
+function updateSendButtonVisibility() {
+  const messageInput = document.getElementById('messageInput');
+  const voiceBtn = document.getElementById('voiceNoteBtn');
+  const sendBtn = document.querySelector('.send-btn');
+  const recordingIndicator = document.getElementById('recordingIndicator');
+  const fileInput = document.getElementById('fileInput');
+  
+  if (messageInput && voiceBtn && sendBtn) {
+    // If recording is active, don't change button visibility
+    if (recordingIndicator && !recordingIndicator.classList.contains('hidden')) {
+      return;
+    }
+    
+    const hasText = messageInput.value.trim().length > 0;
+    const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+    
+    if (hasText || hasFile) {
+      // Ada teks atau file: tampilkan send button, sembunyikan voice button
+      voiceBtn.style.display = 'none';
+      sendBtn.style.display = 'flex';
+    } else {
+      // Tidak ada teks atau file: sembunyikan send button, tampilkan voice button
+      voiceBtn.style.display = 'flex';
+      sendBtn.style.display = 'none';
+    }
+  }
+}
+
 function switchTab(tabName) {
   // Hide all tabs
   document.querySelectorAll('.tab-content').forEach(tab => {
@@ -662,14 +886,9 @@ function switchTab(tabName) {
 }
 
 function toggleSearchBar() {
-  const searchBar = document.getElementById('searchBar');
-  searchBar.classList.toggle('hidden');
-  if (!searchBar.classList.contains('hidden')) {
-    document.getElementById('searchInput').focus();
-  } else {
-    // Clear search dan kembali ke tampilan normal
-    document.getElementById('searchInput').value = '';
-    loadFriendsAndRequests();
+  // Open contacts modal instead of showing search bar
+  if (typeof ContactsModal !== 'undefined') {
+    ContactsModal.open();
   }
 }
 
@@ -829,24 +1048,8 @@ function logout(e) {
 // --- HELPER: Create Avatar HTML ---
 // Helper: Generate consistent gradient color based on user name
 function getAvatarGradient(name) {
-  const gradients = [
-    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-    'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)',
-  ];
-  
-  // Generate consistent index based on name
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % gradients.length;
-  return gradients[index];
+  // Use single gradient for all avatars
+  return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 }
 
 function createAvatarHTML(user, cssClass = 'avatar small', isOnline = false) {
@@ -897,8 +1100,10 @@ function applyFriendsPayload(payload) {
   if (!payload) return;
   const { friends = [], requests = [] } = payload;
   window.allUsers = friends;
-  displaySearchResults(friends, true);
+  // No need to display search results here anymore - contacts are displayed in ContactsModal
   renderFriendRequests(requests);
+  // Re-load unread counts before updating display
+  loadUnreadCounts();
   updateRecentChatsDisplay();
 }
 
@@ -1006,7 +1211,7 @@ function searchUsers(query) {
       // Tentukan list mana yang akan di-update
       const listId = currentTab === 'chats' ? 'recentChatsList' : 
                      currentTab === 'groups' ? 'groupsList' : 
-                     'usersList';
+                     'recentChatsList'; // Default ke chats jika tab tidak valid
       const list = document.getElementById(listId);
       
       if (list) {
@@ -1020,9 +1225,6 @@ function searchUsers(query) {
         if (currentTab === 'chats' || currentTab === 'groups') {
           // Filter results to show in chats/groups tab
           displaySearchResultsInTab(data.users, currentTab);
-        } else {
-          // Show in contacts tab
-          displaySearchResults(data.users, false);
         }
       }
     } catch (err) {
@@ -1096,88 +1298,6 @@ function displaySearchResultsInTab(users, tab) {
   });
   
   if(typeof feather !== 'undefined') feather.replace();
-}
-
-// C. Display List User (Bisa untuk Teman atau Hasil Search)
-function displaySearchResults(results, isFriendList = false) {
-  const list = document.getElementById('usersList');
-  list.innerHTML = '';
-
-  if (!results || results.length === 0) {
-    list.innerHTML = `<div style="text-align:center; padding:10px; color:#94a3b8;">${isFriendList ? 'Belum ada teman' : 'Pengguna tidak ditemukan'}</div>`;
-    return;
-  }
-
-
-
-  results.forEach(user => {
-    const div = document.createElement('div');
-    div.className = 'list-item chat-item';
-    // Tambahkan ID agar bisa di-highlight saat dipilih
-    if(isFriendList) div.id = `user-item-${user.username}`;
-
-    let actionButton = '';
-
-    // Logic Tampilan: Jika Teman -> Bisa Chat. Jika Belum -> Tombol Add.
-    if (user.isFriend || isFriendList) {
-        // Tampilkan action button kosong untuk space consistency
-        actionButton = ``;
-    } else if (user.isPending) {
-        actionButton = `<button class="icon-btn" disabled style="font-size:0.7rem; width:auto; padding:5px 10px; cursor:default;">Pending ⏳</button>`;
-    } else {
-        actionButton = `<button onclick="sendFriendRequest(event, '${user._id}')" class="icon-btn" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">
-                        <i data-feather="user-plus" style="width:16px; height:16px;"></i>
-                      </button>`;
-    }
-
-    // Check if user is online
-    const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
-
-    // Get last message untuk user ini
-    const lastMsg = getLastMessageForUser(user.username);
-    const lastMessageText = lastMsg ? lastMsg.message : 'Tap to start chatting';
-    const lastMessageTime = lastMsg ? formatMessageTime(lastMsg.timestamp) : '';
-
-    div.innerHTML = `
-      ${createAvatarHTML(user, 'avatar small', isOnline)}
-      <div class="chat-item-info">
-        <h4>${user.nama}</h4>
-        <small>${lastMessageText}</small>
-      </div>
-      <div style="font-size:0.7rem; color:#64748b; text-align:right;">${lastMessageTime}</div>
-      ${actionButton}
-    `;
-    
-    // Add click handler ke div utama (tidak di info)
-    if (user.isFriend || isFriendList) {
-      div.onclick = () => selectUserFromSearch(user._id);
-    }
-    
-    list.appendChild(div);
-  });
-  
-  if(typeof feather !== 'undefined') feather.replace();
-}
-
-// D. Helper: Memilih user untuk chat
-function selectUserFromSearch(userId) {
-  // Pastikan user ada di list local sebelum select
-  const friend = window.allUsers ? window.allUsers.find(u => u._id === userId) : null;
-  
-  if (friend) {
-    selectUser(friend);
-    // Bersihkan search bar agar kembali ke tampilan normal
-    document.getElementById('searchInput').value = '';
-    const searchBar = document.getElementById('searchBar');
-    if(!searchBar.classList.contains('hidden')) {
-        // Opsional: tutup searchbar atau biarkan terbuka
-        // searchBar.classList.add('hidden');
-        loadFriendsAndRequests(); // Refresh list ke mode teman
-    }
-  } else {
-    // Fallback jika data user search tidak lengkap, fetch ulang (jarang terjadi)
-    selectUser(window.allUsers[0]); 
-  }
 }
 
 // Di dalam file app.js
@@ -1363,13 +1483,19 @@ async function loadMessages(otherUser) {
   }
 }
 
-function sendMessage() {
-  if (selectedGroup) {
-    sendGroupMessage();
-  } else if (selectedUser) {
-    sendPrivateMessage();
+  function sendMessage() {
+    if (selectedGroup) {
+      sendGroupMessage();
+    } else if (selectedUser) {
+      sendPrivateMessage();
+    }
+    
+    // Update button visibility after sending
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+      updateSendButtonVisibility();
+    }
   }
-}
 
 function sendPrivateMessage() {
   const input = document.getElementById('messageInput');
@@ -1417,6 +1543,8 @@ function sendPrivateMessage() {
     // Save last message
     saveLastMessage(selectedUser.username, msg, new Date());
     input.value = '';
+    // Update button visibility after clearing input
+    updateSendButtonVisibility();
   }
 }
 
@@ -1493,7 +1621,20 @@ function addMessageToUI(msg) {
   let content = '';
   if (msg.file && msg.file.data) {
     if (msg.file.type && msg.file.type.startsWith('audio/')) {
-      content += `<audio controls src="${msg.file.data}" class="audio-msg"></audio>`;
+      const audioId = `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      content += `
+        <div class="audio-player" id="${audioId}">
+          <button class="audio-play-pause" onclick="toggleAudioPlayback('${audioId}', '${msg.file.data}')">
+            <i data-feather="play" class="play-icon"></i>
+            <i data-feather="pause" class="pause-icon" style="display:none;"></i>
+          </button>
+          <div class="audio-waveform-container">
+            <div class="audio-waveform" id="waveform-${audioId}"></div>
+          </div>
+          <span class="audio-time">0:00 / 0:00</span>
+          <audio src="${msg.file.data}" id="audio-element-${audioId}" style="display: none;"></audio>
+        </div>
+      `;
     } else if (msg.file.type && msg.file.type.startsWith('image/')) {
       content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
     } else {
@@ -1513,6 +1654,17 @@ function addMessageToUI(msg) {
 
   div.innerHTML = content;
   container.appendChild(div);
+  
+  // Initialize waveform for audio messages
+  if (msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('audio/')) {
+    // Find the audioId in the newly added content
+    const audioElements = div.querySelectorAll('[id^="audio-"]');
+    if (audioElements.length > 0) {
+      const audioId = audioElements[0].id.replace('audio-element-', '');
+      initializeWaveform(audioId, msg.file.data);
+    }
+  }
+  
   if(typeof feather !== 'undefined') feather.replace();
   scrollToBottom();
 
@@ -1535,7 +1687,6 @@ if(fileInput){
     fileInput.addEventListener('change', function() {
       if (this.files[0]) {
         const file = this.files[0];
-        // Validasi tipe & ukuran
         if (!isFileTypeAllowed(file.type)) {
           Toast.show('Tipe file tidak diizinkan', 'error');
           clearFile();
@@ -1560,6 +1711,9 @@ if(fileInput){
           iconEl.setAttribute('data-feather', getFileIcon(file.type));
           if (typeof feather !== 'undefined') feather.replace();
         }
+        
+        // Update send button visibility when file is selected
+        updateSendButtonVisibility();
       }
     });
 }
@@ -1577,6 +1731,9 @@ function clearFile() {
     const metaEl = document.getElementById('fileMeta');
     if (metaEl) metaEl.textContent = '';
   }
+  
+  // Update send button visibility when file is cleared
+  updateSendButtonVisibility();
 }
 
 // --- CHAT HISTORY FUNCTIONS ---
@@ -1584,6 +1741,20 @@ function clearFile() {
 function addToChatHistory(id, name, message, isGroup) {
   // Truncate long messages
   const truncated = message.length > 50 ? message.substring(0, 50) + '...' : message;
+  
+  // Initialize unread count if not exists
+  if (!chatHistory[id]) {
+    chatHistory[id] = {
+      name: name,
+      lastMessage: truncated,
+      timestamp: new Date(),
+      unreadCount: 0,
+      isGroup: isGroup
+    };
+  } else {
+    chatHistory[id].lastMessage = truncated;
+    chatHistory[id].timestamp = new Date();
+  }
   
   // Save to localStorage untuk persistent storage
   if (isGroup) {
@@ -1597,7 +1768,12 @@ function addToChatHistory(id, name, message, isGroup) {
 }
 
 function incrementUnread(id) {
-  // Increment unread counter di localStorage jika perlu
+  // Increment unread counter
+  if (chatHistory[id]) {
+    chatHistory[id].unreadCount = (chatHistory[id].unreadCount || 0) + 1;
+  }
+  // Save to localStorage
+  saveUnreadCount(id, (chatHistory[id]?.unreadCount || 0));
   updateRecentChatsDisplay();
 }
 
@@ -1605,7 +1781,41 @@ function clearUnread(id) {
   if (chatHistory[id]) {
     chatHistory[id].unreadCount = 0;
   }
+  // Save to localStorage
+  saveUnreadCount(id, 0);
   updateRecentChatsDisplay();
+}
+
+// Save unread count to localStorage
+function saveUnreadCount(id, count) {
+  try {
+    const unreadMap = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+    unreadMap[id] = count;
+    localStorage.setItem('unreadCounts', JSON.stringify(unreadMap));
+  } catch (err) {
+    console.error('Error saving unread count:', err);
+  }
+}
+
+// Load unread counts from localStorage
+function loadUnreadCounts() {
+  try {
+    const unreadMap = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+    // Apply unread counts to chatHistory
+    Object.keys(unreadMap).forEach(id => {
+      // Initialize chatHistory entry if not exists
+      if (!chatHistory[id]) {
+        chatHistory[id] = {
+          unreadCount: unreadMap[id] || 0
+        };
+      } else {
+        chatHistory[id].unreadCount = unreadMap[id];
+      }
+    });
+    console.log('Loaded unread counts from localStorage:', unreadMap);
+  } catch (err) {
+    console.error('Error loading unread counts:', err);
+  }
 }
 
 // Build recent chats from localStorage
@@ -1715,14 +1925,28 @@ function updateRecentChatsDisplay() {
       }
     }
     
+    const unreadCount = chatHistory[chat.id]?.unreadCount || 0;
+    const badgeHTML = unreadCount > 0 ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : '';
+    
     div.innerHTML = `
       ${avatarHTML}
       <div class="chat-item-info">
         <h4>${chat.name}</h4>
         <small style="color:#94a3b8; font-size:0.75rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chat.lastMessage}</small>
       </div>
-      <div style="font-size:0.7rem; color:#64748b; text-align:right;">${timeText}</div>
+      <div style="font-size:0.7rem; color:#64748b; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+        <span>${timeText}</span>
+        ${badgeHTML}
+      </div>
     `;
+    
+    // Ensure online status is properly applied to avatar
+    if (!chat.isGroup && isOnline) {
+      const avatar = div.querySelector('.avatar.small');
+      if (avatar && !avatar.classList.contains('online')) {
+        avatar.classList.add('online');
+      }
+    }
     
     div.onclick = () => {
       if (chat.isGroup) {
@@ -1755,10 +1979,81 @@ socket.on('message_error', (payload) => {
   Toast.show(message, 'error');
 });
 
+// Request online users list when socket connects
+socket.on('connect', () => {
+  socket.emit('get_online_users');
+});
+
+// Receive online users list from server
+socket.on('online_users_list', (users) => {
+  console.log('Received online_users_list:', users);
+  window.userStatusMap = window.userStatusMap || {};
+  
+  // First, mark all users as offline
+  if (window.allUsers) {
+    window.allUsers.forEach(user => {
+      window.userStatusMap[user.username] = 'offline';
+    });
+  }
+  
+  // Then mark received online users as online
+  users.forEach(username => {
+    window.userStatusMap[username] = 'online';
+  });
+  
+  console.log('Updated userStatusMap:', window.userStatusMap);
+  
+  // Update DOM for all users (both in chat list and contacts)
+  users.forEach(username => {
+    // Update chat item avatar
+    const chatItem = document.getElementById(`chat-item-${username}`);
+    if (chatItem) {
+      const avatar = chatItem.querySelector('.avatar.small');
+      if (avatar) avatar.classList.add('online');
+    }
+    
+    // Update user item avatar (in contacts tab)
+    const userItem = document.getElementById(`user-item-${username}`);
+    if (userItem) {
+      const avatar = userItem.querySelector('.avatar.small');
+      if (avatar) avatar.classList.add('online');
+    }
+  });
+  
+  // Mark all others as offline in DOM
+  if (window.allUsers) {
+    window.allUsers.forEach(user => {
+      if (!users.includes(user.username)) {
+        // Remove online class for offline users
+        const chatItem = document.getElementById(`chat-item-${user.username}`);
+        if (chatItem) {
+          const avatar = chatItem.querySelector('.avatar.small');
+          if (avatar) avatar.classList.remove('online');
+        }
+        
+        const userItem = document.getElementById(`user-item-${user.username}`);
+        if (userItem) {
+          const avatar = userItem.querySelector('.avatar.small');
+          if (avatar) avatar.classList.remove('online');
+        }
+      }
+    });
+  }
+  
+  // Re-render recent chats to show updated status
+  updateRecentChatsDisplay();
+  
+  // Also update contacts modal if it's rendered
+  if (window.ContactsModal && window.ContactsModal.currentUsers) {
+    window.ContactsModal.renderUserList(window.ContactsModal.currentUsers);
+  }
+});
+
 socket.on('user_status_change', (data) => {
   const statusEl = document.getElementById(`status-${data.username}`);
   if (statusEl) statusEl.className = `user-status ${data.status}`;
 
+  // Update global status map
   window.userStatusMap = window.userStatusMap || {};
   window.userStatusMap[data.username] = data.status;
 
@@ -1795,6 +2090,17 @@ socket.on('user_status_change', (data) => {
       }
     }
   }
+  
+  // Also update contacts modal if it's rendered
+  if (window.ContactsModal && window.ContactsModal.currentUsers) {
+    window.ContactsModal.renderUserList(window.ContactsModal.currentUsers);
+  }
+
+  // Re-render recent chats jika ada perubahan status
+  // Ini memastikan status online selalu muncul dengan benar
+  setTimeout(() => {
+    updateRecentChatsDisplay();
+  }, 50);
 });
 
 // Notifikasi Request Pertemanan Realtime
@@ -1867,6 +2173,7 @@ async function initiateCallFromHistory(event, username, callType) {
 
 function startCallTimer() {
   callDuration = 0;
+  callStartTime = Date.now(); // Record when the call started
   if (callTimer) clearInterval(callTimer);
   callTimer = setInterval(() => {
     callDuration++;
@@ -1969,6 +2276,9 @@ async function answerCall() {
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
   socket.emit('call_answer', { answer, to: window.callerUsername, from: currentUser.username });
+  
+  // Start the call timer when the call is answered
+  startCallTimer();
 }
 
 function endCall() {
@@ -1976,8 +2286,14 @@ function endCall() {
   const targetName = selectedUser ? selectedUser.nama : window.callerUsername;
   
   // Save call history with 'completed' status
+  // Save for both outgoing and incoming calls
   if (selectedUser) {
+    // Outgoing call
     saveCallToHistoryWithStatus(target, targetName, isVideo ? 'video' : 'voice', callDuration, 'completed');
+  } else if (window.callerUsername) {
+    // Incoming call (when ending from receiver side)
+    const callerName = window.callerUsername;
+    saveCallToHistoryWithStatus(callerName, callerName, isVideo ? 'video' : 'voice', callDuration, 'completed');
   }
   
   if (target) socket.emit('end_call', { to: target });
@@ -2011,11 +2327,21 @@ function closeCallUI() {
   document.getElementById('callTargetName').classList.remove('hidden');
   window.pendingOffer = null;
   window.callerUsername = null;
+  callStartTime = null; // Reset call start time
   isVideo = false;
 }
 
 socket.on('call_ended', () => {
     Toast.show('Panggilan diakhiri', 'info');
+    
+    // Save call history for incoming calls when ended by caller
+    if (window.callerUsername && callStartTime) {
+        const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
+        const callerName = window.callerUsername;
+        saveCallToHistoryWithStatus(callerName, callerName, isVideo ? 'video' : 'voice', callDuration, 'completed');
+        displayCallHistory(); // Refresh the call history display
+    }
+    
     closeCallUI();
 });
 
@@ -2095,6 +2421,9 @@ async function loadGroups() {
       });
       updateRecentChatsDisplay();
       
+      // Request online users list before joining
+      socket.emit('get_online_users');
+      
       // Emit join dengan username dan group IDs
       const groupIds = allGroups.map(g => g._id);
       socket.emit('join', { username: currentUser.username, groupIds });
@@ -2102,6 +2431,8 @@ async function loadGroups() {
   } catch (err) {
 
     // Fallback: emit join dengan format lama jika error
+    // Request online users list sebelum join
+    socket.emit('get_online_users');
     socket.emit('join', currentUser.username);
   }
 }
@@ -2186,9 +2517,21 @@ async function populateMembersCheckbox() {
     
     const id = `member-${user._id}`;
     
+    // Check if user has a profile photo
+    let avatarHtml = '';
+    if (user.avatar) {
+      // User has uploaded a profile photo
+      avatarHtml = `<div class="user-avatar-small" style="background-image: url('${user.avatar}'); background-size: cover; background-position: center;"></div>`;
+    } else {
+      // Generate text avatar with first letter
+      const avatarText = user.nama ? user.nama.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase();
+      avatarHtml = `<div class="user-avatar-small">${avatarText}</div>`;
+    }
+    
     div.innerHTML = `
+      ${avatarHtml}
+      <label for="${id}" class="member-name">${user.nama || user.username}</label>
       <input type="checkbox" id="${id}" name="groupMembers" value="${user._id}">
-      <label for="${id}">${user.nama}</label>
     `;
     
     container.appendChild(div);
@@ -2364,7 +2707,25 @@ function addGroupMessageToUI(msg) {
   
   if (msg.file && msg.file.data) {
     if (msg.file.type && msg.file.type.startsWith('audio/')) {
-      content += `<audio controls src="${msg.file.data}" class="audio-msg"></audio>`;
+      const audioId = `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      content += `
+        <div class="audio-player" id="${audioId}">
+          <button class="audio-play-pause" onclick="toggleAudioPlayback('${audioId}', '${msg.file.data}')">
+            <svg class="play-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg class="pause-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+              <rect x="6" y="4" width="4" height="16"></rect>
+              <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+          </button>
+          <div class="audio-waveform-container">
+            <div class="audio-waveform" id="waveform-${audioId}"></div>
+          </div>
+          <span class="audio-time">0:00 / 0:00</span>
+          <audio src="${msg.file.data}" id="audio-element-${audioId}" style="display: none;"></audio>
+        </div>
+      `;
     } else if (msg.file.type && msg.file.type.startsWith('image/')) {
       content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
     } else {
@@ -2384,6 +2745,17 @@ function addGroupMessageToUI(msg) {
 
   div.innerHTML = content;
   container.appendChild(div);
+  
+  // Initialize waveform for audio messages
+  if (msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('audio/')) {
+    // Find the audioId in the newly added content
+    const audioElements = div.querySelectorAll('[id^="audio-"]');
+    if (audioElements.length > 0) {
+      const audioId = audioElements[0].id.replace('audio-element-', '');
+      initializeWaveform(audioId, msg.file.data);
+    }
+  }
+  
   if(typeof feather !== 'undefined') feather.replace();
   scrollToBottom();
 }
@@ -2426,6 +2798,8 @@ function sendGroupMessage() {
       saveLastMessageGroup(selectedGroup._id, displayMsg, new Date());
       input.value = '';
       clearFile();
+      // Update button visibility after clearing input
+      updateSendButtonVisibility();
     };
   } else {
     socket.emit('send_message', {
@@ -2437,6 +2811,8 @@ function sendGroupMessage() {
     // Save last message untuk group
     saveLastMessageGroup(selectedGroup._id, msg, new Date());
     input.value = '';
+    // Update button visibility after clearing input
+    updateSendButtonVisibility();
   }
 }
 
@@ -2455,10 +2831,6 @@ socket.on('receive_message', function(msg) {
       addGroupMessageToUI(msg);
     } else {
       // Cari group yang menerima message
-      const group = allGroups.find(g => g._id === msg.groupId);
-      if (group) {
-        Toast.show(`Pesan baru di ${group.nama}`, 'info');
-      }
       incrementUnread(msg.groupId);
     }
   } else {
@@ -2468,7 +2840,6 @@ socket.on('receive_message', function(msg) {
     if (selectedUser && (msg.from === selectedUser.username || msg.to === selectedUser.username)) {
       addMessageToUI(msg);
     } else {
-      Toast.show(`Pesan baru dari ${msg.from}`, 'info');
       const userItem = document.getElementById(`user-item-${msg.from}`);
       if(userItem) {
           userItem.style.background = "rgba(99, 102, 241, 0.1)"; 

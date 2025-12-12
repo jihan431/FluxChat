@@ -396,6 +396,41 @@ function hideLoadingScreen() {
   }
 }
 
+// Function untuk toggle visibility password
+function setupPasswordToggle() {
+  // Setup toggle untuk login form
+  const loginPasswordInput = document.getElementById('loginPassword');
+  const loginToggleButton = document.getElementById('loginPasswordToggle');
+  
+  if (loginPasswordInput && loginToggleButton) {
+    loginToggleButton.addEventListener('click', function() {
+      // Toggle tipe input antara password dan text
+      const type = loginPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      loginPasswordInput.setAttribute('type', type);
+      
+      // Toggle visibility icon
+      const eyeIcons = this.querySelectorAll('svg');
+      eyeIcons.forEach(icon => icon.classList.toggle('hidden'));
+    });
+  }
+  
+  // Setup toggle untuk registration form
+  const regPasswordInput = document.getElementById('regPassword');
+  const regToggleButton = document.getElementById('regPasswordToggle');
+  
+  if (regPasswordInput && regToggleButton) {
+    regToggleButton.addEventListener('click', function() {
+      // Toggle tipe input antara password dan text
+      const type = regPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      regPasswordInput.setAttribute('type', type);
+      
+      // Toggle visibility icon
+      const eyeIcons = this.querySelectorAll('svg');
+      eyeIcons.forEach(icon => icon.classList.toggle('hidden'));
+    });
+  }
+}
+
 // Function untuk wait semua resource ter-load
 function waitForResources() {
   const resources = [];
@@ -458,6 +493,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const authCard = document.querySelector('.auth-card');
   const initialHeight = loginForm.scrollHeight + 150;
   authCard.style.minHeight = initialHeight + 'px';
+  
+  // Setup password visibility toggle
+  setupPasswordToggle();
   
   // Tambahkan efek blur dan opacity pada background saat input focused
   const allInputs = document.querySelectorAll('input[type="email"], input[type="password"], input[type="text"]');
