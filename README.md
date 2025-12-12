@@ -1,6 +1,6 @@
 <!-- Improved README.md for FluxChat -->
 <div align="center">
-  <img src="public/assets/Screenshot_20251212_095000.png" alt="FluxChat Logo" width="120" height="120">
+  <img src="public/assets/Screenshot_20251212_095000.png" alt="FluxChat Logo">
   
   <h1>FluxChat</h1>
   
