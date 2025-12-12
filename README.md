@@ -1,6 +1,6 @@
 <!-- Improved README.md for FluxChat -->
 <div align="center">
-  <img src="public/assets/Screenshot_20251212_095000.png" alt="FluxChat Logo">
+  <img src="public/assets/Screenshot_20251212_095000.png" alt="FluxChat Logo border-radius=20px">
   
   <h1>FluxChat</h1>
   
