@@ -374,14 +374,24 @@ const ContactsModal = {
 
     if (user.avatar && user.avatar !== 'default' && 
         (user.avatar.startsWith('data:') || user.avatar.startsWith('http'))) {
-      return `<div class="avatar small ${onlineClass}" style="background-image: url('${user.avatar}'); background-size: cover; background-position: center;"></div>`;
+      
+      // Fallback logic jika gambar rusak (ORB Error)
+      const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
+      const gradient = window.getAvatarGradient 
+        ? window.getAvatarGradient(user.nama || user.name || 'User')
+        : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+
+      return `<div class="avatar small ${onlineClass} avatar-bg-container">
+        <div class="avatar-bg-overlay" style="background: ${gradient};">${initial}</div>
+        <img src="${user.avatar}" class="avatar-bg-img" onerror="this.style.display='none'">
+      </div>`;
     } else {
       const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
       const gradient = window.getAvatarGradient 
         ? window.getAvatarGradient(user.nama || user.name || 'User')
         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
       
-      return `<div class="avatar small ${onlineClass}" style="background: ${gradient} !important; display: flex !important; align-items: center !important; justify-content: center !important; color: white !important; font-weight: 600 !important; font-size: 1.2rem !important;">${initial}</div>`;
+      return `<div class="avatar small ${onlineClass} avatar-gradient" style="background: ${gradient} !important;">${initial}</div>`;
     }
   },
 

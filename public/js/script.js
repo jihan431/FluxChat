@@ -10,11 +10,11 @@ function showToast(message, type = 'info') {
 
   let iconHtml = '';
   if (type === 'success') {
-    iconHtml = `<span style="color: #4ade80; font-size: 1.2rem;">✓</span>`;
+    iconHtml = `<span class="toast-success-icon">✓</span>`;
   } else if (type === 'error') {
-    iconHtml = `<span style="color: #f87171; font-size: 1.2rem;">✕</span>`;
+    iconHtml = `<span class="toast-error-icon">✕</span>`;
   } else {
-    iconHtml = `<span style="color: #60a5fa; font-size: 1.2rem;">ℹ</span>`;
+    iconHtml = `<span class="toast-info-icon">ℹ</span>`;
   }
 
   toast.innerHTML = `

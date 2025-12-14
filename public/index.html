@@ -10,6 +10,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
   <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+
 </head>
 <body>
   <div class="app-layout">
@@ -36,10 +37,6 @@
                 <i data-feather="user"></i>
                 <span>Profile</span>
               </a>
-              <a href="#" onclick="openBlockedUsers(event)" class="dropdown-item">
-                <i data-feather="alert-circle"></i>
-                <span>Blocked User</span>
-              </a>
               <a href="#" onclick="logout(event)" class="dropdown-item danger">
                 <i data-feather="log-out"></i>
                 <span>Logout</span>
@@ -53,6 +50,7 @@
       <div class="tabs-container">
         <button class="tab-btn active" data-tab="chats" onclick="switchTab('chats')">Chats</button>
         <button class="tab-btn" data-tab="groups" onclick="switchTab('groups')">Groups</button>
+        <button class="tab-btn" data-tab="status" onclick="switchTab('status')">Status</button>
         <button class="tab-btn" data-tab="calls" onclick="switchTab('calls')">Calls</button>
       </div>
 
@@ -68,6 +66,11 @@
         <!-- GROUPS SECTION -->
         <div id="groups-tab" class="tab-content hidden">
           <div id="groupsList" class="list-content"></div>
+        </div>
+
+        <!-- STATUS SECTION -->
+        <div id="status-tab" class="tab-content hidden">
+          <div id="statusList" class="list-content"></div>
         </div>
 
         <!-- CALLS SECTION (Call History) -->
@@ -125,6 +128,19 @@
 
         <div class="messages-container" id="messagesContainer"></div>
 
+        <div id="replyPreview" class="reply-preview hidden">
+          <div class="reply-preview-content">
+            <div class="reply-indicator"></div>
+            <div class="reply-text">
+              <strong id="replyPreviewName"></strong>
+              <p id="replyPreviewText"></p>
+            </div>
+          </div>
+          <button class="icon-btn" onclick="cancelReply()">
+            <i data-feather="x"></i>
+          </button>
+        </div>
+
         <div id="filePreview" class="file-preview hidden">
           <div class="file-info">
             <i data-feather="file"></i>
@@ -170,9 +186,11 @@
         <video id="localVideo" autoplay muted playsinline></video>
       </div>
 
-      <div class="call-status" id="callStatus">Memanggil...</div>
-      <div class="avatar large pulse" id="callAvatar"></div>
-      <h2 id="callTargetName">User Name</h2>
+      <div class="call-info-container">
+        <div id="callAvatarContainer" class="call-avatar-container"></div>
+        <h2 id="callTargetName">User Name</h2>
+        <div class="call-status" id="callStatus">Memanggil...</div>
+      </div>
 
       <div id="incomingActions" class="call-actions hidden">
         <button class="btn-call reject" onclick="rejectCall()">
@@ -248,7 +266,7 @@
     <div class="modal-divider"></div>
 
     <!-- HIDDEN FILE INPUT — WAJIB ADA -->
-    <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
+    <input type="file" id="profilePhotoInput" accept="image/*" class="hidden-file-input">
 
     <!-- Modal Footer -->
     <div class="modal-footer">
@@ -355,15 +373,103 @@
 
         <!-- Divider -->
         <div class="modal-divider"></div>
-
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-          <button class="icon-btn block-btn" id="blockUserBtn" onclick="blockUser()">
-            <i data-feather="slash"></i> Block
-          </button>
-        </div>
       </div>
     </div>
+  </div>
+
+  <!-- Create Status Modal -->
+  <div id="createStatusModal" class="modal hidden">
+    <div class="glass-panel status-modal-content">
+      <button class="icon-btn close-modal" onclick="closeCreateStatusModal()">
+        <i data-feather="x"></i>
+      </button>
+      <h2>Buat Status</h2>
+
+      <div class="status-type-toggle">
+        <button class="toggle-btn active" data-type="text"><i data-feather="type"></i> Teks</button>
+        <button class="toggle-btn" data-type="image"><i data-feather="camera"></i> Gambar</button>
+      </div>
+      
+      <div class="status-creator-container">
+        <!-- Text Status Creator -->
+        <div id="textStatusCreator">
+          <div class="text-status-wrapper">
+            <textarea id="statusTextInput" placeholder="Ketik status..."></textarea>
+          </div>
+          <div class="color-palette">
+            <button class="color-dot" style="background: #4a90e2;" data-color="#4a90e2"></button>
+            <button class="color-dot" style="background: #50e3c2;" data-color="#50e3c2"></button>
+            <button class="color-dot" style="background: #f5a623;" data-color="#f5a623"></button>
+            <button class="color-dot" style="background: #d0021b;" data-color="#d0021b"></button>
+            <button class="color-dot" style="background: #9013fe;" data-color="#9013fe"></button>
+            <button class="color-dot active" style="background: #31363F;" data-color="#31363F"></button>
+          </div>
+        </div>
+        
+        <!-- Image Status Creator (placeholder for now) -->
+        <div id="imageStatusCreator" class="hidden">
+           <label for="statusImageInput" class="image-upload-placeholder">
+              <i data-feather="image"></i>
+              <span>Pilih Gambar</span>
+           </label>
+           <input type="file" id="statusImageInput" accept="image/*" class="hidden-file-input">
+           <div class="image-preview-wrapper hidden" id="imagePreviewWrapper">
+             <img id="statusImagePreview" />
+             <input type="text" id="statusImageCaption" placeholder="Tambahkan keterangan..." class="status-caption-input">
+           </div>
+        </div>
+      </div>
+      <div class="modal-footer"><button id="postStatusBtn" class="save-btn"><i data-feather="send"></i> Kirim</button></div>
+    </div>
+  </div>
+
+  <!-- View Status Modal -->
+  <div id="viewStatusModal" class="modal hidden" style="z-index: 20001;">
+    <div class="status-viewer-content">
+      <div class="status-viewer-header">
+        <div class="status-progress-bar-container" id="statusProgressBarContainer"></div>
+        <div class="status-user-info">
+           <div class="avatar-container-view" id="statusViewerAvatar"></div>
+           <div class="status-text-info">
+             <h4 id="statusViewerName">User</h4>
+             <small id="statusViewerTime">Time</small>
+           </div>
+           <button class="icon-btn close-status-viewer" onclick="closeStatusViewer()">
+             <i data-feather="x"></i>
+           </button>
+        </div>
+      </div>
+      
+      <div class="status-viewer-body" id="statusViewerBody"></div>
+      
+      <button class="status-nav-btn prev" onclick="prevStatus()"><i data-feather="chevron-left"></i></button>
+      <button class="status-nav-btn next" onclick="nextStatus()"><i data-feather="chevron-right"></i></button>
+
+      <!-- Status Footer (Reply / Viewers) -->
+      <div class="status-footer" id="statusFooter"></div>
+
+      <!-- Viewers List Modal (Slide Up) -->
+      <div id="statusViewersPanel" class="status-viewers-panel">
+        <div class="viewers-header">
+          <h4>Dilihat oleh <span id="viewersCount">0</span></h4>
+          <button class="icon-btn" onclick="closeViewersPanel()"><i data-feather="chevron-down"></i></button>
+        </div>
+        <div id="viewersList" class="viewers-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Context Menu -->
+  <div id="messageContextMenu" class="context-menu hidden">
+    <button class="context-menu-item" onclick="startReply()">
+      <i data-feather="corner-up-left" class="context-menu-icon"></i> Balas
+    </button>
+    <button class="context-menu-item danger" onclick="deleteMessageForMe()" id="deleteForMeBtn">
+      <i data-feather="trash" class="context-menu-icon"></i> Hapus untuk Saya
+    </button>
+    <button class="context-menu-item danger" onclick="deleteMessageForEveryone()" id="deleteForEveryoneBtn" class="context-menu-hidden">
+      <i data-feather="trash-2" class="context-menu-icon"></i> Hapus untuk Semua
+    </button>
   </div>
 
   <!-- Screenshot Protection Overlay -->

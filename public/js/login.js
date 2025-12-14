@@ -1,6 +1,11 @@
 const API_URL = window.location.origin;
 let googleInitTried = false;
 
+// Deteksi perangkat
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 async function initGoogleLogin() {
   const btn = document.getElementById('googleLoginBtn');
   if (!btn || googleInitTried) return;
@@ -38,58 +43,74 @@ async function initGoogleLogin() {
         return;
       }
 
-      google.accounts.id.initialize({
+      const isMobile = isMobileDevice();
+      
+      // Konfigurasi berbeda untuk mobile dan desktop
+      const config = {
         client_id: clientId,
-        callback: handleGoogleCredential,
-        ux_mode: 'popup',
-        login_uri: `${window.location.origin}/login.html`
-      });
+        callback: handleGoogleCredential
+      };
 
-      // Buat container tersembunyi untuk Google button
-      const googleBtnContainer = document.createElement('div');
-      googleBtnContainer.id = 'googleBtnContainer';
-      googleBtnContainer.style.position = 'absolute';
-      googleBtnContainer.style.left = '-9999px';
-      googleBtnContainer.style.top = '-9999px';
-      googleBtnContainer.style.width = btn.offsetWidth + 'px';
-      googleBtnContainer.style.height = '40px';
-      document.body.appendChild(googleBtnContainer);
+      if (isMobile) {
+        // Mobile: gunakan redirect
+        config.ux_mode = 'redirect';
+        config.redirect_uri = `${window.location.origin}/login.html`;
+      } else {
+        // Desktop: gunakan popup
+        config.ux_mode = 'popup';
+      }
 
-      // Render Google button di container tersembunyi
-      google.accounts.id.renderButton(googleBtnContainer, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        width: btn.offsetWidth || 300
-      });
+      google.accounts.id.initialize(config);
 
-      // Saat tombol custom diklik, trigger klik pada Google button
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        // Tunggu sebentar untuk memastikan button sudah di-render
-        setTimeout(() => {
-          const googleBtn = googleBtnContainer.querySelector('div[role="button"]');
-          if (googleBtn) {
-            googleBtn.click();
-          } else {
-            // Fallback: coba lagi setelah delay lebih lama
-            setTimeout(() => {
-              const retryBtn = googleBtnContainer.querySelector('div[role="button"]');
-              if (retryBtn) {
-                retryBtn.click();
-              } else {
-                showNotification('Gagal memuat Google login', 'error');
-              }
-            }, 500);
-          }
-        }, 100);
-      });
+      // Untuk desktop, buat button tersembunyi
+      if (!isMobile) {
+        const googleBtnContainer = document.createElement('div');
+        googleBtnContainer.id = 'googleBtnContainer';
+        googleBtnContainer.style.position = 'absolute';
+        googleBtnContainer.style.left = '-9999px';
+        googleBtnContainer.style.top = '-9999px';
+        googleBtnContainer.style.width = btn.offsetWidth + 'px';
+        googleBtnContainer.style.height = '40px';
+        document.body.appendChild(googleBtnContainer);
+
+        google.accounts.id.renderButton(googleBtnContainer, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          width: btn.offsetWidth || 300
+        });
+
+        // Custom button click trigger Google button tersembunyi
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          setTimeout(() => {
+            const googleBtn = googleBtnContainer.querySelector('div[role="button"]');
+            if (googleBtn) {
+              googleBtn.click();
+            } else {
+              setTimeout(() => {
+                const retryBtn = googleBtnContainer.querySelector('div[role="button"]');
+                if (retryBtn) {
+                  retryBtn.click();
+                } else {
+                  showNotification('Gagal memuat Google login', 'error');
+                }
+              }, 500);
+            }
+          }, 100);
+        });
+      } else {
+        // Mobile: button langsung trigger Google login
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          google.accounts.id.prompt();
+        });
+      }
 
       setBtnState('Masuk dengan Google', false);
     };
 
-    // Tunggu script Google siap
     if (typeof google !== 'undefined' && google.accounts?.id) {
       startInit();
     } else {
@@ -180,11 +201,9 @@ function setMode(mode) {
 
   tabButtons.forEach(btn => btn.classList.remove('active'));
 
-  // Function untuk update card height
   const updateCardHeight = (form) => {
-    // Hitung height dari form yang akan ditampilkan
     setTimeout(() => {
-      const height = form.scrollHeight + 150; // 150px untuk header dan padding
+      const height = form.scrollHeight + 150;
       authCard.style.minHeight = height + 'px';
     }, 0);
   };
@@ -215,7 +234,6 @@ function setMode(mode) {
 
 window.setMode = setMode;
 
-// --- LOGIKA TOAST TERBARU ---
 function showNotification(message, type = 'info') {
   const toastBox = document.getElementById('toastBox');
   if (!toastBox) return;
@@ -223,14 +241,13 @@ function showNotification(message, type = 'info') {
   const toast = document.createElement('div');
   toast.classList.add('toast', type);
 
-  // Icon SVG based on type - Inline untuk performa lebih baik
   let iconHtml = '';
   if (type === 'success') {
-    iconHtml = `<span style="color: #4ade80; font-size: 1.2rem;">✓</span>`;
+    iconHtml = `<span class="toast-success-icon">✓</span>`;
   } else if (type === 'error') {
-    iconHtml = `<span style="color: #f87171; font-size: 1.2rem;">✕</span>`;
+    iconHtml = `<span class="toast-error-icon">✕</span>`;
   } else {
-    iconHtml = `<span style="color: #60a5fa; font-size: 1.2rem;">ℹ</span>`;
+    iconHtml = `<span class="toast-info-icon">ℹ</span>`;
   }
 
   toast.innerHTML = `
@@ -240,7 +257,6 @@ function showNotification(message, type = 'info') {
 
   toastBox.appendChild(toast);
 
-  // Auto remove after 3.5s
   setTimeout(() => {
     toast.classList.add('hide');
     toast.addEventListener('animationend', () => {
@@ -357,6 +373,7 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
         setTimeout(() => window.location.href = 'index.html', 1000);
       } else {
         showNotification('Verifikasi berhasil! Silakan login.', 'success');
+        localStorage.setItem('newUser', 'true');
         document.getElementById('otpCode').value = '';
         setTimeout(() => setMode('login'), 1000);
       }
@@ -375,20 +392,17 @@ if (localStorage.getItem('currentUser')) {
   window.location.href = 'index.html';
 }
 
-// Function untuk hide loading screen
 function hideLoadingScreen() {
   const loadingScreen = document.getElementById('loadingScreen');
   const authCard = document.querySelector('.auth-card');
   
   if (loadingScreen) {
     loadingScreen.classList.add('hidden');
-    // Hapus dari DOM setelah animasi selesai
     setTimeout(() => {
       loadingScreen.remove();
     }, 500);
   }
   
-  // Trigger animasi auth card setelah loading screen mulai fade out
   if (authCard) {
     setTimeout(() => {
       authCard.classList.add('loaded');
@@ -396,70 +410,56 @@ function hideLoadingScreen() {
   }
 }
 
-// Function untuk toggle visibility password
 function setupPasswordToggle() {
-  // Setup toggle untuk login form
   const loginPasswordInput = document.getElementById('loginPassword');
   const loginToggleButton = document.getElementById('loginPasswordToggle');
   
   if (loginPasswordInput && loginToggleButton) {
     loginToggleButton.addEventListener('click', function() {
-      // Toggle tipe input antara password dan text
       const type = loginPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
       loginPasswordInput.setAttribute('type', type);
-      
-      // Toggle visibility icon
       const eyeIcons = this.querySelectorAll('svg');
       eyeIcons.forEach(icon => icon.classList.toggle('hidden'));
     });
   }
   
-  // Setup toggle untuk registration form
   const regPasswordInput = document.getElementById('regPassword');
   const regToggleButton = document.getElementById('regPasswordToggle');
   
   if (regPasswordInput && regToggleButton) {
     regToggleButton.addEventListener('click', function() {
-      // Toggle tipe input antara password dan text
       const type = regPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
       regPasswordInput.setAttribute('type', type);
-      
-      // Toggle visibility icon
       const eyeIcons = this.querySelectorAll('svg');
       eyeIcons.forEach(icon => icon.classList.toggle('hidden'));
     });
   }
 }
 
-// Function untuk wait semua resource ter-load
 function waitForResources() {
   const resources = [];
   
-  // Wait untuk images
   const images = document.querySelectorAll('img');
   images.forEach(img => {
     if (!img.complete) {
       resources.push(new Promise(resolve => {
         img.onload = resolve;
-        img.onerror = resolve; // Continue even if image fails
+        img.onerror = resolve;
       }));
     }
   });
   
-  // Wait untuk background image
   const bgImage = new Image();
   bgImage.src = 'background.jpg';
   resources.push(new Promise(resolve => {
     bgImage.onload = resolve;
-    bgImage.onerror = resolve; // Continue even if image fails
+    bgImage.onerror = resolve;
   }));
   
-  // Wait untuk fonts
   if (document.fonts && document.fonts.ready) {
     resources.push(document.fonts.ready);
   }
   
-  // Wait untuk Google script (optional)
   const googleScript = document.querySelector('script[src*="accounts.google.com"]');
   if (googleScript && typeof google === 'undefined') {
     resources.push(new Promise(resolve => {
@@ -474,11 +474,9 @@ function waitForResources() {
     }));
   }
   
-  // Minimum loading time untuk smooth UX (2000ms - 2 detik)
   const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000));
   resources.push(minLoadTime);
   
-  // Wait semua resource atau timeout setelah 5 detik
   Promise.race([
     Promise.all(resources),
     new Promise(resolve => setTimeout(resolve, 5000))
@@ -487,17 +485,14 @@ function waitForResources() {
   });
 }
 
-// Set initial card height saat halaman dimuat
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
   const authCard = document.querySelector('.auth-card');
   const initialHeight = loginForm.scrollHeight + 150;
   authCard.style.minHeight = initialHeight + 'px';
   
-  // Setup password visibility toggle
   setupPasswordToggle();
   
-  // Tambahkan efek blur dan opacity pada background saat input focused
   const allInputs = document.querySelectorAll('input[type="email"], input[type="password"], input[type="text"]');
   
   allInputs.forEach(input => {
@@ -510,15 +505,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Wait untuk semua resource ter-load
   waitForResources();
   
-  // Cek jika ada credential di URL setelah redirect dari Google
+  
+  if (localStorage.getItem('newUser') === 'true') {
+    showNotification('Selamat datang! Akun Anda telah berhasil dibuat.', 'success');
+    localStorage.removeItem('newUser');
+  }
+  
+  // Handle redirect dari Google (untuk mobile)
   const urlParams = new URLSearchParams(window.location.search);
   const credential = urlParams.get('credential');
-  if (credential) {
-    // Hapus credential dari URL untuk keamanan
+  const g_csrf_token = urlParams.get('g_csrf_token');
+  
+  if (credential && g_csrf_token) {
+    // Hapus parameter dari URL
     window.history.replaceState({}, document.title, window.location.pathname);
+    // Proses credential
     handleGoogleCredential({ credential });
   } else {
     initGoogleLogin();

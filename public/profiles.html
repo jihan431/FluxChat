@@ -6,6 +6,7 @@
     <title>User Profile - FluxChat</title>
     <link rel="stylesheet" href="css/profiles.css">
     <script src="https://unpkg.com/feather-icons"></script>
+    <script src="js/avatar-utils.js"></script>
 </head>
 <body>
     
@@ -15,7 +16,7 @@
             <!-- Close Button -->
             <div class="close-btn-container">
                 <button class="close-btn" onclick="window.history.back()">
-                    <i data-feather="x" style="width: 24px; height: 24px;"></i>
+                    <i data-feather="x" class="close-btn-icon"></i>
                 </button>
             </div>
 
@@ -58,20 +59,21 @@
             <!-- Divider -->
             <div class="divider"></div>
 
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button class="btn btn-block" id="blockUserBtn" onclick="blockUser()">
-                    <i data-feather="lock"></i>
-                    Block User
-                </button>
-            </div>
+
         </div>
     </div>
 
     <script>
         // Get user data from localStorage
         function getProfileData() {
-            const userData = JSON.parse(localStorage.getItem('selectedUserProfile') || '{}');
+            // First try to get selected user profile (when viewing another user's profile)
+            let userData = JSON.parse(localStorage.getItem('selectedUserProfile') || '{}');
+            
+            // If no selected user profile, fallback to current user's own profile
+            if (!userData.username) {
+                userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            }
+            
             return userData;
         }
 
@@ -85,15 +87,7 @@
             // Avatar
             const avatarEl = document.getElementById('userProfileAvatar');
             if (avatarEl) {
-                if (user.avatar && user.avatar !== 'default' && (user.avatar.startsWith('data:') || user.avatar.startsWith('http'))) {
-                    avatarEl.style.backgroundImage = `url("${user.avatar}")`;
-                    avatarEl.style.backgroundSize = 'cover';
-                    avatarEl.style.backgroundPosition = 'center';
-                    avatarEl.textContent = '';
-                } else {
-                    const initial = user.nama ? user.nama.charAt(0).toUpperCase() : 'U';
-                    avatarEl.textContent = initial;
-                }
+                setAvatar(avatarEl, user, { size: 'large' });
             }
 
             // Name
@@ -142,15 +136,6 @@
                 const isOnline = user.status === 'online';
                 statusEl.textContent = isOnline ? 'Online' : 'Offline';
                 statusEl.classList.add(isOnline ? 'online' : 'offline');
-            }
-        }
-
-        function blockUser() {
-            const user = getProfileData();
-            if (confirm(`Block ${user.nama}? You won't be able to see their messages.`)) {
-                // TODO: Call API to block user
-                alert('User blocked!');
-                window.history.back();
             }
         }
 

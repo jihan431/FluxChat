@@ -70,6 +70,16 @@ const messageSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   read: { type: Boolean, default: false },
   groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'GroupChat' }
+,
+  replyTo: {
+    messageId: String,
+    senderName: String,
+    content: String,
+    mediaUrl: String,
+    type: { type: String },
+    userId: String
+  },
+  isDeleted: { type: Boolean, default: false }
 });
 
 // Validate: Pesan atau file harus ada minimal satu
@@ -83,6 +93,10 @@ messageSchema.pre('save', function(next) {
   next();
 });
 
+// Indexing untuk mempercepat query pesan
+messageSchema.index({ from: 1, to: 1, timestamp: -1 });
+messageSchema.index({ groupId: 1, timestamp: -1 });
+
 const groupChatSchema = new mongoose.Schema({
   nama: { type: String, required: true },
   avatar: { type: String, default: 'G' },
@@ -93,10 +107,36 @@ const groupChatSchema = new mongoose.Schema({
   lastMessageTime: { type: Date }
 });
 
+const statusSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  type: { type: String, enum: ['text', 'image'], required: true },
+  content: { type: String, required: true }, // For text or image URL/base64
+  caption: { type: String },
+  backgroundColor: { type: String }, // For text statuses
+  viewers: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    viewedAt: { type: Date, default: Date.now }
+  }],
+  createdAt: { type: Date, default: Date.now },
+  expiresAt: { type: Date, required: true }
+});
+
+// TTL index to automatically delete statuses after they expire
+statusSchema.index({ "expiresAt": 1 }, { expireAfterSeconds: 0 });
+
 const User = mongoose.model('User', userSchema);
 const Message = mongoose.model('Message', messageSchema);
 const GroupChat = mongoose.model('GroupChat', groupChatSchema);
+const Status = mongoose.model('Status', statusSchema);
 
+// Middleware to check for a valid ObjectId
+const validateObjectId = (req, res, next) => {
+  const id = req.params.userId || req.body.userId || req.query.userId || req.params.id;
+  if (id && !mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, error: 'Format ID tidak valid' });
+  }
+  next();
+};
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -407,6 +447,88 @@ app.put('/api/profile', async (req, res) => {
   }
 });
 
+// POST: Create a new status
+app.post('/api/statuses', validateObjectId, async (req, res) => {
+  try {
+    const { userId, type, content, backgroundColor, caption } = req.body;
+    if (!userId || !type || !content) {
+      return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
+    }
+
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    const newStatus = new Status({
+      user: userId,
+      type,
+      content,
+      caption,
+      backgroundColor,
+      expiresAt
+    });
+
+    await newStatus.save();
+    res.status(201).json({ success: true, status: newStatus });
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST: Mark status as viewed
+app.post('/api/statuses/:id/view', validateObjectId, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const statusId = req.params.id;
+
+    // Gunakan updateOne dengan kondisi 'viewers.user': { $ne: userId }
+    // Ini memastikan kita hanya push jika user BELUM ada di array viewers
+    await Status.updateOne(
+      { _id: statusId, 'viewers.user': { $ne: userId } },
+      { 
+        $push: { viewers: { user: userId, viewedAt: new Date() } } 
+      }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET: Get all active statuses from friends and self
+app.get('/api/statuses', validateObjectId, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID diperlukan' });
+    }
+
+    const user = await User.findById(userId).select('friends');
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
+    }
+
+    const userAndFriendIds = [userId, ...user.friends];
+
+    const statuses = await Status.find({
+      user: { $in: userAndFriendIds },
+      expiresAt: { $gt: new Date() }
+    })
+    .populate('user', 'username nama avatar')
+    .populate('viewers.user', 'username nama avatar')
+    .sort({ 'user.id': 1, createdAt: -1 }); // Sort to group by user
+
+    res.json({ success: true, statuses });
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 app.get('/api/users', async (req, res) => {
   try {
@@ -441,60 +563,77 @@ app.get('/api/users', async (req, res) => {
 
 app.get('/api/messages/:user1/:user2', async (req, res) => {
   const { user1, user2 } = req.params;
+  const limit = parseInt(req.query.limit) || 50; // Batasi 50 pesan terakhir
+
   const messages = await Message.find({
     $or: [
       { from: user1, to: user2 },
       { from: user2, to: user1 }
     ]
-  }).sort({ timestamp: 1 });
-  res.json({ success: true, messages });
+  }).sort({ timestamp: -1 }).limit(limit); // Ambil terbaru dulu
+
+  res.json({ success: true, messages: messages.reverse() }); // Balik urutan agar kronologis
 });
 
 // Cari pesan (private & group) dengan kata kunci
 app.get('/api/messages/search', async (req, res) => {
   try {
-    const { userId, q, limit = 20, skip = 0 } = req.query;
+    const { userId, q, chatId, isGroup, limit = 50, skip = 0 } = req.query;
     if (!q || !userId) return res.json({ success: true, results: [] });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
 
-    const blockedUsers = await User.find({ _id: { $in: user.blockedUsers || [] } }).select('username');
-    const blockedNames = blockedUsers.map(u => u.username);
-
-    const groups = await GroupChat.find({ members: userId }).select('_id nama');
-    const groupIds = groups.map(g => g._id);
-    const groupNameMap = new Map(groups.map(g => [g._id.toString(), g.nama]));
-
     const regex = new RegExp(q, 'i');
-
-    const messages = await Message.find({
+    const queryConditions = {
       $and: [
         { $or: [{ message: regex }, { 'file.name': regex }] },
-        {
-          $or: [
-            { from: user.username, to: { $nin: blockedNames } },
-            { to: user.username, from: { $nin: blockedNames } },
-            { groupId: { $in: groupIds } }
-          ]
-        }
+        { isDeleted: { $ne: true } }
       ]
-    })
+    };
+
+    // Jika chatId tidak ada, pencarian tidak dilakukan (sesuai permintaan fitur)
+    if (!chatId) {
+      return res.json({ success: true, results: [] });
+    }
+
+    if (isGroup === 'true') {
+      // Search within a specific group
+      queryConditions.$and.push({ groupId: chatId });
+      // Verifikasi user adalah anggota grup
+      const group = await GroupChat.findOne({ _id: chatId, members: userId });
+      if (!group) {
+        return res.status(403).json({ error: 'Akses ditolak ke grup ini' });
+      }
+    } else {
+      // Search within a private chat
+      queryConditions.$and.push({ groupId: { $exists: false } });
+      queryConditions.$and.push({
+        $or: [
+          { from: user.username, to: chatId },
+          { from: chatId, to: user.username }
+        ]
+      });
+    }
+
+    const messages = await Message.find(queryConditions)
       .sort({ timestamp: -1 })
       .skip(parseInt(skip) || 0)
-      .limit(Math.min(parseInt(limit) || 20, 100));
+      .limit(Math.min(parseInt(limit) || 50, 100));
 
+    const senderUsernames = [...new Set(messages.map(m => m.from))];
+    const senders = await User.find({ username: { $in: senderUsernames } }).select('username nama');
+    const senderMap = new Map(senders.map(s => [s.username, s]));
+    
     const results = messages.map(m => {
-      const isGroup = !!m.groupId;
-      const chatId = isGroup ? m.groupId.toString() : (m.from === user.username ? m.to : m.from);
-      const chatName = isGroup ? (groupNameMap.get(m.groupId?.toString()) || 'Group') : chatId;
+      const sender = senderMap.get(m.from);
       return {
         id: m._id,
-        chatId,
-        chatName,
-        isGroup,
         from: m.from,
-        to: m.to,
+        sender: {
+          username: sender?.username || m.from,
+          nama: sender?.nama || m.from
+        },
         message: m.message,
         file: m.file,
         timestamp: m.timestamp
@@ -738,9 +877,11 @@ app.post('/api/groups', async (req, res) => {
 // GET: Ambil pesan dalam group
 app.get('/api/groups/:groupId/messages', async (req, res) => {
   try {
+    const limit = parseInt(req.query.limit) || 50; // Batasi 50 pesan terakhir
     const messages = await Message.find({ groupId: req.params.groupId })
-      .sort({ timestamp: 1 });
-    res.json({ success: true, messages });
+      .sort({ timestamp: -1 })
+      .limit(limit);
+    res.json({ success: true, messages: messages.reverse() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -759,6 +900,46 @@ app.post('/api/groups/:groupId/members', async (req, res) => {
     res.json({ success: true, group });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT: Update group details (nama, avatar)
+app.put('/api/groups/:groupId', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { nama, avatar, userId } = req.body; // userId is the person requesting the change
+
+    if (!nama || !userId) {
+      return res.status(400).json({ success: false, error: 'Nama grup dan ID user diperlukan' });
+    }
+
+    const group = await GroupChat.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ success: false, error: 'Grup tidak ditemukan' });
+    }
+
+    // Authorization: Only creator can edit for now
+    if (group.createdBy.toString() !== userId) {
+      return res.status(403).json({ success: false, error: 'Hanya pembuat grup yang dapat mengedit' });
+    }
+
+    group.nama = nama;
+    if (avatar) {
+      group.avatar = avatar;
+    } else if (!group.avatar || !group.avatar.startsWith('data:')) {
+      // Only update initial if no custom avatar is set
+      group.avatar = nama.charAt(0).toUpperCase();
+    }
+
+    await group.save();
+    const updatedGroup = await GroupChat.findById(groupId).populate('members', 'username nama avatar');
+
+    // Notify all members via socket
+    io.to(groupId).emit('group_updated', { group: updatedGroup });
+
+    res.json({ success: true, group: updatedGroup });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -867,7 +1048,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_message', async (data) => {
-    const { from, to, message, file, groupId } = data;
+    const { from, to, message, file, groupId, replyTo, tempId } = data;
 
     let sanitizedFile = null;
     if (file && file.data) {
@@ -893,15 +1074,29 @@ io.on('connection', (socket) => {
 
     if (groupId) {
       // Pesan ke group
-      const newMsg = new Message({ from, to: groupId, message, file: sanitizedFile, groupId });
-      await newMsg.save();
-      io.to(groupId).emit('receive_message', newMsg);
+      const newMsg = new Message({ from, to: groupId, message, file: sanitizedFile, groupId, replyTo });
+      const savedMessage = await newMsg.save();
+      // Siarkan ke semua anggota grup KECUALI pengirim
+      socket.broadcast.to(groupId).emit('receive_message', savedMessage);
+
+      // Kirim konfirmasi kembali ke pengirim dengan ID permanen untuk sinkronisasi
+      const savedMessageObject = savedMessage.toObject();
+      if (tempId) {
+        savedMessageObject.tempId = tempId;
+      }
+      socket.emit('message_sent', savedMessageObject);
     } else {
       // Pesan private seperti biasa
-      const newMsg = new Message({ from, to, message, file: sanitizedFile });
-      await newMsg.save();
-      io.to(to).emit('receive_message', newMsg);
-      socket.emit('message_sent', newMsg);
+      const newMsg = new Message({ from, to, message, file: sanitizedFile, replyTo });
+      const savedMessage = await newMsg.save();
+
+      const savedMessageObject = savedMessage.toObject();
+      if (tempId) {
+        savedMessageObject.tempId = tempId;
+      }
+
+      io.to(to).emit('receive_message', savedMessage);
+      socket.emit('message_sent', savedMessageObject);
     }
   });
 
@@ -912,6 +1107,71 @@ io.on('connection', (socket) => {
 
   socket.on('stop_typing', (data) => {
     io.to(data.to).emit('stop_typing', { from: data.from });
+  });
+
+  socket.on('delete_message_for_everyone', async (data) => {
+    try {
+      const { messageId } = data;
+      const username = onlineUsers.get(socket.id);
+
+      if (!username) {
+        return socket.emit('message_error', { error: 'Autentikasi gagal untuk menghapus pesan.' });
+      }
+
+      const message = await Message.findById(messageId);
+
+      if (!message) {
+        return socket.emit('message_error', { error: 'Pesan tidak ditemukan.' });
+      }
+
+      if (message.from !== username) {
+        return socket.emit('message_error', { error: 'Anda tidak bisa menghapus pesan orang lain.' });
+      }
+
+      // Update message in DB
+      message.message = 'Pesan ini telah dihapus';
+      message.file = undefined;
+      message.isDeleted = true;
+      await message.save();
+
+      // --- BARU: Cari pesan terakhir yang baru untuk memperbarui sidebar dengan benar ---
+      let newLastMessage = null;
+      const query = { isDeleted: { $ne: true } };
+
+      if (message.groupId) {
+        query.groupId = message.groupId;
+      } else {
+        // Untuk chat pribadi, pastikan tidak tercampur dengan pesan grup
+        query.groupId = { $exists: false };
+        query.$or = [
+          { from: message.from, to: message.to },
+          { from: message.to, to: message.from }
+        ];
+      }
+
+      // Cari pesan terbaru yang tidak terhapus
+      newLastMessage = await Message.findOne(query).sort({ timestamp: -1 });
+      // --- AKHIR BARU ---
+
+      const payload = {
+        messageId: message._id.toString(),
+        groupId: message.groupId ? message.groupId.toString() : null,
+        timestamp: message.timestamp,
+        from: message.from,
+        to: message.to,
+        newLastMessage: newLastMessage // Kirim pesan terakhir yang baru ke klien
+      };
+      
+      if (message.groupId) {
+        io.to(message.groupId.toString()).emit('message_deleted', payload);
+      } else {
+        // Kirim ke pengirim dan penerima untuk pembaruan real-time yang andal
+        io.to(message.to).emit('message_deleted', payload);
+        io.to(message.from).emit('message_deleted', payload);
+      }
+    } catch (error) {
+      socket.emit('message_error', { error: 'Gagal menghapus pesan di server.' });
+    }
   });
 
   socket.on('call_offer', (data) => {
