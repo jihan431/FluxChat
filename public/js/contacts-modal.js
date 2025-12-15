@@ -2,7 +2,7 @@
 // Modal untuk menampilkan daftar kontak dengan search functionality
 // Integrates dengan existing search dan contact list logic dari app.js
 
-const ContactsModal = {
+window.ContactsModal = {
   isOpen: false,
   searchTimeout: null,
 
@@ -42,7 +42,7 @@ const ContactsModal = {
     if (!content) return;
 
     content.innerHTML = `
-      <button class="icon-btn close-modal" onclick="ContactsModal.close()">
+      <button class="icon-btn close-modal" onclick="window.ContactsModal.close()">
         <i data-feather="x"></i>
       </button>
 
@@ -194,7 +194,8 @@ const ContactsModal = {
     try {
       // Use existing data from app.js if available
       if (window.allUsers && window.allUsers.length > 0) {
-        this.displayContacts(window.allUsers);
+        // Render requests + friends
+        this.renderFullList(listContainer);
       } else {
         // Fallback: fetch friends list
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -204,7 +205,9 @@ const ContactsModal = {
         console.log('Friends list data:', data);
 
         if (data.success && data.friends) {
-          this.displayContacts(data.friends);
+          window.allUsers = data.friends;
+          window.allRequests = data.requests || [];
+          this.renderFullList(listContainer);
         } else {
           this.showEmptyState();
         }
@@ -218,6 +221,66 @@ const ContactsModal = {
       `;
       if (typeof feather !== 'undefined') feather.replace();
     }
+  },
+
+  /**
+   * Render Full List (Requests + Contacts)
+   */
+  renderFullList(container) {
+    container.innerHTML = '';
+
+    // 1. Render Friend Requests
+    if (window.allRequests && window.allRequests.length > 0) {
+      const reqHeader = document.createElement('div');
+      reqHeader.innerHTML = 'Friend Requests';
+      reqHeader.style.padding = '12px 10px 8px';
+      reqHeader.style.color = 'var(--primary-light)';
+      reqHeader.style.fontSize = '0.8rem';
+      reqHeader.style.fontWeight = '700';
+      reqHeader.style.textTransform = 'uppercase';
+      reqHeader.style.letterSpacing = '0.5px';
+      container.appendChild(reqHeader);
+
+      window.allRequests.forEach(req => {
+        const div = document.createElement('div');
+        div.className = 'contact-item';
+        div.style.background = 'rgba(255, 165, 0, 0.05)';
+        div.style.border = '1px solid rgba(255, 165, 0, 0.2)';
+        
+        div.innerHTML = `
+          <div class="contact-avatar">
+            ${this.createAvatarHTML(req.from, false)}
+          </div>
+          <div class="contact-info">
+            <h4 class="contact-name">${req.from.nama}</h4>
+            <p class="contact-username">@${req.from.username}</p>
+          </div>
+          <div class="contact-action" style="display:flex; gap:8px; width:auto;">
+            <button class="contact-action-btn" style="color:var(--success); background:rgba(16, 185, 129, 0.15);" onclick="respondFriend('${req.from._id}', 'accept')" title="Terima">
+              <i data-feather="check"></i>
+            </button>
+            <button class="contact-action-btn" style="color:var(--danger); background:rgba(239, 68, 68, 0.15);" onclick="respondFriend('${req.from._id}', 'reject')" title="Tolak">
+              <i data-feather="x"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      const divider = document.createElement('div');
+      divider.style.borderBottom = '1px solid var(--border)';
+      divider.style.margin = '15px 0';
+      container.appendChild(divider);
+    }
+
+    // 2. Render Contacts
+    if (window.allUsers && window.allUsers.length > 0) {
+      this.appendContactItems(window.allUsers, container);
+    } else if (!window.allRequests || window.allRequests.length === 0) {
+      this.showEmptyState();
+    }
+    
+    if (typeof feather !== 'undefined') feather.replace();
   },
 
   /**
@@ -269,9 +332,15 @@ const ContactsModal = {
       this.showEmptyState();
       return;
     }
-
     listContainer.innerHTML = '';
+    this.appendContactItems(contacts, listContainer);
+    if (typeof feather !== 'undefined') feather.replace();
+  },
 
+  /**
+   * Helper to append contact items to a container
+   */
+  appendContactItems(contacts, container) {
     contacts.forEach(user => {
       const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
       const contactItem = document.createElement('div');
@@ -293,7 +362,7 @@ const ContactsModal = {
       } else {
         // Not a friend: show add button
         actionButton = `
-          <button class="contact-action-btn add-btn" onclick="ContactsModal.sendFriendRequest(event, '${user._id}')" title="Add friend">
+          <button class="contact-action-btn add-btn" onclick="window.ContactsModal.sendFriendRequest(event, '${user._id}')" title="Add friend">
             <i data-feather="user-plus"></i>
           </button>
         `;
@@ -338,13 +407,8 @@ const ContactsModal = {
         });
       }
 
-      listContainer.appendChild(contactItem);
+      container.appendChild(contactItem);
     });
-
-    // Replace feather icons
-    if (typeof feather !== 'undefined') {
-      feather.replace();
-    }
   },
 
   /**
@@ -381,9 +445,12 @@ const ContactsModal = {
         ? window.getAvatarGradient(user.nama || user.name || 'User')
         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
-      return `<div class="avatar small ${onlineClass} avatar-bg-container">
-        <div class="avatar-bg-overlay" style="background: ${gradient};">${initial}</div>
-        <img src="${user.avatar}" class="avatar-bg-img" onerror="this.style.display='none'">
+      // FIX: Struktur nested div agar badge online tidak terpotong overflow:hidden
+      return `<div class="avatar small ${onlineClass} avatar-bg-container" style="overflow: visible !important; background: transparent !important;">
+        <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; position: relative;">
+          <div class="avatar-bg-overlay" style="background: ${gradient}; width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: center; color: white;">${initial}</div>
+          <img src="${user.avatar}" class="avatar-bg-img" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;" onerror="this.style.display='none'">
+        </div>
       </div>`;
     } else {
       const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
@@ -478,8 +545,8 @@ const ContactsModal = {
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    ContactsModal.init();
+    window.ContactsModal.init();
   });
 } else {
-  ContactsModal.init();
+  window.ContactsModal.init();
 }

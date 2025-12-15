@@ -1,76 +1,64 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-mongoose.connect('mongodb://localhost:27017/chatapp')
-  .then(() => {})
-  .catch(err => {});
+const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/chatapp';
 
+// Definisi Schema User (Hanya yang diperlukan untuk pembuatan user)
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   nama: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   lastSeen: { type: Date, default: Date.now },
+  avatar: { type: String, default: 'default' },
   otpHash: { type: String },
   otpExpires: { type: Date },
-  avatar: { type: String, default: 'default' },
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   friendRequests: [{
     from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     createdAt: { type: Date, default: Date.now }
-  }]
+  }],
+  blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-async function seedDatabase() {
+const seedDB = async () => {
   try {
-    await User.deleteMany({});
+    await mongoose.connect(mongoUri);
+    console.log('🔌 MongoDB Connected.');
 
-    const hashedPassword = await bcrypt.hash('testpass123', 10);
+    console.log('🧹 Membersihkan seluruh database...');
+    
+    // Ambil semua koleksi (tables) yang ada di database secara dinamis
+    const collections = await mongoose.connection.db.collections();
+    
+    for (let collection of collections) {
+      // Hapus semua dokumen di setiap koleksi (Users, Messages, Groups, Statuses, dll)
+      await collection.deleteMany({});
+      console.log(`   ✨ Koleksi '${collection.collectionName}' berhasil dibersihkan.`);
+    }
 
-    // Buat 3 user test
-    const user1 = new User({
-      username: 'user1',
-      nama: 'Jihan Nugraha',
-      email: 'test@example.com',
-      password: hashedPassword,
-      lastSeen: new Date(),
+    console.log('👤 Membuat user admin...');
+
+    // Buat 1 User Admin
+    const hashedPassword = await bcrypt.hash('password123', 10);
+    
+    await User.create({
+      username: 'admin',
+      nama: 'Admin FluxChat',
+      email: 'admin@fluxchat.com',
+      password: hashedPassword
     });
 
-    const user2 = new User({
-      username: 'user2',
-      nama: 'Jihan tidak nugraha',
-      email: 'test2@example.com',
-      password: hashedPassword,
-      lastSeen: new Date(),
-    });
-
-    const user3 = new User({
-      username: 'user3',
-      nama: 'Nugraha',
-      email: 'test3@example.com',
-      password: hashedPassword,
-      lastSeen: new Date(),
-    });
-
-    await user1.save();
-    await user2.save();
-    await user3.save();
-
-    // Set user1 dan user2 sebagai teman
-    user1.friends.push(user2._id, user3._id);
-    user2.friends.push(user1._id, user3._id);
-    user3.friends.push(user1._id, user2._id);
-
-    await user1.save();
-    await user2.save();
-    await user3.save();
-
+    console.log('✅ Database Reset Selesai!');
+    console.log('👉 Login: admin@fluxchat.com / password123');
     process.exit(0);
-  } catch (error) {
+  } catch (err) {
+    console.error('❌ Gagal seeding:', err);
     process.exit(1);
   }
-}
+};
 
-seedDatabase();
+seedDB();

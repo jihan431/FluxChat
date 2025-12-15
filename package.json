@@ -22,6 +22,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "@google/generative-ai": "^0.21.0",
     "google-auth-library": "^10.5.0",
     "mongoose": "^7.8.7",
     "nodemailer": "^7.0.10",

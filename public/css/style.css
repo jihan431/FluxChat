@@ -37,7 +37,7 @@
   --offline: #64748b;
 
   --glass: blur(8px);
-  --transition: all 0.2s ease;
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 
   --shadow-sm: 0 6px 16px rgba(0, 0, 0, 0.18);
   --shadow-md: 0 14px 36px rgba(0, 0, 0, 0.28);
@@ -71,9 +71,22 @@
   100% { transform: translateX(0); opacity: 1; }
 }
 
+.slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
 @keyframes slideInStaggered {
   0% { transform: translateX(-30px); opacity: 0; }
   100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes hueRotate {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
 }
 
 /* ==================== LIGHT THEME MODE ==================== */
@@ -135,15 +148,53 @@ body.light {
   --shadow-input-focus: 0 0 0 3px rgba(90, 138, 140, 0.15);
 }
 
+/* ==================== PERFORMANCE LITE MODE ==================== */
+/* Tambahkan class 'perf-lite' pada body untuk mempercepat rendering */
+body.perf-lite {
+  --glass: none;
+  --transition: none;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0 0 0 1px var(--border);
+}
+
+body.perf-lite * {
+  animation: none !important;
+  transition: none !important;
+}
+
+body.perf-lite .sidebar,
+body.perf-lite .chat-header,
+body.perf-lite .input-area,
+body.perf-lite .glass-panel,
+body.perf-lite .toast,
+body.perf-lite .status-reply-input,
+body.perf-lite .members-list-container,
+body.perf-lite #createGroupModal .glass-panel {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: var(--bg-secondary);
+}
+
+body.perf-lite .message {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.perf-lite .message.incoming {
+  background-color: var(--bg-secondary);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  transition: background-color .25s ease, 
-              color .25s ease,
-              border-color .25s ease,
-              fill .25s ease,
-              stroke .25s ease;
+  transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              fill 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              stroke 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 body {
@@ -173,18 +224,18 @@ body.light {
 
 /* ==================== SIDEBAR ==================== */
 .sidebar {
-  width: 320px;
+  width: 100%;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  transition: var(--transition);
+  transition: width 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.3s ease;
   z-index: 10;
   box-shadow: var(--shadow-sm);
   backdrop-filter: var(--glass);
   border-radius: 20px;
-  min-width: 260px;
-  max-width: 420px;
+  min-width: 320px;
+  max-width: 90vw; /* Izinkan sidebar melebar lebih dari 500px */
 }
 
 .sidebar-resizer {
@@ -242,13 +293,24 @@ body.light {
 .icon-btn:hover {
   background: var(--bg-lightest);
   color: var(--text-primary);
-  transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
 .icon-btn.recording {
   background: rgba(248, 113, 113, 0.15);
   border-color: rgba(248, 113, 113, 0.4);
   color: #f87171;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background-color: var(--danger);
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+  z-index: 5;
 }
 
 .tabs-container {
@@ -291,14 +353,21 @@ body.light {
   font-weight: 700;
 }
 
-.tab-btn.active::after {
+.tab-btn::after {
   content: '';
   position: absolute;
   left: 10px;
   right: 10px;
   bottom: -6px;
-  height: 2px;
+  height: 3px;
+  background-color: var(--primary);
   border-radius: 99px;
+  transform: scaleX(0);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-btn.active::after {
+  transform: scaleX(1);
 }
 
 /* ==================== USER LIST ==================== */
@@ -306,12 +375,35 @@ body.light {
   flex: 1;
   overflow-y: auto;
   padding: 0 6px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-content.active {
+  animation: tabContentSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.list-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes tabContentSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .list-item {
   display: flex;
   align-items: center;
-  padding: 14px 20px;
+  padding: 12px 16px;
   gap: 12px;
   cursor: pointer;
   transition: var(--transition);
@@ -335,9 +427,10 @@ body.light {
 }
 
 .avatar.small {
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   font-size: 1.2rem;
+  margin: 2px;
 }
 
 .avatar.medium {
@@ -510,7 +603,7 @@ body.light {
   border-radius: 16px;
   position: relative;
   word-wrap: break-word;
-  animation: fadeInUp 0.3s ease;
+  animation: fadeInUp 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   border: none;
   backdrop-filter: var(--glass);
 }
@@ -660,7 +753,7 @@ body.light {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
@@ -959,7 +1052,7 @@ body.light {
   border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: var(--shadow-lg);
   backdrop-filter: var(--glass);
-  animation: slideInDown 0.3s ease;
+  animation: slideInDown 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   justify-content: center;
   align-items: center;
 }
@@ -967,7 +1060,7 @@ body.light {
 @keyframes slideInDown {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-15px);
   }
   to {
     opacity: 1;
@@ -1010,7 +1103,6 @@ body.light {
   position: relative;
   width: 80px;
   height: 80px;
-  margin: 0 auto 15px;
 }
 
 /* Profile Avatar Display */
@@ -1021,7 +1113,7 @@ body.light {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(122, 128, 255, 0.25);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.25);
   background-size: cover;
   background-position: center;
   font-size: 2.6rem;
@@ -1249,10 +1341,16 @@ body.light {
 }
 
 .call-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
   text-align: center;
   color: var(--text-secondary);
   font-size: 1rem;
-  padding: 40px 0;
+  padding: 20px;
+  min-height: 300px;
 } 
 .call-item {
   display: flex;
@@ -1378,7 +1476,35 @@ body.light {
   box-shadow: var(--shadow-modal);
   backdrop-filter: blur(12px);
   border-radius: 16px;
-  animation: slideInRight 0.4s ease-out;
+  animation: modalPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#createStatusModal .close-modal {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 10;
+}
+
+#createStatusModal .close-modal:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+@keyframes modalPopIn {
+  0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 #createGroupModal h2 {
@@ -1387,7 +1513,6 @@ body.light {
   margin-bottom: 22px;
   font-weight: 600;
   color: var(--text-primary);
-  animation: slideInLeft 0.3s ease-out;
 }
 
 #createGroupModal .form-group label {
@@ -1397,7 +1522,31 @@ body.light {
   font-weight: 600;
   margin-bottom: 8px;
   display: block;
-  animation: slideInLeft 0.3s ease-out;
+}
+
+.group-search-container {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.group-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+
+.group-search-input {
+  width: 100%;
+  padding: 10px 10px 10px 36px !important; /* Override default input padding */
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
 #createGroupModal .form-group input {
@@ -1408,7 +1557,6 @@ body.light {
   padding: 12px 16px;
   font-size: 15px;
   transition: all 0.3s ease;
-  animation: slideInRight 0.3s ease-out;
 }
 
 #createGroupModal .form-group input:focus {
@@ -1449,7 +1597,6 @@ body.light {
   padding: 12px;
   background: var(--bg-member-list);
   backdrop-filter: var(--glass);
-  animation: slideInLeft 0.4s ease-out;
 }
 
 .member-checkbox {
@@ -1462,8 +1609,13 @@ body.light {
   color: var(--text-primary);
   background: var(--bg-member-list);
   margin-bottom: 6px;
-  animation: slideInStaggered 0.4s ease-out;
+  animation: fadeInUp 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
   animation-fill-mode: backwards;
+}
+
+.member-checkbox.selected {
+  background: rgba(90, 138, 140, 0.15); /* Primary color with opacity */
+  border: 1px solid var(--primary);
 }
 
 .member-checkbox:nth-child(1) { animation-delay: 0.1s; }
@@ -1502,7 +1654,7 @@ body.light {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1511,8 +1663,7 @@ body.light {
   color: white;
   flex-shrink: 0;
   box-shadow: var(--shadow-avatar);
-  background-size: 200% 200%;
-  animation: slideGradient 3s ease infinite;
+  animation: none;
 }
 
 .user-avatar-small:hover {
@@ -1582,7 +1733,7 @@ body.light {
   height: 100px;
   font-size: 2.5rem;
   background: var(--primary);
-  box-shadow: 0 10px 30px rgba(122, 128, 255, 0.25);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.25);
 }
 
 .status-badge {
@@ -1606,14 +1757,15 @@ body.light {
   top: 100%;
   right: 0;
   width: 200px;
-  background: var(--bg-primary);
+  background: transparent;
   border-radius: 12px;
+  backdrop-filter: blur(12px);
   padding: 8px;
   margin-top: 8px;
   z-index: 100;
-  animation: slideInUp 0.2s ease;
-  box-shadow: var(--shadow-sm);
-  border: 0.5px solid var(--border2);
+  animation: slideInUp 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: var(--shadow-md);
+  border: 0.5px solid var(--border);
 }
 
 @keyframes slideInUp {
@@ -1676,7 +1828,7 @@ body.light {
   border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: slideInDown 0.3s ease;
+  animation: slideInDown 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   padding: 20px 24px 24px 24px;
 }
 
@@ -2055,6 +2207,8 @@ body.light {
     background: var(--bg-primary);
     border-radius: 0;
     border: none;
+    max-width: none; /* FIX: Reset max-width agar full screen di mobile */
+    min-width: 0;
   }
 
   /* Call modal: portrait split 2: penerima di atas, penelpon di bawah */
@@ -2227,6 +2381,10 @@ body.light {
       padding: 8px 12px;
       background: var(--bg-secondary);
       border-top: 1px solid var(--border);
+    }
+
+    .attachment-menu {
+      width: 200px; /* Kecilkan sedikit di mobile agar pas */
     }
   }
 }
@@ -2423,51 +2581,77 @@ body.light {
 }
 
 /* ==================== ATTACHMENT MENU ==================== */
+.attachment-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .attachment-menu {
   position: absolute;
   bottom: 100%;
   left: 0;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 8px;
   z-index: 100;
-  width: 220px;
+  width: 240px;
   transform-origin: bottom left;
-  transition: transform 0.1s ease-out, opacity 0.1s ease-out, visibility 0.1s;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   visibility: hidden;
   opacity: 0;
-  transform: translateY(5px);
+  transform: scale(0.9) translateY(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex; /* Pastikan menggunakan Flexbox */
+  flex-direction: column; /* Paksa susunan ke bawah (Vertikal) */
 }
 
-.attachment-container:hover .attachment-menu {
+.attachment-container:hover .attachment-menu,
+.attachment-menu.active {
   visibility: visible;
   opacity: 1;
-  transform: translateY(0);
+  transform: scale(1) translateY(0);
 }
 
 .attachment-menu a {
   display: flex;
   align-items: center;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 12px 16px;
+  border-radius: 12px;
   color: var(--text-primary);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
+  transition: var(--transition);
+  margin-bottom: 8px; /* Tambah jarak vertikal antar item */
+  gap: 16px; /* Tambah jarak horizontal antara icon dan teks */
+}
+
+.attachment-menu a:last-child {
+  margin-bottom: 0;
 }
 
 .attachment-menu a:hover {
-  background-color: var(--bg-lightest);
-  color: var(--text-primary);
+  background-color: var(--bg-light);
+  transform: translateX(4px);
 }
 
 .attachment-menu a i {
-  margin-right: 14px;
-  width: 18px;
-  height: 18px;
+  margin-right: 0; /* Hapus margin, gunakan gap */
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
 }
+
+/* Colorful Icons */
+.attachment-menu a:nth-child(1) i { color: #8b5cf6; } /* Image - Violet */
+.attachment-menu a:nth-child(2) i { color: #f59e0b; } /* Doc - Amber */
+.attachment-menu a:nth-child(3) i { color: #ec4899; } /* Audio - Pink */
+.attachment-menu a:nth-child(4) i { color: #10b981; } /* All - Emerald */
 
 /* ==================== FRIEND REQUEST ITEM ==================== */
 .request-item-styled {
@@ -2568,8 +2752,8 @@ body.light {
 }
 .status-reply-input {
   flex: 1;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border);
   border-radius: 24px;
   padding: 10px 16px;
   color: white;
@@ -2636,6 +2820,8 @@ body.light {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
+  display: flex;
+  flex-direction: column;
 }
 .viewer-item {
   display: flex;
@@ -2649,11 +2835,18 @@ body.light {
 .viewer-info small { color: var(--text-secondary); font-size: 0.75rem; }
 
 .no-groups-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
   text-align: center;
-  padding: 10px;
   color: var(--text-secondary);
   font-size: 0.85rem;
+  padding: 20px;
+  min-height: 300px;
 }
+
 
 .no-friends-message {
   padding: 10px;
@@ -2667,7 +2860,7 @@ body.light {
 }
 
 .group-avatar {
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .last-message-small {
@@ -2886,7 +3079,7 @@ body.light {
   min-width: 300px;
   max-width: 400px;
   transform: translateX(120%);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
   opacity: 0;
 }
 
@@ -2918,19 +3111,69 @@ body.light {
 
 @media (max-width: 768px) {
   .toast-container {
-    top: 16px;
-    left: 16px;
-    right: 16px;
+    top: auto;
+    bottom: 90px; /* Posisi di bawah, di atas input area */
+    left: 0;
+    right: 0;
     align-items: center;
+    pointer-events: none; /* Agar klik tembus di area kosong */
   }
   .toast {
-    width: 100%;
-    min-width: 0;
-    transform: translateY(-50px);
+    width: auto;
+    min-width: auto;
+    max-width: 85%;
+    border-radius: 50px; /* Bentuk kapsul/pill */
+    padding: 10px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    transform: translateY(20px); /* Animasi muncul dari bawah */
   }
   .toast.show {
     transform: translateY(0);
   }
+}
+
+/* ==================== THEME TRANSITION ANIMATION ==================== */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ANIMASI KELUAR (Dark -> Light): Lingkaran membesar */
+[data-theme-transition="out"]::view-transition-new(root) {
+  animation: reveal 1.2s ease-in-out forwards; /* Tambahkan forwards */
+  clip-path: circle(0px at var(--x) var(--y)); /* State awal: lingkaran 0px */
+  z-index: 9999;
+}
+[data-theme-transition="out"]::view-transition-old(root) {
+  z-index: 1;
+}
+
+/* ANIMASI MASUK (Light -> Dark): Lingkaran mengecil */
+[data-theme-transition="in"]::view-transition-old(root) {
+  animation: unreveal 1.2s ease-in-out forwards; /* Tambahkan forwards */
+  z-index: 9999; /* Layer lama (terang) di atas agar bisa mengecil */
+}
+[data-theme-transition="in"]::view-transition-new(root) {
+  z-index: 1;
+}
+
+@keyframes reveal {
+  0% { clip-path: circle(0px at var(--x) var(--y)); }
+  100% { clip-path: circle(var(--r) at var(--x) var(--y)); }
+}
+
+@keyframes unreveal {
+  0% { clip-path: circle(var(--r) at var(--x) var(--y)); }
+  100% { clip-path: circle(0px at var(--x) var(--y)); }
+}
+
+/* Class untuk mematikan transisi CSS standar saat View Transition berjalan */
+.disable-transitions,
+.disable-transitions * {
+  transition: none !important;
 }
 
 /* Loading Animation */
@@ -3120,7 +3363,7 @@ body.light {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  flex: 1;
   padding: 40px 20px;
   color: var(--text-secondary);
   text-align: center;
@@ -3152,7 +3395,6 @@ body.light {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 12px;
 }
 .status-item .avatar-ring {
   position: absolute;
@@ -3203,21 +3445,18 @@ body.light {
   width: min(420px, 90vw);
   padding: 24px;
 }
-.status-modal-content h2 {
-  text-align: center;
-  margin-bottom: 20px;
-}
 .status-creator-container {
   margin: 20px 0;
+  overflow: hidden; /* Masking untuk animasi slide */
+  padding: 4px; /* FIX: Tambah padding agar shadow/scale tidak terpotong */
 }
 .text-status-wrapper {
   width: 100%;
-  aspect-ratio: 9/16; /* Portrait ratio like mobile screen */
-  max-height: 400px;
+  height: 450px; /* FIX: Tinggi fixed agar konsisten */
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 15px;
-  box-shadow: var(--shadow-md);
+  border: 2px solid var(--border);
 }
 #textStatusCreator textarea {
   width: 100%;
@@ -3246,6 +3485,7 @@ body.light {
   justify-content: center;
   gap: 10px;
   margin-top: 15px;
+  margin-bottom: 20px;
 }
 .color-dot {
   width: 28px;
@@ -3261,7 +3501,7 @@ body.light {
 }
 #imageStatusCreator .image-upload-placeholder {
     width: 100%;
-    height: 400px;
+    height: 300px; /* FIX: Samakan dengan total tinggi Teks + Palet (450 + 70) */
     background-color: var(--bg-input);
     border: 2px dashed var(--border);
     border-radius: 16px;
@@ -3351,7 +3591,7 @@ body.light {
   left: 0;
   width: 100%;
   padding: 10px 15px;
-  z-index: 10;
+  z-index: 500; /* FIX: Z-index tinggi agar tidak tertutup gambar/video */
   background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
 }
 .status-progress-bar-container {
@@ -3407,11 +3647,17 @@ body.light {
   align-items: center;
   justify-content: center;
   background: #111;
+  position: relative; /* Penting untuk absolute positioning anak */
+  width: 100%;
+  overflow: hidden;
 }
 .status-image-content {
+  position: absolute; /* Paksa gambar mengisi container tanpa peduli flexbox */
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: contain !important; /* Pastikan gambar tidak pernah terpotong (cover) */
   background-color: #000;
 }
 .status-text-content {
@@ -3448,7 +3694,8 @@ body.light {
   color: rgba(255,255,255,0.5);
   padding: 20px;
   cursor: pointer;
-  z-index: 5;
+  z-index: 200; /* FIX: Tingkatkan z-index agar di atas gambar status */
+  pointer-events: auto; /* Pastikan bisa diklik */
 }
 .status-nav-btn:hover { color: #fff; }
 .status-nav-btn.prev { left: 0; }
@@ -3457,23 +3704,22 @@ body.light {
   display: flex;
   background: var(--bg-input);
   border-radius: 10px;
+  border-radius: 99px; /* Lebih bulat (capsule shape) */
   padding: 4px;
-  margin-bottom: 15px;
+  margin-bottom: 0; /* Hapus margin bottom karena di footer */
 }
 .status-type-toggle .toggle-btn {
-  flex: 1;
-  padding: 8px;
+  width: 42px; /* Ukuran fixed untuk icon only */
+  height: 42px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-weight: 600;
-  border-radius: 8px;
+  border-radius: 50%; /* Tombol bulat */
   cursor: pointer;
   transition: var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
 }
 .status-type-toggle .toggle-btn:hover {
   background: var(--bg-light);
@@ -3482,4 +3728,352 @@ body.light {
   background: var(--primary);
   color: white;
   box-shadow: var(--shadow-sm);
+}
+
+/* ==================== STATUS VIEWER DESKTOP EMBEDDED ==================== */
+#viewStatusModal.desktop-embedded:not(.hidden) {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000 !important;
+  z-index: 50;
+  border-radius: 0 !important; /* Hapus radius agar pas di container chat */
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto; /* Pastikan modal menangkap klik */
+}
+
+#viewStatusModal.desktop-embedded .status-viewer-content {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border-radius: 0 !important; /* Hapus radius agar gambar full */
+  box-shadow: none;
+}
+
+/* Fix untuk preview saat upload status agar tidak gepeng/terpotong */
+#statusImagePreview {
+  object-fit: contain;
+  background-color: #000;
+  width: 100%;
+  max-height: 60vh; /* Perbesar preview upload agar portrait terlihat lebih jelas */
+}
+
+#createStatusModal .modal-footer {
+  justify-content: center; /* Pindahkan ke end (kanan) */
+  align-items: center;
+  gap: 15px; /* Jarak antara toggle dan tombol kirim */
+  padding-top: 10px;
+  display: flex;
+}
+
+#postStatusBtn {
+  flex: 0 0 auto; /* Jangan stretch */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Buat bulat */
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==================== CREATE STATUS MODAL DESKTOP EMBEDDED ==================== */
+#createStatusModal.desktop-embedded:not(.hidden) {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-secondary) !important;
+  z-index: 50;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto;
+}
+
+#createStatusModal.desktop-embedded .glass-panel,
+#createStatusModal.desktop-embedded .status-modal-content {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  animation: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#createStatusModal.desktop-embedded .status-creator-container {
+  width: 100%;
+  max-width: 500px;
+}
+
+/* ==================== AVATAR STATUS RING (CHAT LIST) ==================== */
+.avatar-container-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 2px;
+  width: 54px; /* FIX: Ukuran fixed agar sejajar */
+  height: 54px;
+}
+
+.status-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  pointer-events: none;
+}
+
+/* Wrapper to standardize avatar size in chat list */
+.chat-avatar-wrapper {
+  width: 54px; /* FIX: Samakan dengan container ring */
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* ==================== GEMINI TAB STYLES ==================== */
+.gemini-interface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: transparent;
+  background-image: radial-gradient(circle at 50% 50%, rgba(66, 133, 244, 0.05) 0%, transparent 50%);
+  position: relative;
+}
+.gemini-chat-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  scroll-behavior: smooth;
+}
+.gemini-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 20px;
+  opacity: 0.8;
+}
+.gemini-avatar-large {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #4285f4, #9b72cb, #d96570);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: white;
+  box-shadow: 0 10px 25px rgba(66, 133, 244, 0.3);
+}
+.gemini-intro h3 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  background: linear-gradient(to right, #4285f4, #d96570);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.gemini-message {
+  max-width: 85%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  position: relative;
+  word-wrap: break-word;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.gemini-message.user {
+  align-self: flex-end;
+  background: var(--primary);
+  color: white;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.gemini-message.ai {
+  align-self: flex-start;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-dark);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+/* Typing Indicator Animation */
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 0;
+}
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+.gemini-input-wrapper {
+  padding: 15px;
+  background: transparent;
+  border:none;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.gemini-input-wrapper input {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 24px;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+.gemini-input-wrapper input:focus {
+  border-color: var(--primary);
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+.gemini-input-wrapper button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3);
+}
+.gemini-input-wrapper button:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+.gemini-input-wrapper button:active {
+  transform: scale(0.95);
+}
+/* Markdown Styles for AI */
+.gemini-message.ai code {
+  background: rgba(127, 127, 127, 0.15);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+  color: var(--primary);
+}
+.gemini-message.ai pre {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 0.85rem;
+}
+.gemini-message.ai pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+.gemini-message.ai strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ==================== GEMINI FULLSCREEN ANIMATION ==================== */
+/* Saat mode Gemini aktif */
+.app-layout.gemini-mode .sidebar {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-right: none;
+  border-radius: 20px; /* Tetap rounded agar konsisten */
+  z-index: 50;
+}
+
+/* Hapus padding dari container list saat mode gemini aktif */
+.app-layout.gemini-mode .users-list {
+  padding: 0;
+}
+
+.app-layout.gemini-mode .chat-area {
+  flex: 0 0 0;       /* Kecilkan flex basis ke 0 */
+  width: 0;          /* Lebar 0 */
+  min-width: 0;      /* Izinkan mengecil di bawah min-content */
+  padding: 0;        /* Hilangkan padding */
+  opacity: 0;        /* Fade out konten */
+  overflow: hidden;  /* Sembunyikan scrollbar/konten */
+  border: none;
+  margin: 0;
+  /* Animasi transisi halus */
+  transition: flex 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease, padding 0.5s ease;
+}
+
+/* ==================== GEMINI TAB RESPONSIVE ==================== */
+.gemini-icon-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gemini-text-tab {
+  margin-left: 6px;
+}
+
+@media screen and (max-width: 768px) {
+  .tab-btn[data-tab="gemini"] {
+    flex: 0 0 auto; /* Jangan stretch, sesuaikan konten */
+    padding: 0 14px;
+    min-width: auto;
+  }
+  .tab-btn[data-tab="gemini"] .gemini-text-tab {
+    display: none; /* Sembunyikan teks di mobile */
+  }
+  .tab-btn[data-tab="gemini"] .gemini-icon-tab svg {
+    width: 24px; /* Sedikit perbesar ikon di mobile */
+    height: 24px;
+  }
 }

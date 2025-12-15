@@ -9,6 +9,7 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const crypto = require('crypto');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const server = http.createServer(app);
@@ -17,7 +18,7 @@ const io = socketIO(server, {
     origin: '*',
     methods: ['GET', 'POST']
   },
-  maxHttpBufferSize: 50 * 1024 * 1024 // 50MB
+  maxHttpBufferSize: 15 * 1024 * 1024 // Turunkan ke 15MB (buffer aman untuk file 10MB + overhead)
 });
 
 app.use(cors());
@@ -141,7 +142,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER || 'cracked655@gmail.com',
-    pass: process.env.EMAIL_PASS || 'vwpn mhfq evii wrrd'
+    pass: process.env.EMAIL_PASS // Hapus password hardcoded untuk keamanan
   }
 });
 
@@ -149,8 +150,14 @@ const transporter = nodemailer.createTransport({
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 
+// Google Gemini AI
+const genAI = process.env.GEMINI_API_KEY
+  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  : null;
+
+
 // File validation
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB (Agar muat di limit 16MB MongoDB)
 const ALLOWED_FILE_TYPES = [
   'image/',
   'video/',
@@ -360,6 +367,81 @@ app.post('/api/verify-otp', async (req, res) => {
     await user.save();
 
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- PASSWORD RECOVERY ENDPOINTS ---
+
+// 1. Kirim Kode Pemulihan
+app.post('/api/recovery/send-code', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ error: 'Email tidak terdaftar' });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
+
+    user.otpHash = otpHash;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    try {
+      await transporter.sendMail({
+        from: 'FluxChat Security',
+        to: email,
+        subject: 'Reset Password FluxChat',
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border-radius: 10px;">
+          <div style="text-align: center; padding: 20px 0;">
+            <h2 style="color: #4361ee;">FluxChat</h2>
+            <p style="color: #6c757d;">Permintaan Reset Password</p>
+          </div>
+          <div style="background-color: white; padding: 30px; border-radius: 8px; text-align: center;">
+            <p>Gunakan kode berikut untuk melanjutkan proses reset password:</p>
+            <div style="background-color: #e9ecef; padding: 15px; border-radius: 6px; margin: 20px 0; display: inline-block;">
+              <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #4361ee;">${otp}</span>
+            </div>
+            <p style="font-size: 12px; color: #999;">Kode berlaku selama 10 menit.</p>
+          </div>
+        </div>`
+      });
+    } catch (emailErr) {
+      console.error('[Email] Failed to send Recovery OTP:', emailErr);
+      return res.status(500).json({ error: 'Gagal mengirim email' });
+    }
+
+    res.json({ success: true, message: 'Kode dikirim ke email' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Reset Password (Verifikasi OTP + Set Password Baru)
+app.post('/api/recovery/reset', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
+
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+    if (user.otpHash !== otpHash || user.otpExpires < Date.now()) {
+      return res.status(400).json({ error: 'Kode OTP salah atau kadaluarsa' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.otpHash = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.json({ success: true, message: 'Password berhasil diubah' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -803,6 +885,16 @@ app.post('/api/friends/accept', async (req, res) => {
     await user.save();
     await requester.save();
 
+    // Notify requester via socket that request was accepted
+    io.to(requester.username).emit('friend_request_accepted', {
+      user: {
+        _id: user._id,
+        username: user.username,
+        nama: user.nama,
+        avatar: user.avatar
+      }
+    });
+
     res.json({ success: true, message: "Pertemanan diterima!" });
 
   } catch (err) {
@@ -1020,6 +1112,50 @@ app.get('/api/users/blocked-list', async (req, res) => {
   }
 });
 
+// --- GEMINI AI ENDPOINT ---
+app.post('/api/gemini', async (req, res) => {
+  try {
+    if (!genAI) {
+      return res.status(503).json({ success: false, error: 'Server belum dikonfigurasi dengan GEMINI_API_KEY' });
+    }
+
+    const { message, history } = req.body;
+    
+    // Gunakan model gemini-1.5-flash yang lebih stabil dengan kuota lebih besar
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      systemInstruction: "Kamu adalah asisten AI yang cerdas. Kamu menguasai Bahasa Indonesia dan berbagai bahasa daerah di Indonesia (seperti Jawa, Sunda, Bali, Minang, dll). Jika pengguna berbicara dalam bahasa daerah, cobalah membalas dengan bahasa yang sama agar lebih akrab. Jika tidak yakin, gunakan Bahasa Indonesia yang santai dan ramah."
+    });
+
+    // Mulai chat dengan history (jika ada)
+    const chat = model.startChat({
+      history: history || [],
+      generationConfig: {
+        maxOutputTokens: 4096,
+      },
+    });
+
+    const result = await chat.sendMessage(message);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ success: true, reply: text });
+  } catch (error) {
+    console.error('[Gemini] Error:', error);
+    
+    let errorMessage = error.message || 'Maaf, Gemini sedang sibuk.';
+    
+    // Deteksi Error
+    if (errorMessage.includes('429') || errorMessage.includes('Quota')) {
+        errorMessage = 'Kuota Gemini sedang penuh. Mohon tunggu sebentar sebelum mencoba lagi.';
+    } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        errorMessage = 'Gagal: Pastikan "Google Generative AI API" sudah diaktifkan di Google Cloud Console.';
+    }
+    
+    res.status(500).json({ success: false, error: errorMessage });
+  }
+});
+
 io.on('connection', (socket) => {
   socket.on('join', (data) => {
     // Support both old format (string) dan new format (object)
@@ -1055,7 +1191,7 @@ io.on('connection', (socket) => {
       const fileSize = file.size || getFileSizeFromBase64(file.data);
 
       if (fileSize > MAX_FILE_BYTES) {
-        socket.emit('message_error', { error: 'File terlalu besar (maks 50MB)' });
+        socket.emit('message_error', { error: 'File terlalu besar (maks 10MB)' });
         return;
       }
 

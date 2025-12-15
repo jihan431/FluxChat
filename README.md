@@ -1,205 +1,106 @@
-<!-- Improved README.md for FluxChat -->
-<div align="center">
-  <img src="public/assets/Screenshot_20251212_095000.png" alt="FluxChat Logo border-radius=20px">
-  
-  <h1>FluxChat</h1>
-  
-  <p>
-    <strong>A Modern Real-Time Chat Application</strong>
-  </p>
-  
-  <p>
-    Experience seamless communication with FluxChat's innovative approach to real-time messaging, 
-    combining cutting-edge technologies with an intuitive user interface.
-  </p>
-  
-  <p>
-    <a href="#features"><img src="https://img.shields.io/badge/Features-10+-blue.svg" alt="Features"></a>
-    <a href="#tech-stack"><img src="https://img.shields.io/badge/Built%20With-Node.js-green.svg" alt="Built With"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-    <a href="#"><img src="https://img.shields.io/badge/Version-2.0.0-orange.svg" alt="Version"></a>
-  </p>
-</div>
+# FluxChat
 
-## 🌟 Welcome to FluxChat
+FluxChat is a modern, real-time messaging application built with Node.js, Express, Socket.IO, and MongoDB. It features a responsive UI, voice/video calls, status updates, and AI integration.
 
-FluxChat redefines real-time communication by blending modern design principles with powerful functionality. Built for developers and users who demand both performance and aesthetics, FluxChat offers a fresh take on instant messaging platforms.
+## 🚀 Features
 
-Unlike typical chat applications, FluxChat focuses on creating a unique user experience with its own distinctive style and features, moving beyond conventional messaging paradigms.
+*   **Real-time Messaging:** Instant private and group chats using Socket.IO.
+*   **Multimedia Support:** Send images, videos, audio, PDFs, and text files.
+*   **Voice Notes:** Record and send voice messages directly from the chat interface.
+*   **Voice & Video Calls:** Peer-to-peer calling using WebRTC.
+*   **Status Updates:** Share text or image stories (like WhatsApp/Instagram) that expire after 24 hours.
+*   **AI Assistant:** Integrated Google Gemini AI for chatting and assistance.
+*   **Friend System:** Send friend requests, accept/reject, and block users.
+*   **Authentication:**
+    *   Email/Password registration with OTP verification.
+    *   Google OAuth login.
+    *   Password recovery via email.
+*   **UI/UX:**
+    *   Responsive design (Mobile & Desktop).
+    *   Dark/Light theme toggle.
+    *   Message replies and context menus (Delete for me/everyone).
+    *   Typing indicators and online status.
+    *   Read receipts and unread counters.
 
-## 🚀 Key Features
+## 🛠️ Tech Stack
 
-### 💬 Advanced Messaging
-- **Real-time Communication**: Instant message delivery powered by Socket.IO
-- **Rich Media Support**: Send text, images, documents, and files up to 50MB
-- **Emoji Integration**: Express yourself with our comprehensive emoji picker
-- **Message History**: Never lose conversations with persistent message storage
+*   **Backend:** Node.js, Express.js
+*   **Database:** MongoDB (Mongoose)
+*   **Real-time Engine:** Socket.IO
+*   **Frontend:** HTML5, CSS3, Vanilla JavaScript
+*   **AI:** Google Generative AI (Gemini)
+*   **Authentication:** Google Auth Library, Bcrypt, Nodemailer
 
-### 👥 Smart Presence System
-- **Live Status Updates**: See who's online with real-time presence indicators
-- **Last Seen Information**: Know when your contacts were last active
-- **Typing Notifications**: Real-time typing indicators with smooth animations
+## ⚙️ Installation
 
-### 📞 Communication Tools
-- **Voice & Video Calls**: Peer-to-peer calling with WebRTC technology
-- **Call Controls**: Mute, camera toggle, and call duration tracking
-- **Ringing Notifications**: Audio alerts for incoming calls
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/yourusername/fluxchat.git
+    cd fluxchat
+    ```
 
-### 🎨 Modern UI/UX
-- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
-- **Theme Switching**: Toggle between light and dark modes
-- **Smooth Animations**: Polished transitions and interactive elements
-- **Intuitive Navigation**: Clean interface with easy access to all features
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-### 🔐 Security & Authentication
-- **Secure Registration**: Protected user signup with email validation
-- **Password Encryption**: Industry-standard bcrypt password hashing
-- **Session Management**: Secure user sessions with automatic timeout
-- **Google Authentication**: Alternative sign-in with Google accounts
+3.  **Configure Environment Variables:**
+    Create a `.env` file in the root directory and add the following:
 
-## 🛠 Tech Stack
+    ```env
+    # Server Configuration
+    PORT=3000
+    
+    # Database
+    MONGO_URI=mongodb://localhost:27017/chatapp
+    
+    # Email Configuration (for OTP & Recovery)
+    EMAIL_USER=your_email@gmail.com
+    EMAIL_PASS=your_app_password
+    
+    # Google OAuth (Optional)
+    GOOGLE_CLIENT_ID=your_google_client_id
+    
+    # Google Gemini AI (Optional)
+    GEMINI_API_KEY=your_gemini_api_key
+    ```
 
-FluxChat leverages modern technologies to deliver a robust and scalable platform:
+    > **Note:** For Gmail, use an App Password if 2FA is enabled.
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Frontend** | HTML5, CSS3, JavaScript | User interface and client-side logic |
-| **Backend** | Node.js, Express.js | Server logic and API endpoints |
-| **Real-time** | Socket.IO | Bidirectional communication |
-| **Database** | MongoDB, Mongoose | Data persistence and modeling |
-| **Authentication** | bcrypt, Google Auth | User verification and security |
-| **Email Service** | Nodemailer | Account verification and notifications |
-| **Media Processing** | Wavesurfer.js, Feather Icons | Audio visualization and icons |
+4.  **Start the Server:**
+    
+    For development (with nodemon):
+    ```bash
+    npm run dev
+    ```
 
-## 🏗 Architecture Overview
+    For production:
+    ```bash
+    npm start
+    ```
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   WebSocket      │    │   Backend       │
-│  (HTML/CSS/JS)  │◄──►│   (Socket.IO)    │◄──►│  (Node.js)      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │                         │
-                        ┌─────────────────┐    ┌─────────────────┐
-                        │   Database      │    │   Services      │
-                        │  (MongoDB)      │    │ (Auth/Email)    │
-                        └─────────────────┘    └─────────────────┘
-```
+5.  **Access the App:**
+    Open your browser and navigate to `http://localhost:3000`.
 
 ## 📁 Project Structure
 
 ```
 FluxChat/
-├── public/                 # Client-side assets
-│   ├── assets/             # Images, icons, and media
-│   ├── css/                # Stylesheets
-│   └── js/                 # Client-side JavaScript
-├── security/               # Encryption and security tools
-├── server.js              # Main server application
-├── package.json           # Dependencies and scripts
-└── README.md             # Project documentation
-```
-
-## ▶️ Getting Started
-
-### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB (v4.4 or higher)
-- Modern web browser with WebRTC support
-
-### Installation
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/yourusername/FluxChat.git
-cd FluxChat
-```
-
-2. **Install dependencies**
-```bash
-npm install
-```
-
-3. **Start MongoDB**
-```bash
-# Linux/macOS
-sudo systemctl start mongod
-
-# Windows
-net start MongoDB
-```
-
-4. **Launch the application**
-```bash
-npm start
-```
-
-5. **Access the application**
-Open your browser and navigate to `http://localhost:3000`
-
-## 🎯 Usage Guide
-
-### Creating an Account
-1. Navigate to the registration page
-2. Enter your username, full name, and email
-3. Create a secure password
-4. Verify your email address
-
-### Starting a Conversation
-1. Log in to your account
-2. Select a contact from your chat list
-3. Type your message in the input field
-4. Press Enter or click send
-
-### Making Calls
-1. Open a chat with the desired contact
-2. Click the phone icon for voice calls
-3. Click the video icon for video calls
-4. Accept incoming calls from the notification panel
-
-### Customizing Your Experience
-1. Toggle between light/dark themes using the sun/moon icon
-2. Adjust notification settings in your profile
-3. Manage your account information in the profile section
-
-## 🔄 Development
-
-### Available Scripts
-- `npm start` - Run the application in production mode
-- `npm run dev` - Run the application in development mode with auto-reload
-
-### Environment Variables
-Create a `.env` file in the root directory:
-```env
-MONGO_URI=mongodb://localhost:27017/chatapp
-PORT=3000
+├── public/             # Static frontend files
+│   ├── css/            # Stylesheets
+│   ├── js/             # Client-side logic
+│   ├── index.html      # Main application view
+│   ├── login.html      # Login view
+│   └── ...
+├── server.js           # Main backend server entry point
+├── package.json        # Project dependencies and scripts
+└── .env                # Environment variables
 ```
 
 ## 🤝 Contributing
 
-We welcome contributions to FluxChat! Here's how you can help:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-Please ensure your code follows our style guidelines and includes appropriate tests.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Socket.IO team for real-time communication tools
-- MongoDB community for database solutions
-- All contributors who have helped shape FluxChat
-
----
-
-<div align="center">
-  <strong>Built with ❤️ for modern communication</strong><br><br>
-  <img src="https://img.shields.io/github/stars/FluxChat?style=social" alt="GitHub Stars">
-  <img src="https://img.shields.io/github/forks/FluxChat?style=social" alt="GitHub Forks">
-</div>
+This project is licensed under the MIT License.

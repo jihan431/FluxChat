@@ -6,6 +6,8 @@
   <title>FluxChat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Fix Favicon 404: Menggunakan emoji sebagai favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
   <link rel="stylesheet" href="css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
@@ -19,8 +21,9 @@
       <div class="sidebar-header">
         <h2 class="brand-name">FluxChat</h2>
         <div class="header-actions-container">
-          <button class="icon-btn" onclick="toggleSearchBar()" title="Cari Kontak">
+          <button class="icon-btn" id="contactsBtn" onclick="toggleSearchBar()" title="Cari Kontak" style="position: relative;">
             <i data-feather="search"></i>
+            <span id="contactsBadge" class="notification-badge hidden"></span>
           </button>
           <button class="icon-btn" id="themeToggle">
             <i data-feather="sun"></i>
@@ -48,6 +51,14 @@
 
       <!-- TAB NAVIGATION (Horizontal) -->
       <div class="tabs-container">
+        <button class="tab-btn" data-tab="gemini" onclick="switchTab('gemini')">
+          <span class="gemini-icon-tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z" />
+            </svg>
+          </span>
+          <span class="gemini-text-tab">Gemini</span>
+        </button>
         <button class="tab-btn active" data-tab="chats" onclick="switchTab('chats')">Chats</button>
         <button class="tab-btn" data-tab="groups" onclick="switchTab('groups')">Groups</button>
         <button class="tab-btn" data-tab="status" onclick="switchTab('status')">Status</button>
@@ -55,8 +66,6 @@
       </div>
 
       <div class="users-list">
-        
-        <div id="friendRequestsList" class="requests-container"></div>
         
         <!-- CHATS SECTION (Recently Active) -->
         <div id="chats-tab" class="tab-content active">
@@ -76,6 +85,27 @@
         <!-- CALLS SECTION (Call History) -->
         <div id="calls-tab" class="tab-content hidden">
           <div id="callsList" class="list-content"></div>
+        </div>
+
+        <!-- GEMINI SECTION -->
+        <div id="gemini-tab" class="tab-content hidden" style="height: 100%;">
+          <div class="gemini-interface">
+            <div id="geminiChatList" class="gemini-chat-list">
+              <div class="gemini-intro">
+                <div class="gemini-avatar-large">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z" />
+                  </svg>
+                </div>
+                <h3>Gemini AI</h3>
+                <p style="font-size: 0.85rem; margin-top: 5px;">Tanyakan apa saja, curhat, atau ngobrol dengan gemini</p>
+              </div>
+            </div>
+            <div class="gemini-input-wrapper">
+              <input type="text" id="geminiInput" placeholder="Tanya Gemini..." autocomplete="off">
+              <button onclick="sendGeminiMessage()"><i data-feather="send" style="width: 16px; height: 16px;"></i></button>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
@@ -152,6 +182,16 @@
           <button class="icon-btn danger" onclick="clearFile()">
             <i data-feather="x"></i>
           </button>
+        </div>
+
+        <div id="uploadProgress" class="upload-progress hidden">
+          <div class="progress-info">
+            <span class="progress-filename" id="uploadFileName">Mengirim file...</span>
+            <span class="progress-percent" id="uploadPercent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="uploadBar" class="progress-fill"></div>
+          </div>
         </div>
 
         <div class="input-area">
@@ -285,6 +325,10 @@
   <!-- Modal Create Group -->
   <div id="createGroupModal" class="modal hidden">
     <div class="glass-panel group-modal-content">
+      <button class="icon-btn close-modal" style="position: absolute; top: 20px; right: 20px;">
+        <i data-feather="x"></i>
+      </button>
+
       <h2>Buat Group Chat</h2>
       
       <div class="form-group">
@@ -294,6 +338,10 @@
 
       <div class="form-group">
         <label>Pilih Anggota</label>
+        <div class="group-search-container">
+          <i data-feather="search" class="group-search-icon"></i>
+          <input type="text" id="groupMemberSearch" placeholder="Cari teman..." class="group-search-input">
+        </div>
         <div id="membersListContainer" class="members-list-container">
           <!-- Dinamis diisi dari JS -->
         </div>
@@ -383,12 +431,6 @@
       <button class="icon-btn close-modal" onclick="closeCreateStatusModal()">
         <i data-feather="x"></i>
       </button>
-      <h2>Buat Status</h2>
-
-      <div class="status-type-toggle">
-        <button class="toggle-btn active" data-type="text"><i data-feather="type"></i> Teks</button>
-        <button class="toggle-btn" data-type="image"><i data-feather="camera"></i> Gambar</button>
-      </div>
       
       <div class="status-creator-container">
         <!-- Text Status Creator -->
@@ -419,7 +461,13 @@
            </div>
         </div>
       </div>
-      <div class="modal-footer"><button id="postStatusBtn" class="save-btn"><i data-feather="send"></i> Kirim</button></div>
+      <div class="modal-footer">
+        <div class="status-type-toggle">
+          <button class="toggle-btn active" data-type="text" title="Teks"><i data-feather="type"></i></button>
+          <button class="toggle-btn" data-type="image" title="Gambar"><i data-feather="camera"></i></button>
+        </div>
+        <button id="postStatusBtn" class="save-btn"><i data-feather="send"></i></button>
+      </div>
     </div>
   </div>
 
@@ -485,6 +533,8 @@
   <script src="js/app.js"></script>
   <script src="js/contacts-modal.js"></script>
   <script src="js/toggle-theme.js" defer></script>
+  <script src="/js/escape-handler.js"></script>
+  
 
 </body>
 </html>

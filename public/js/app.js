@@ -1,6 +1,22 @@
 //
-const socket = io();
+const socket = io({
+  extraHeaders: {
+    "ngrok-skip-browser-warning": "true"
+  }
+});
 const API_URL = `${window.location.origin}/api`;
+
+// --- NGROK BYPASS: Override fetch untuk menambahkan header otomatis ---
+const originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+  const newOptions = { ...options };
+  newOptions.headers = newOptions.headers || {};
+  if (newOptions.headers.constructor === Object) {
+    newOptions.headers['ngrok-skip-browser-warning'] = 'true';
+  }
+  return originalFetch(url, newOptions);
+};
+
 let currentUser = JSON.parse(localStorage.getItem('currentUser'));
 let selectedUser = null;
 let selectedGroup = null;
@@ -21,7 +37,7 @@ let callHistory = []; // Array untuk menyimpan history call
 let recentChats = []; // Array untuk riwayat chat (user + group)
 let currentTab = 'chats'; // Track tab mana yang aktif
 window.userStatusMap = {}; // Initialize status map globally
-const FILE_MAX_BYTES = 50 * 1024 * 1024; // 50MB
+const FILE_MAX_BYTES = 10 * 1024 * 1024; // 10MB (Sesuaikan dengan server)
 const ALLOWED_FILE_TYPES = ['image/', 'video/', 'audio/', 'application/pdf', 'text/plain'];
 let voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null, startTime: null, interval: null };
 let chatSearchTimeout = null;
@@ -32,8 +48,11 @@ let currentStatuses = {};
 let statusQueue = [];
 let currentStatusIndex = 0;
 let statusTimer = null;
+let statusUserOrder = [];
+let currentViewedUserId = null;
 
 let statusImageBase64 = null;
+let statusNavLock = false; // Mencegah double-click/skip tidak sengaja
 
 // --- 1. TOAST NOTIFICATION SYSTEM ---
 const Toast = {
@@ -118,6 +137,17 @@ function getUserStatusText(user) {
   return 'Offline';
 }
 
+// --- SECURITY: Prevent XSS ---
+function escapeHtml(text) {
+  if (!text) return text;
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function updateChatStatusHeader() {
   if (!selectedUser) return;
   const statusEl = document.getElementById('chatStatus');
@@ -160,14 +190,14 @@ function renderChatSearchResults(items) {
     div.className = 'chat-search-result-item';
     const ts = new Date(item.timestamp).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     const snippet = item.message || (item.file && item.file.name ? `📎 ${item.file.name}` : 'Pesan media');
-    const senderName = item.sender ? (item.sender.username === currentUser.username ? 'Anda' : item.sender.nama) : item.from;
+    const senderName = escapeHtml(item.sender ? (item.sender.username === currentUser.username ? 'Anda' : item.sender.nama) : item.from);
 
     div.innerHTML = `
       <div class="meta">
         <span>Dari: <strong>${senderName}</strong></span>
         <span>${ts}</span>
       </div>
-      <div class="snippet">${snippet}</div>
+      <div class="snippet">${escapeHtml(snippet)}</div>
     `;
     div.onclick = (e) => {
       scrollToMessage(e, item.id);
@@ -248,7 +278,7 @@ async function toggleVoiceRecording() {
       if (blob.size === 0) return;
 
       if (blob.size > FILE_MAX_BYTES) {
-        Toast.show('Voice note terlalu besar (>50MB)', 'error');
+        Toast.show('Voice note terlalu besar (>10MB)', 'error');
         return;
       }
 
@@ -535,76 +565,20 @@ function setupAttachmentDropdown() {
       </button>
       <div class="attachment-menu" id="attachmentMenu">
         <a href="#" data-type="image/*,video/*">
-          <i data-feather="image"></i> <span> Gambar & Video</span>
+          <i data-feather="image"></i><span>Gambar & Video</span>
         </a>
         <a href="#" data-type="application/pdf,text/plain">
-          <i data-feather="file-text"></i> <span> Dokumen</span>
+          <i data-feather="file-text"></i><span>Dokumen</span>
         </a>
         <a href="#" data-type="audio/*">
-          <i data-feather="music"></i> <span> Audio</span>
+          <i data-feather="music"></i><span>Audio</span>
         </a>
         <a href="#" data-type="*">
-          <i data-feather="folder"></i> <span> Semua File</span>
+          <i data-feather="folder"></i><span>Semua File</span>
         </a>
       </div>
     </div>
   `;
-
-  // 2. Buat CSS untuk styling dropdown
-  const dropdownCSS = `
-    .attachment-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
-    .attachment-menu {
-        position: absolute;
-        bottom: 100%;
-        left: 0;
-        margin-bottom: 10px;
-        background-color: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        padding: 8px;
-        z-index: 100;
-        width: 220px;
-        transform-origin: bottom left;
-        transition: transform 0.1s ease-out, opacity 0.1s ease-out, visibility 0.1s;
-        visibility: hidden;
-        opacity: 0;
-        transform: translateY(5px);
-    }
-    .attachment-container:hover .attachment-menu {
-        visibility: visible;
-        opacity: 1;
-        transform: translateY(0);
-    }
-    .attachment-menu a {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        border-radius: 6px;
-        color: var(--text-primary);
-        text-decoration: none;
-        font-size: 0.9rem;
-        font-weight: 500;
-        text-align: end;
-    }
-    .attachment-menu a:hover {
-        background-color: var(--bg-lightest);
-        color: var(--text-primary);
-    }
-    .attachment-menu a i {
-        margin-right: 14px;
-        width: 18px;
-        height: 18px;
-        stroke-width: 2;
-    }
-  `;
-  const styleSheet = document.createElement("style");
-  styleSheet.innerText = dropdownCSS;
-  document.head.appendChild(styleSheet);
 
   // 3. Sisipkan HTML sebelum input file
   fileInput.insertAdjacentHTML('beforebegin', dropdownHTML);
@@ -612,7 +586,24 @@ function setupAttachmentDropdown() {
 
   // 4. Tambahkan Event Listener untuk fungsionalitas
   const menu = document.getElementById('attachmentMenu');
+  const btn = document.getElementById('attachmentDropdownBtn');
+
   if (!menu) return;
+
+  // Toggle menu saat tombol diklik (untuk Mobile/Android)
+  if (btn) {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Mencegah event bubbling ke document
+      menu.classList.toggle('active');
+    });
+
+    // Tutup menu saat klik di luar area menu/tombol
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.remove('active');
+      }
+    });
+  }
 
   menu.addEventListener('click', (e) => {
     e.preventDefault();
@@ -627,6 +618,7 @@ function setupAttachmentDropdown() {
       }
       
       fileInput.click();
+      menu.classList.remove('active'); // Tutup menu setelah memilih file
     }
   });
 }
@@ -715,6 +707,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (chatSearchInput) {
     chatSearchInput.addEventListener('input', handleChatSearchInput);
   }
+  
+  // Gemini Input Listener
+  const geminiInput = document.getElementById('geminiInput');
+  if (geminiInput) {
+    geminiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendGeminiMessage(); });
+  }
 
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('chatSearchPanel');
@@ -772,6 +770,15 @@ let typingTimeout;
 
   // Close dropdown user menu
   document.addEventListener('click', (e) => {
+    // 1. Handle Close Status Button (Delegation) - FIX untuk tombol tidak bisa diklik
+    const closeStatusBtn = e.target.closest('.close-status-viewer');
+    if (closeStatusBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeStatusViewer();
+      return;
+    }
+
     const dropdown = document.getElementById('userDropdown');
     const userMenu = document.getElementById('userMenu');
     if (dropdown && !dropdown.contains(e.target)) {
@@ -792,6 +799,19 @@ let typingTimeout;
       });
     });
   });
+
+  // Specific handler for Create Status Modal close button to ensure UI restoration
+  const createStatusModal = document.getElementById('createStatusModal');
+  if (createStatusModal) {
+    const closeBtn = createStatusModal.querySelector('.close-modal');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeCreateStatusModal();
+      });
+    }
+  }
 
   const saveProfileBtn = document.getElementById('saveProfile');
   if (saveProfileBtn) {
@@ -918,10 +938,61 @@ function checkScreenSize() {
       sidebar.classList.remove('hidden-mobile');
       chatArea.classList.remove('active');
     }
+    // Reset width style on mobile to allow CSS 100% to take over
+    sidebar.style.width = '';
   } else {
     // Di desktop, tampilkan kedua-duanya (sidebar dan chat area)
     sidebar.classList.remove('hidden-mobile');
     chatArea.classList.remove('active');
+    
+    // Logic lebar sidebar desktop
+    // FIX: Cek juga apakah status viewer/creator sedang terbuka
+    const isStatusOpen = (document.getElementById('viewStatusModal') && !document.getElementById('viewStatusModal').classList.contains('hidden')) || 
+                         (document.getElementById('createStatusModal') && !document.getElementById('createStatusModal').classList.contains('hidden'));
+
+    if (!selectedUser && !selectedGroup && !isStatusOpen) {
+      sidebar.style.width = '50%';
+    } else if (sidebar.style.width === '' || sidebar.style.width === '50%') {
+      sidebar.style.width = '380px';
+    }
+  }
+
+  // Handle Status Viewer responsiveness during resize
+  const statusModal = document.getElementById('viewStatusModal');
+  if (statusModal && !statusModal.classList.contains('hidden')) {
+    if (isMobile) {
+      if (statusModal.parentNode !== document.body) {
+        document.body.appendChild(statusModal);
+        statusModal.classList.remove('desktop-embedded');
+      }
+    } else {
+      const chatArea = document.getElementById('chatArea');
+      if (statusModal.parentNode !== chatArea) {
+        chatArea.appendChild(statusModal);
+        statusModal.classList.add('desktop-embedded');
+        document.getElementById('welcomeScreen').classList.add('hidden');
+        document.getElementById('chatRoom').classList.add('hidden');
+      }
+    }
+  }
+
+  // Handle Create Status Modal responsiveness
+  const createStatusModal = document.getElementById('createStatusModal');
+  if (createStatusModal && !createStatusModal.classList.contains('hidden')) {
+    if (isMobile) {
+      if (createStatusModal.parentNode !== document.body) {
+        document.body.appendChild(createStatusModal);
+        createStatusModal.classList.remove('desktop-embedded');
+      }
+    } else {
+      const chatArea = document.getElementById('chatArea');
+      if (createStatusModal.parentNode !== chatArea) {
+        chatArea.appendChild(createStatusModal);
+        createStatusModal.classList.add('desktop-embedded');
+        document.getElementById('welcomeScreen').classList.add('hidden');
+        document.getElementById('chatRoom').classList.add('hidden');
+      }
+    }
   }
 }
 
@@ -1011,6 +1082,20 @@ function switchTab(tabName) {
   
   // Track current tab
   currentTab = tabName;
+
+  // --- GEMINI FULLSCREEN MODE ---
+  const appLayout = document.querySelector('.app-layout');
+  const resizer = document.getElementById('sidebarResizer');
+
+  if (tabName === 'gemini') {
+    if (appLayout) appLayout.classList.add('gemini-mode');
+    if (resizer) resizer.classList.add('hidden');
+  } else {
+    if (appLayout) appLayout.classList.remove('gemini-mode');
+    if (resizer) resizer.classList.remove('hidden');
+    // Kembalikan ukuran sidebar seperti semula
+    checkScreenSize();
+  }
 }
 
 function toggleSearchBar() {
@@ -1163,7 +1248,7 @@ async function saveProfile() {
 
 function logout(e) {
   if(e) e.preventDefault();
-  localStorage.removeItem('currentUser');
+  localStorage.clear(); // Hapus semua cache (history chat, unread, user) agar bersih
   window.location.href = 'login.html';
 }
 
@@ -1185,9 +1270,12 @@ function createAvatarHTML(user, cssClass = 'avatar small', isOnline = false) {
     const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
     const gradient = getAvatarGradient(user.nama || user.name || 'User');
     
-    return `<div class="${cssClass} ${onlineClass}" style="position: relative; overflow: hidden; padding: 0; flex-shrink: 0;">
-      <div style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: ${gradient}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">${initial}</div>
-      <img src="${user.avatar}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
+    // FIX: Struktur nested div. Outer div (overflow visible) untuk badge online, Inner div (overflow hidden) untuk crop gambar.
+    return `<div class="${cssClass} ${onlineClass}" style="position: relative; padding: 0; flex-shrink: 0; background: transparent !important; overflow: visible !important;">
+      <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; position: relative;">
+        <div style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: ${gradient}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">${initial}</div>
+        <img src="${user.avatar}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
+      </div>
     </div>`;
   } else {
     // Show gradient avatar with first letter
@@ -1203,38 +1291,41 @@ function createAvatarHTML(user, cssClass = 'avatar small', isOnline = false) {
 const FRIENDS_CACHE_TTL = 2 * 60 * 1000; // 2 menit
 let friendsFetchPromise = null;
 
-function renderFriendRequests(requests = []) {
-  const requestContainer = document.getElementById('friendRequestsList');
-  if (!requestContainer) return;
-
-  requestContainer.innerHTML = '';
-  if (requests.length === 0) return;
-
-  requests.forEach(req => {
-    const div = document.createElement('div');
-    div.className = 'request-item';
-    div.classList.add('request-item-styled');
-    div.innerHTML = `
-      <span>Wait! <b>${req.from.nama}</b> ingin berteman.</span>
-      <div>
-        <button onclick="respondFriend('${req.from._id}', 'accept')" class="request-button">✅</button>
-        <button onclick="respondFriend('${req.from._id}', 'reject')" class="request-button">❌</button>
-      </div>
-    `;
-    requestContainer.appendChild(div);
-  });
-  Toast.show(`Ada ${requests.length} permintaan pertemanan baru!`, 'info');
-}
-
 function applyFriendsPayload(payload) {
   if (!payload) return;
   const { friends = [], requests = [] } = payload;
   window.allUsers = friends;
-  // No need to display search results here anymore - contacts are displayed in ContactsModal
-  renderFriendRequests(requests);
+  window.allRequests = requests; // Simpan requests secara global
+  
+  updateContactBadge(); // Update badge notifikasi
+
+  // Jika ContactsModal sedang terbuka, refresh isinya
+  if (window.ContactsModal && window.ContactsModal.isOpen) {
+    // FIX: Gunakan renderFullList langsung agar tidak loading ulang (spinner)
+    const listContainer = document.getElementById('contactsList');
+    if (listContainer) {
+      window.ContactsModal.renderFullList(listContainer);
+    }
+  } else if (requests.length > 0) {
+    // Opsional: Tampilkan notifikasi toast jika ada request baru dan modal tertutup
+    // Toast.show(`Ada ${requests.length} permintaan pertemanan baru!`, 'info');
+  }
+
   // Re-load unread counts before updating display
   loadUnreadCounts();
   updateRecentChatsDisplay();
+}
+
+function updateContactBadge() {
+  const badge = document.getElementById('contactsBadge');
+  if (!badge) return;
+  
+  const count = window.allRequests ? window.allRequests.length : 0;
+  if (count > 0) {
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
 }
 
 async function loadFriendsAndRequests(forceRefresh = false) {
@@ -1288,8 +1379,8 @@ function setupSidebarResizer() {
   const resizer = document.getElementById('sidebarResizer');
   if (!sidebar || !resizer) return;
 
-  const MIN = 260;
-  const MAX = 600;
+  const MIN = 300;
+  const MAX = window.innerWidth * 0.8; // Izinkan resize hingga 80% layar
   let startX = 0;
   let startWidth = 0;
   let dragging = false;
@@ -1486,7 +1577,50 @@ async function sendFriendRequest(e, targetId) {
 async function respondFriend(requesterId, action) {
     const endpoint = action === 'accept' ? '/friends/accept' : '/friends/reject';
     
+    // Simpan state lama untuk rollback jika error
+    const prevRequests = window.allRequests ? [...window.allRequests] : [];
+    const prevFriends = window.allUsers ? [...window.allUsers] : [];
+
+    // 0. INSTANT VISUAL FEEDBACK (Fallback)
+    // Sembunyikan elemen HTML secara langsung agar terasa instan
     try {
+        if (window.event && window.event.target) {
+            const btn = window.event.target.closest('.contact-action-btn');
+            if (btn) {
+                const item = btn.closest('.contact-item');
+                if (item) item.style.display = 'none';
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    try {
+      // 1. Optimistic Update: Update UI duluan sebelum server merespon
+      let newRequests = [...prevRequests];
+      let newFriends = [...prevFriends];
+      
+      // FIX: Pencarian ID yang lebih aman (handle string/object)
+      const reqIndex = newRequests.findIndex(req => {
+          const fromId = req.from && (req.from._id || req.from);
+          return fromId && fromId.toString() === requesterId.toString();
+      });
+
+      if (reqIndex !== -1) {
+          const request = newRequests[reqIndex];
+          newRequests.splice(reqIndex, 1); // Hapus dari list request
+          
+          if (action === 'accept') {
+              // Tambahkan ke list teman secara instan
+              const friendData = request.from;
+              const newFriend = { ...friendData, isFriend: true, isPending: false };
+              // Cek duplikasi ID sebelum push
+              if (!newFriends.find(u => u._id.toString() === newFriend._id.toString())) {
+                  newFriends.push(newFriend);
+              }
+          }
+      }
+      // Terapkan perubahan ke UI
+      applyFriendsPayload({ friends: newFriends, requests: newRequests });
+
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1495,16 +1629,21 @@ async function respondFriend(requesterId, action) {
   
       const data = await res.json();
       if (data.success) {
-        Toast.show(data.message, 'success');
-        loadFriendsAndRequests(); // Reload list agar update
+        // Toast dihapus sesuai permintaan
+        // FIX: Beri jeda 500ms sebelum sync server agar DB pasti sudah update
+        setTimeout(() => loadFriendsAndRequests(true), 500);
       } else {
-        Toast.show(data.error, 'error');
+        throw new Error(data.error);
       }
     } catch (err) {
-
+      // Rollback ke state sebelumnya jika error
+      applyFriendsPayload({ friends: prevFriends, requests: prevRequests });
       Toast.show('Gagal memproses permintaan', 'error');
     }
   }
+
+// Expose function to window agar bisa dipanggil dari onclick HTML
+window.respondFriend = respondFriend;
 
 // --- 6. CHAT LOGIC ---
 
@@ -1512,8 +1651,22 @@ function selectUser(user) {
   selectedUser = user;
   selectedGroup = null;
   
+  // FIX: Tutup modal status jika sedang terbuka agar chat langsung terlihat
+  if (document.getElementById('viewStatusModal') && !document.getElementById('viewStatusModal').classList.contains('hidden')) {
+    closeStatusViewer();
+  }
+  if (document.getElementById('createStatusModal') && !document.getElementById('createStatusModal').classList.contains('hidden')) {
+    closeCreateStatusModal();
+  }
+
   // Clear unread count for this user
   clearUnread(user.username);
+
+  // Animasi Sidebar Desktop: Kecilkan saat chat dibuka
+  if (window.innerWidth > 768) {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.width = '380px';
+  }
 
   const isMobile = window.innerWidth <= 768;
   
@@ -1583,6 +1736,12 @@ function closeChat() {
   selectedUser = null;
   selectedGroup = null;
   
+  // Animasi Sidebar Desktop: Lebarkan (50%) saat chat ditutup
+  if (window.innerWidth > 768) {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.width = '50%';
+  }
+
   const isMobile = window.innerWidth <= 768;
   
   if (isMobile) {
@@ -1611,6 +1770,13 @@ async function loadMessages(otherUser) {
 
     if (data.messages.length === 0) {
       container.innerHTML = '<div class="empty-chat-message">Belum ada pesan. Sapa dia! 👋</div>';
+      
+      // FIX: Hapus cache lokal jika server kosong (Sinkronisasi setelah reset DB)
+      const cacheKey = `lastMsg-${currentUser.username}-${otherUser}`;
+      if (localStorage.getItem(cacheKey)) {
+        localStorage.removeItem(cacheKey);
+        updateRecentChatsDisplay(); // Refresh sidebar agar pesan hantu hilang
+      }
     } else {
       data.messages.forEach(addMessageToUI);
     }
@@ -1653,7 +1819,7 @@ function sendPrivateMessage() {
     }
 
     if (file.size > FILE_MAX_BYTES) {
-      Toast.show('File terlalu besar (Maks 50MB)', 'error');
+      Toast.show('File terlalu besar (Maks 10MB)', 'error');
       clearFile();
       return;
     }
@@ -1863,7 +2029,7 @@ function addMessageToUI(msg) {
                   </div>`;
     }
   }
-  if (msg.message) content += `<p style="margin:0;">${msg.message}</p>`;
+  if (msg.message) content += `<p style="margin:0;">${escapeHtml(msg.message)}</p>`;
   content += `<span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
 
   div.innerHTML = content;
@@ -1908,7 +2074,7 @@ if(fileInput){
         }
 
         if (file.size > FILE_MAX_BYTES) {
-          Toast.show('File terlalu besar (Maks 50MB)', 'error');
+          Toast.show('File terlalu besar (Maks 10MB)', 'error');
           clearFile();
           return;
         }
@@ -2126,19 +2292,32 @@ function updateRecentChatsDisplay() {
     
     // Use createAvatarHTML for consistent avatar display with photos/initials
     let avatarHTML;
+    let avatarContent;
     if (chat.isGroup) {
       // For groups, show gradient background with first letter
-      avatarHTML = `<div class="avatar small ${isOnline ? 'online' : ''} group-avatar">${chat.name.charAt(0).toUpperCase()}</div>`;
+      avatarContent = `<div class="avatar small ${isOnline ? 'online' : ''} group-avatar">${chat.name.charAt(0).toUpperCase()}</div>`;
     } else {
       // For users, use createAvatarHTML to show photo or initial
       if (chat.user) {
-        avatarHTML = createAvatarHTML(chat.user, 'avatar small', isOnline);
+        avatarContent = createAvatarHTML(chat.user, 'avatar small', isOnline);
       } else {
         // Fallback if user data not available
-        avatarHTML = `<div class="avatar small ${isOnline ? 'online' : ''}">${chat.name.charAt(0).toUpperCase()}</div>`;
+        avatarContent = `<div class="avatar small ${isOnline ? 'online' : ''}">${chat.name.charAt(0).toUpperCase()}</div>`;
       }
     }
     
+    // Wrapper for avatar to standardize size and add status ring if needed
+    if (!chat.isGroup && chat.user && currentStatuses && currentStatuses[chat.user._id]) {
+      // User with status: wrap with ring container
+      avatarHTML = `<div class="avatar-container-ring" onclick="event.stopPropagation(); viewStatus('${chat.user._id}')">
+          <div class="status-ring"></div>
+          ${avatarContent}
+      </div>`;
+    } else {
+      // Group or user without status: wrap with a standard size container
+      avatarHTML = `<div class="chat-avatar-wrapper">${avatarContent}</div>`;
+    }
+
     const unreadCount = chatHistory[chat.id]?.unreadCount || 0;
     const badgeHTML = unreadCount > 0 ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : '';
     
@@ -2212,7 +2391,6 @@ socket.on('connect', () => {
 
 // Receive online users list from server
 socket.on('online_users_list', (users) => {
-  console.log('Received online_users_list:', users);
   window.userStatusMap = window.userStatusMap || {};
   
   // First, mark all users as offline
@@ -2226,8 +2404,6 @@ socket.on('online_users_list', (users) => {
   users.forEach(username => {
     window.userStatusMap[username] = 'online';
   });
-  
-  console.log('Updated userStatusMap:', window.userStatusMap);
   
   // Update DOM for all users (both in chat list and contacts)
   users.forEach(username => {
@@ -2331,8 +2507,14 @@ socket.on('user_status_change', (data) => {
 
 // Notifikasi Request Pertemanan Realtime
 socket.on('new_friend_request', (data) => {
-    Toast.show(`Permintaan pertemanan baru dari ${data.from.nama}`, 'info');
+    // Toast dihapus, hanya update badge via reload
     loadFriendsAndRequests(); // Refresh list otomatis
+});
+
+// Notifikasi saat teman menerima request
+socket.on('friend_request_accepted', (data) => {
+  Toast.show(`${data.user.nama} menerima permintaan pertemanan!`, 'success');
+  loadFriendsAndRequests(true); // Force refresh friends list
 });
 
 // Typing indicator
@@ -2695,7 +2877,12 @@ function displayGroups() {
   list.innerHTML = '';
   
   if (!allGroups || allGroups.length === 0) {
-    list.innerHTML = '<div class="no-groups-message">Belum ada group</div>';
+    list.innerHTML = `
+      <div class="no-groups-message">
+        <i data-feather="users" style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.5;"></i>
+        <span>Belum ada group</span>
+      </div>`;
+    if(typeof feather !== 'undefined') feather.replace();
     return;
   }
 
@@ -2767,6 +2954,9 @@ async function displayStatusUpdates() {
     }, {});
 
     currentStatuses = groupedStatuses; // Store globally for viewer
+    
+    // FIX: Refresh tampilan chat list agar ring status muncul
+    updateRecentChatsDisplay();
 
     // 1. "My Status" item
     const myStatusData = groupedStatuses[currentUser.id];
@@ -2792,14 +2982,17 @@ async function displayStatusUpdates() {
 
     // Add a divider
     const divider = document.createElement('div');
-    divider.innerHTML = `<small style="padding: 8px 16px; display: block; color: var(--text-secondary);">Pembaruan terkini</small>`;
+    divider.innerHTML = `<small style="padding: 8px 16px; display: block; color: var(--text-secondary);text-align:center;">Pembaruan terkini</small>`;
     list.appendChild(divider);
 
     // 2. Friends' statuses
     const friendStatuses = Object.values(groupedStatuses).filter(s => s.user._id !== currentUser.id);
+    
+    // FIX: Simpan urutan user untuk navigasi next/prev antar user
+    statusUserOrder = friendStatuses.map(s => s.user._id);
 
     if (friendStatuses.length === 0) {
-      list.innerHTML += '<div class="status-placeholder"><i data-feather="circle"></i><p>Belum ada status dari teman Anda.</p></div>';
+      list.innerHTML += '<div class="status-placeholder"><p>Belum ada status dari teman Anda.</p></div>';
     } else {
       friendStatuses.forEach(statusGroup => {
         const friendItem = document.createElement('div');
@@ -2829,6 +3022,7 @@ async function displayStatusUpdates() {
 }
 
 async function viewStatus(userId, startStatusId = null) {
+  currentViewedUserId = userId; // FIX: Track user yang sedang dilihat
   // Jika data status belum ada (misal klik dari chat), coba fetch dulu
   if (!currentStatuses[userId]) {
     await displayStatusUpdates();
@@ -2852,6 +3046,28 @@ async function viewStatus(userId, startStatusId = null) {
   }
 
   const modal = document.getElementById('viewStatusModal');
+  
+  // LOGIC: Pindahkan modal ke dalam chatArea jika Desktop
+  const isDesktop = window.innerWidth > 768;
+  if (isDesktop) {
+    const chatArea = document.getElementById('chatArea');
+    if (modal.parentNode !== chatArea) {
+      chatArea.appendChild(modal);
+    }
+    document.getElementById('welcomeScreen').classList.add('hidden');
+    document.getElementById('chatRoom').classList.add('hidden');
+    modal.classList.add('desktop-embedded');
+    
+    // FIX: Resize sidebar saat buka status
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.width = '380px';
+  } else {
+    if (modal.parentNode !== document.body) {
+      document.body.appendChild(modal);
+    }
+    modal.classList.remove('desktop-embedded');
+  }
+
   modal.classList.remove('hidden');
   modal.classList.add('active'); // Ensure flex display
 
@@ -2862,6 +3078,23 @@ function closeStatusViewer() {
   const modal = document.getElementById('viewStatusModal');
   modal.classList.add('hidden');
   modal.classList.remove('active');
+  modal.classList.remove('desktop-embedded'); // FIX: Hapus class agar display:flex tidak memaksa tampil
+  
+  // Restore Desktop UI
+  if (window.innerWidth > 768) {
+      if (selectedUser || selectedGroup) {
+          document.getElementById('welcomeScreen').classList.add('hidden'); // Pastikan welcome hidden
+          document.getElementById('chatRoom').classList.remove('hidden');
+      } else {
+          document.getElementById('chatRoom').classList.add('hidden'); // Pastikan chatroom hidden
+          document.getElementById('welcomeScreen').classList.remove('hidden');
+          
+          // FIX: Kembalikan sidebar ke 50% jika tidak ada chat aktif
+          const sidebar = document.getElementById('sidebar');
+          if (sidebar) sidebar.style.width = '50%';
+      }
+  }
+  
   if (statusTimer) clearTimeout(statusTimer);
   statusQueue = [];
   currentStatusIndex = 0;
@@ -2904,6 +3137,19 @@ function renderStatus() {
       body.appendChild(captionDiv);
     }
   }
+  
+  // Add Tap Navigation (Instagram Style)
+  // Klik kiri layar = Prev, Klik kanan layar = Next
+  body.onclick = (e) => {
+    // Abaikan jika klik pada elemen interaktif lain
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
+    
+    const rect = body.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    // 30% area kiri untuk Prev, sisanya Next
+    if (x < rect.width * 0.3) prevStatus();
+    else nextStatus();
+  };
 
   // Update Footer (Reply or Viewers)
   footer.innerHTML = '';
@@ -2974,11 +3220,12 @@ function renderStatus() {
   if(typeof feather !== 'undefined') feather.replace();
   
   // Update Progress Bars
-  updateStatusProgressBars();
+  const duration = status.type === 'image' ? 10000 : 5000; // 10s untuk foto, 5s untuk teks
+  updateStatusProgressBars(duration);
   
   // Auto advance
   if (statusTimer) clearTimeout(statusTimer);
-  statusTimer = setTimeout(nextStatus, 5000); // 5 seconds per status
+  statusTimer = setTimeout(nextStatus, duration);
 }
 
 async function markStatusViewed(statusId) {
@@ -3070,12 +3317,14 @@ function closeViewersPanel() {
      // Sederhananya, kita resume timer status saat ini
      if (statusQueue.length > 0) {
         if (statusTimer) clearTimeout(statusTimer);
-        statusTimer = setTimeout(nextStatus, 5000);
+        const currentStatus = statusQueue[currentStatusIndex];
+        const duration = currentStatus && currentStatus.type === 'image' ? 10000 : 5000;
+        statusTimer = setTimeout(nextStatus, duration);
      }
   }
 }
 
-function updateStatusProgressBars() {
+function updateStatusProgressBars(duration = 5000) {
   const container = document.getElementById('statusProgressBarContainer');
   container.innerHTML = '';
   
@@ -3090,9 +3339,9 @@ function updateStatusProgressBars() {
     } else if (idx === currentStatusIndex) {
       // Animate current bar
       setTimeout(() => {
+        fill.style.transition = `width ${duration}ms linear`;
         fill.style.width = '100%';
-        fill.style.transition = 'width 5s linear';
-      }, 10);
+      }, 50);
     }
     
     bar.appendChild(fill);
@@ -3101,25 +3350,86 @@ function updateStatusProgressBars() {
 }
 
 function nextStatus() {
+  // Debounce: Cegah navigasi ganda jika dipanggil terlalu cepat
+  if (statusNavLock) return;
+  statusNavLock = true;
+  setTimeout(() => statusNavLock = false, 300);
+
   if (currentStatusIndex < statusQueue.length - 1) {
     currentStatusIndex++;
     renderStatus();
   } else {
-    closeStatusViewer();
+    // Cek apakah ada user berikutnya
+    const currentUserIdx = statusUserOrder.indexOf(currentViewedUserId);
+    if (currentUserIdx !== -1 && currentUserIdx < statusUserOrder.length - 1) {
+      // Pindah ke user berikutnya
+      const nextUserId = statusUserOrder[currentUserIdx + 1];
+      viewStatus(nextUserId);
+    } else if (currentUserIdx === -1 && currentViewedUserId === currentUser.id && statusUserOrder.length > 0) {
+      // Dari status saya, lanjut ke teman pertama
+      viewStatus(statusUserOrder[0]);
+    } else {
+      closeStatusViewer();
+    }
   }
 }
 
 function prevStatus() {
+  // Debounce: Cegah navigasi ganda
+  if (statusNavLock) return;
+  statusNavLock = true;
+  setTimeout(() => statusNavLock = false, 300);
+
   if (currentStatusIndex > 0) {
     currentStatusIndex--;
     renderStatus();
+  } else {
+    // Cek apakah ada user sebelumnya
+    const currentUserIdx = statusUserOrder.indexOf(currentViewedUserId);
+    if (currentUserIdx > 0) {
+      // Pindah ke user sebelumnya
+      const prevUserId = statusUserOrder[currentUserIdx - 1];
+      viewStatus(prevUserId);
+    } else if (currentUserIdx === 0 && currentStatuses[currentUser.id]) {
+      // Opsional: Dari teman pertama, kembali ke status saya (jika ada)
+      viewStatus(currentUser.id);
+    } else {
+      closeStatusViewer();
+    }
   }
 }
+
+// Expose status navigation globally to ensure timer and onclick works
+window.nextStatus = nextStatus;
+window.prevStatus = prevStatus;
+window.closeStatusViewer = closeStatusViewer;
 
 function openCreateStatusModal() {
   const modal = document.getElementById('createStatusModal');
   if (modal) {
+    // LOGIC: Pindahkan modal ke dalam chatArea jika Desktop
+    const isDesktop = window.innerWidth > 768;
+    if (isDesktop) {
+      const chatArea = document.getElementById('chatArea');
+      if (modal.parentNode !== chatArea) {
+        chatArea.appendChild(modal);
+      }
+      document.getElementById('welcomeScreen').classList.add('hidden');
+      document.getElementById('chatRoom').classList.add('hidden');
+      modal.classList.add('desktop-embedded');
+      
+      // FIX: Resize sidebar saat buat status
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.style.width = '380px';
+    } else {
+      if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
+      modal.classList.remove('desktop-embedded');
+    }
+
     modal.classList.remove('hidden');
+    modal.classList.add('active');
     
     // Reset text input
     const textInput = document.getElementById('statusTextInput');
@@ -3146,8 +3456,29 @@ function openCreateStatusModal() {
 
 function closeCreateStatusModal() {
   const modal = document.getElementById('createStatusModal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('active');
+    modal.classList.remove('desktop-embedded');
+
+    // Restore Desktop UI
+    if (window.innerWidth > 768) {
+      if (selectedUser || selectedGroup) {
+          document.getElementById('welcomeScreen').classList.add('hidden');
+          document.getElementById('chatRoom').classList.remove('hidden');
+      } else {
+          document.getElementById('chatRoom').classList.add('hidden');
+          document.getElementById('welcomeScreen').classList.remove('hidden');
+          
+          // FIX: Kembalikan sidebar ke 50% jika tidak ada chat aktif
+          const sidebar = document.getElementById('sidebar');
+          if (sidebar) sidebar.style.width = '50%';
+      }
+    }
+  }
 }
+
+window.closeCreateStatusModal = closeCreateStatusModal;
 
 async function postStatus() {
   const activeType = document.querySelector('.status-type-toggle .toggle-btn.active').dataset.type;
@@ -3166,7 +3497,7 @@ async function postStatus() {
   }
   const btn = document.getElementById('postStatusBtn');
   btn.disabled = true;
-  btn.innerHTML = '<button class="save-btn"><i data-feather="loader" class="spinner-animation"></i> Mengirim...</button>';
+  btn.innerHTML = '<i data-feather="loader" class="spinner-animation" style="margin-right: 0;"></i>';
   if(typeof feather !== 'undefined') feather.replace();
 
   try {
@@ -3185,7 +3516,7 @@ async function postStatus() {
     Toast.show(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<button class="save-btn"><i data-feather="send"></i> Kirim</button>';
+    btn.innerHTML = '<i data-feather="send"></i>';
     if(typeof feather !== 'undefined') feather.replace();
     statusImageBase64 = null; // Clear after attempt
   }
@@ -3199,12 +3530,24 @@ function switchStatusType(type) {
 
   if (type === 'image') {
     textCreator.classList.add('hidden');
+    textCreator.classList.remove('slide-in-left');
+    
     imageCreator.classList.remove('hidden');
+    imageCreator.classList.remove('slide-in-right');
+    void imageCreator.offsetWidth; // Trigger reflow untuk restart animasi
+    imageCreator.classList.add('slide-in-right');
+
     textBtn.classList.remove('active');
     imageBtn.classList.add('active');
   } else { // text
-    textCreator.classList.remove('hidden');
     imageCreator.classList.add('hidden');
+    imageCreator.classList.remove('slide-in-right');
+
+    textCreator.classList.remove('hidden');
+    textCreator.classList.remove('slide-in-left');
+    void textCreator.offsetWidth; // Trigger reflow untuk restart animasi
+    textCreator.classList.add('slide-in-left');
+
     textBtn.classList.add('active');
     imageBtn.classList.remove('active');
   }
@@ -3248,6 +3591,13 @@ function openCreateGroupModal() {
   document.getElementById('groupNameInput').value = '';
   document.querySelectorAll('input[name="groupMembers"]').forEach(cb => cb.checked = false);
   
+  // Reset search
+  const searchInput = document.getElementById('groupMemberSearch');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.oninput = (e) => filterGroupMembers(e.target.value);
+  }
+  
   if(typeof feather !== 'undefined') feather.replace();
 }
 
@@ -3283,8 +3633,44 @@ async function populateMembersCheckbox() {
       <label for="${id}" class="member-name">${user.nama || user.username}</label>
       <input type="checkbox" id="${id}" name="groupMembers" value="${user._id}">
     `;
+
+    // Make row clickable
+    div.onclick = (e) => {
+      // Prevent double toggle if clicking directly on checkbox or label
+      if (e.target.type !== 'checkbox' && e.target.tagName !== 'LABEL') {
+        const checkbox = div.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+        // Trigger change event manually to update style
+        checkbox.dispatchEvent(new Event('change'));
+      }
+    };
+
+    // Update style on selection
+    const checkbox = div.querySelector('input[type="checkbox"]');
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        div.classList.add('selected');
+      } else {
+        div.classList.remove('selected');
+      }
+    });
     
     container.appendChild(div);
+  });
+}
+
+function filterGroupMembers(query) {
+  const container = document.getElementById('membersListContainer');
+  const items = container.querySelectorAll('.member-checkbox');
+  const lowerQuery = query.toLowerCase();
+  
+  items.forEach(item => {
+    const name = item.querySelector('.member-name').textContent.toLowerCase();
+    if (name.includes(lowerQuery)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
   });
 }
 
@@ -3405,10 +3791,24 @@ function selectGroup(groupId) {
   selectedUser = null; // Clear selectedUser saat membuka group
   
   if (!selectedGroup) return;
+
+  // FIX: Tutup modal status jika sedang terbuka agar chat group langsung terlihat
+  if (document.getElementById('viewStatusModal') && !document.getElementById('viewStatusModal').classList.contains('hidden')) {
+    closeStatusViewer();
+  }
+  if (document.getElementById('createStatusModal') && !document.getElementById('createStatusModal').classList.contains('hidden')) {
+    closeCreateStatusModal();
+  }
   
   // Clear unread count for this group
   clearUnread(groupId);
   
+  // Animasi Sidebar Desktop: Kecilkan saat chat dibuka
+  if (window.innerWidth > 768) {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.width = '380px';
+  }
+
   const isMobile = window.innerWidth <= 768;
   
   if (isMobile) {
@@ -3458,6 +3858,13 @@ async function loadGroupMessages(groupId) {
 
     if (data.messages.length === 0) {
       container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Belum ada pesan. Mulai percakapan! 💬</div>';
+      
+      // FIX: Hapus cache lokal grup jika server kosong
+      const cacheKey = `lastMsg-${currentUser.username}-group-${groupId}`;
+      if (localStorage.getItem(cacheKey)) {
+        localStorage.removeItem(cacheKey);
+        updateRecentChatsDisplay(); // Refresh sidebar
+      }
     } else {
       data.messages.forEach(msg => addGroupMessageToUI(msg));
     }
@@ -3592,7 +3999,7 @@ function addGroupMessageToUI(msg) {
                   </div>`;
     }
   }
-  if (msg.message) content += `<p style="margin:0;">${msg.message}</p>`;
+  if (msg.message) content += `<p style="margin:0;">${escapeHtml(msg.message)}</p>`;
   content += `<span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
 
   div.innerHTML = content;
@@ -3632,7 +4039,7 @@ function sendGroupMessage() {
     }
 
     if (file.size > FILE_MAX_BYTES) {
-      Toast.show('File terlalu besar (Maks 50MB)', 'error');
+      Toast.show('File terlalu besar (Maks 10MB)', 'error');
       clearFile();
       return;
     }
@@ -3704,7 +4111,7 @@ function openGroupProfileModal() {
       avatarPreview.textContent = '';
   } else {
       avatarPreview.style.backgroundImage = 'none';
-      avatarPreview.style.background = 'linear-gradient(135deg, #8b5cf6, #6366f1)';
+      avatarPreview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
       avatarPreview.textContent = selectedGroup.nama.charAt(0).toUpperCase();
   }
 
@@ -4133,7 +4540,7 @@ function displayCallHistory() {
     }
     
     div.innerHTML = `
-      <div class="avatar small" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+      <div class="avatar small" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         ${call.name.charAt(0).toUpperCase()}
       </div>
       <div class="call-item-info">
@@ -4308,4 +4715,107 @@ function openUserProfile() {
 }
 
 function closeUserProfile() {
+}
+
+// --- GEMINI AI FUNCTIONS ---
+
+let geminiHistory = []; // Menyimpan konteks percakapan sesi ini
+
+async function sendGeminiMessage() {
+  const input = document.getElementById('geminiInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // 1. Add User Message
+  addGeminiBubble(text, true);
+  input.value = '';
+  input.disabled = true; // Disable input saat loading
+
+  // 2. Simulate Loading
+  const chatList = document.getElementById('geminiChatList');
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'gemini-message ai loading-bubble';
+  loadingDiv.innerHTML = `
+    <div class="typing-indicator">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>`;
+  chatList.appendChild(loadingDiv);
+  chatList.scrollTop = chatList.scrollHeight;
+
+  try {
+    // 3. Call Real Backend API
+    const res = await fetch(`${API_URL}/gemini`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: text,
+        history: geminiHistory 
+      })
+    });
+
+    const data = await res.json();
+    loadingDiv.remove();
+
+    if (data.success) {
+      // Tampilkan balasan
+      addGeminiBubble(data.reply, false);
+      
+      // Update history untuk konteks selanjutnya
+      // Format history sesuai SDK Google Generative AI
+      geminiHistory.push({ role: "user", parts: [{ text: text }] });
+      geminiHistory.push({ role: "model", parts: [{ text: data.reply }] });
+    } else {
+      addGeminiBubble(data.error || "Gagal terhubung ke Gemini.", false);
+    }
+  } catch (err) {
+    loadingDiv.remove();
+    addGeminiBubble("Terjadi kesalahan jaringan.", false);
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+// Helper untuk format teks sederhana (Bold & Code)
+function formatGeminiText(text) {
+  // 1. Escape HTML dasar untuk keamanan
+  let html = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // 2. Code Blocks (```...```)
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+  // 3. Inline Code (`...`)
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 4. Bold (**...**)
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  return html;
+}
+
+function addGeminiBubble(text, isUser) {
+  const container = document.getElementById('geminiChatList');
+  // Sembunyikan intro jika ada
+  const intro = container.querySelector('.gemini-intro');
+  if (intro) intro.style.display = 'none';
+
+  const div = document.createElement('div');
+  div.className = `gemini-message ${isUser ? 'user' : 'ai'}`;
+  
+  if (isUser) {
+    div.innerText = text;
+  } else {
+    // Gunakan formatter untuk AI agar bisa render bold/code
+    div.innerHTML = formatGeminiText(text);
+  }
+  
+  div.style.whiteSpace = 'pre-wrap'; 
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
 }
