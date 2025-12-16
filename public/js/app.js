@@ -3116,6 +3116,27 @@ function renderStatus() {
   time.textContent = formatRelativeTime(new Date(status.createdAt));
   avatarContainer.innerHTML = createAvatarHTML(status.user, 'avatar small', false);
   
+  // --- DELETE BUTTON LOGIC ---
+  const headerInfo = document.querySelector('#viewStatusModal .status-user-info');
+  const closeBtn = headerInfo.querySelector('.close-status-viewer');
+  const existingDelete = headerInfo.querySelector('.delete-status-btn');
+  if (existingDelete) existingDelete.remove();
+  
+  // Reset margin close button
+  closeBtn.style.marginLeft = 'auto';
+
+  if (status.user._id === currentUser.id) {
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'icon-btn delete-status-btn';
+    deleteBtn.innerHTML = '<i data-feather="trash-2"></i>';
+    deleteBtn.onclick = (e) => { e.stopPropagation(); deleteStatus(status._id); };
+    
+    // Adjust layout: Delete pushes to right, Close sits next to it
+    deleteBtn.style.marginLeft = 'auto';
+    closeBtn.style.marginLeft = '0';
+    headerInfo.insertBefore(deleteBtn, closeBtn);
+  }
+  
   // Update Body
   body.innerHTML = '';
   if (status.type === 'text') {
@@ -3218,6 +3239,7 @@ function renderStatus() {
     markStatusViewed(status._id);
   }
   if(typeof feather !== 'undefined') feather.replace();
+  if(typeof feather !== 'undefined') feather.replace(); // Re-run feather for delete icon
   
   // Update Progress Bars
   const duration = status.type === 'image' ? 10000 : 5000; // 10s untuk foto, 5s untuk teks

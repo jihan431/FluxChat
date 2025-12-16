@@ -236,6 +236,8 @@ body.light {
   border-radius: 20px;
   min-width: 320px;
   max-width: 90vw; /* Izinkan sidebar melebar lebih dari 500px */
+  container-type: inline-size;
+  container-name: sidebar;
 }
 
 .sidebar-resizer {
@@ -578,11 +580,42 @@ body.light {
   align-items: center;
   gap: 12px;
   cursor: pointer;
+  min-width: 0;
+}
+
+.chat-info > div:not(.avatar) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.chat-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-info span {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  animation: slide-status 8s linear infinite alternate;
+}
+
+@keyframes slide-status {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(min(0px, calc(100cqw - 100%))); }
 }
 
 .header-actions {
   display: flex;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 /* ==================== MESSAGES ==================== */
@@ -3641,6 +3674,15 @@ body.light {
   background: transparent;
   border: none;
 }
+.delete-status-btn {
+  color: #fff;
+  background: transparent;
+  border: none;
+  margin-right: 8px;
+}
+.delete-status-btn:hover {
+  color: var(--danger);
+}
 .status-viewer-body {
   flex: 1;
   display: flex;
@@ -4061,6 +4103,12 @@ body.light {
 }
 .gemini-text-tab {
   margin-left: 6px;
+  max-width: 100px;
+  opacity: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateX(0);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 @media screen and (max-width: 768px) {
@@ -4075,5 +4123,19 @@ body.light {
   .tab-btn[data-tab="gemini"] .gemini-icon-tab svg {
     width: 24px; /* Sedikit perbesar ikon di mobile */
     height: 24px;
+  }
+}
+
+/* ==================== GEMINI TAB RESIZE BEHAVIOR ==================== */
+/* Saat sidebar dikecilkan di bawah 400px, sembunyikan teks Gemini */
+@container sidebar (max-width: 500px) {
+  .tab-btn[data-tab="gemini"] .gemini-text-tab {
+    opacity: 0;
+    max-width: 0;
+    margin-left: 0;
+    transform: translateX(-10px);
+  }
+  .tab-btn[data-tab="gemini"] {
+    flex: 0 0 auto;
   }
 }

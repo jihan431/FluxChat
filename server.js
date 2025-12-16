@@ -582,6 +582,28 @@ app.post('/api/statuses/:id/view', validateObjectId, async (req, res) => {
   }
 });
 
+// DELETE: Delete a status
+app.delete('/api/statuses/:id', validateObjectId, async (req, res) => {
+  try {
+    const statusId = req.params.id;
+    const { userId } = req.body;
+
+    if (!userId) return res.status(400).json({ success: false, error: 'User ID diperlukan' });
+
+    const status = await Status.findById(statusId);
+    if (!status) return res.status(404).json({ success: false, error: 'Status tidak ditemukan' });
+
+    if (status.user.toString() !== userId) {
+      return res.status(403).json({ success: false, error: 'Anda tidak berhak menghapus status ini' });
+    }
+
+    await Status.findByIdAndDelete(statusId);
+    res.json({ success: true, message: 'Status berhasil dihapus' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET: Get all active statuses from friends and self
 app.get('/api/statuses', validateObjectId, async (req, res) => {
   try {
