@@ -35,7 +35,7 @@ FluxChat is a modern, real-time messaging application built with Node.js, Expres
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/yourusername/fluxchat.git
+    git clone https://github.com/jihan431/fluxchat.git
     cd fluxchat
     ```
 
