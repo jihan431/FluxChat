@@ -1,698 +1,502 @@
 <!DOCTYPE html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
-    />
-    <title>FluxChat</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>"
-    />
-    <link rel="stylesheet" href="css/style.css" />
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
-    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
-  </head>
-  <body>
-    <div class="app-layout">
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-          <h2 class="brand-name">FluxChat</h2>
-          <div class="header-actions-container">
-            <button
-              class="icon-btn"
-              id="contactsBtn"
-              onclick="toggleSearchBar()"
-              title="Cari Kontak"
-              style="position: relative"
-            >
-              <i data-feather="search"></i>
-              <span id="contactsBadge" class="notification-badge hidden"></span>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>FluxChat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+
+</head>
+<body>
+  <div class="app-layout">
+    
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2 class="brand-name">FluxChat</h2>
+        <div class="header-actions-container">
+          <button class="icon-btn" id="contactsBtn" onclick="toggleSearchBar()" title="Cari Kontak" style="position: relative;">
+            <i data-feather="search"></i>
+            <span id="contactsBadge" class="notification-badge hidden"></span>
+          </button>
+          <button class="icon-btn" id="themeToggle">
+            <i data-feather="sun"></i>
+          </button>
+          <button class="icon-btn" onclick="openCreateGroupModal()" title="Buat Group Chat">
+            <i data-feather="plus"></i>
+          </button>
+          <div class="dropdown" id="userDropdown">
+            <button class="icon-btn" onclick="toggleUserMenu()" title="Menu">
+              <i data-feather="more-vertical"></i>
             </button>
-            <button class="icon-btn" id="themeToggle">
-              <i data-feather="sun"></i>
-            </button>
-            <button
-              class="icon-btn"
-              onclick="openCreateGroupModal()"
-              title="Buat Group Chat"
-            >
-              <i data-feather="plus"></i>
-            </button>
-            <div class="dropdown" id="userDropdown">
-              <button class="icon-btn" onclick="toggleUserMenu()" title="Menu">
-                <i data-feather="more-vertical"></i>
-              </button>
-              <div class="dropdown-menu hidden" id="userMenu">
-                <a href="#" onclick="openProfile(event)" class="dropdown-item">
-                  <i data-feather="user"></i>
-                  <span>Profile</span>
-                </a>
-                <a
-                  href="#"
-                  onclick="logout(event)"
-                  class="dropdown-item danger"
-                >
-                  <i data-feather="log-out"></i>
-                  <span>Logout</span>
-                </a>
-              </div>
+            <div class="dropdown-menu hidden" id="userMenu">
+              <a href="#" onclick="openProfile(event)" class="dropdown-item">
+                <i data-feather="user"></i>
+                <span>Profile</span>
+              </a>
+              <a href="#" onclick="logout(event)" class="dropdown-item danger">
+                <i data-feather="log-out"></i>
+                <span>Logout</span>
+              </a>
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="tabs-container">
-          <button
-            class="tab-btn"
-            data-tab="gemini"
-            onclick="switchTab('gemini')"
-          >
-            <span class="gemini-icon-tab">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z"
-                />
-              </svg>
-            </span>
-            <span class="gemini-text-tab">Gemini</span>
-          </button>
-          <button
-            class="tab-btn active"
-            data-tab="chats"
-            onclick="switchTab('chats')"
-          >
-            Chats
-          </button>
-          <button
-            class="tab-btn"
-            data-tab="groups"
-            onclick="switchTab('groups')"
-          >
-            Groups
-          </button>
-          <button
-            class="tab-btn"
-            data-tab="status"
-            onclick="switchTab('status')"
-          >
-            Status
-          </button>
-          <button class="tab-btn" data-tab="calls" onclick="switchTab('calls')">
-            Calls
-          </button>
+            <div class="tabs-container">
+        <button class="tab-btn" data-tab="gemini" onclick="switchTab('gemini')">
+          <span class="gemini-icon-tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z" />
+            </svg>
+          </span>
+          <span class="gemini-text-tab">Gemini</span>
+        </button>
+        <button class="tab-btn active" data-tab="chats" onclick="switchTab('chats')">Chats</button>
+        <button class="tab-btn" data-tab="groups" onclick="switchTab('groups')">Groups</button>
+        <button class="tab-btn" data-tab="status" onclick="switchTab('status')">Status</button>
+        <button class="tab-btn" data-tab="calls" onclick="switchTab('calls')">Calls</button>
+      </div>
+
+      <div class="users-list">
+        
+                <div id="chats-tab" class="tab-content active">
+          <div id="recentChatsList" class="list-content"></div>
+        </div>
+        
+                <div id="groups-tab" class="tab-content hidden">
+          <div id="groupsList" class="list-content"></div>
         </div>
 
-        <div class="users-list">
-          <div id="chats-tab" class="tab-content active">
-            <div id="recentChatsList" class="list-content"></div>
-          </div>
+                <div id="status-tab" class="tab-content hidden">
+          <div id="statusList" class="list-content"></div>
+        </div>
 
-          <div id="groups-tab" class="tab-content hidden">
-            <div id="groupsList" class="list-content"></div>
-          </div>
+                <div id="calls-tab" class="tab-content hidden">
+          <div id="callsList" class="list-content"></div>
+        </div>
 
-          <div id="status-tab" class="tab-content hidden">
-            <div id="statusList" class="list-content"></div>
-          </div>
-
-          <div id="calls-tab" class="tab-content hidden">
-            <div id="callsList" class="list-content"></div>
-          </div>
-
-          <div id="gemini-tab" class="tab-content hidden" style="height: 100%">
-            <div class="gemini-interface">
-              <div id="geminiChatList" class="gemini-chat-list">
-                <div class="gemini-intro">
-                  <div class="gemini-avatar-large">
-                    <svg
-                      width="40"
-                      height="40"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z"
-                      />
-                    </svg>
-                  </div>
-                  <h3>Gemini AI</h3>
-                  <p style="font-size: 0.85rem; margin-top: 5px">
-                    Tanyakan apa saja, curhat, atau ngobrol dengan gemini
-                  </p>
+                <div id="gemini-tab" class="tab-content hidden" style="height: 100%;">
+          <div class="gemini-interface">
+            <div id="geminiChatList" class="gemini-chat-list">
+              <div class="gemini-intro">
+                <div class="gemini-avatar-large">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z" />
+                  </svg>
                 </div>
+                <h3>Gemini AI</h3>
+                <p style="font-size: 0.85rem; margin-top: 5px;">Tanyakan apa saja, curhat, atau ngobrol dengan gemini</p>
               </div>
-              <div class="gemini-input-wrapper">
-                <input
-                  type="text"
-                  id="geminiInput"
-                  placeholder="Tanya Gemini..."
-                  autocomplete="off"
-                />
-                <button onclick="sendGeminiMessage()">
-                  <i data-feather="send" style="width: 16px; height: 16px"></i>
-                </button>
-              </div>
+            </div>
+            <div class="gemini-input-wrapper">
+              <input type="text" id="geminiInput" placeholder="Tanya Gemini..." autocomplete="off">
+              <button onclick="sendGeminiMessage()"><i data-feather="send" style="width: 16px; height: 16px;"></i></button>
             </div>
           </div>
         </div>
-      </aside>
-      <div class="sidebar-resizer" id="sidebarResizer"></div>
+      </div>
+    </aside>
+    <div class="sidebar-resizer" id="sidebarResizer"></div>
 
-      <main class="chat-area" id="chatArea">
-        <div class="welcome-screen" id="welcomeScreen">
-          <div class="welcome-icon">
-            <i data-feather="message-square"></i>
-          </div>
-          <h2>Selamat Datang di FluxChat</h2>
-          <p>Cari teman atau pilih kontak untuk memulai obrolan.</p>
+    <main class="chat-area" id="chatArea">
+      <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-icon">
+          <i data-feather="message-square"></i>
         </div>
+        <h2>Selamat Datang di FluxChat</h2>
+        <p>Cari teman atau pilih kontak untuk memulai obrolan.</p>
+      </div>
 
-        <div class="chat-room hidden" id="chatRoom">
-          <header class="chat-header">
-            <button class="back-btn" onclick="closeChat()">
-              <i data-feather="arrow-left"></i>
-            </button>
-
-            <div class="chat-info" onclick="openUserProfile()">
-              <div class="avatar small" id="chatAvatar">U</div>
-              <div>
-                <h3 id="chatName">User</h3>
-                <span id="chatStatus" class="user-status-text">Offline</span>
-              </div>
-            </div>
-
-            <div class="header-actions">
-              <button
-                class="icon-btn"
-                id="voiceCallBtn"
-                onclick="if(selectedGroup) startGroupCall('voice'); else startCall('voice');"
-              >
-                <i data-feather="phone"></i>
-              </button>
-              <button
-                class="icon-btn"
-                id="videoCallBtn"
-                onclick="if(selectedGroup) startGroupCall('video'); else startCall('video');"
-              >
-                <i data-feather="video"></i>
-              </button>
-              <button class="icon-btn" id="chatSearchToggle" title="Cari pesan">
-                <i data-feather="search"></i>
-              </button>
-            </div>
-          </header>
-
-          <div class="chat-search-panel hidden" id="chatSearchPanel">
-            <div class="chat-search-input">
-              <input
-                type="text"
-                id="chatSearchInput"
-                placeholder="Cari pesan di chat ini..."
-                autocomplete="off"
-              />
-            </div>
-            <div class="chat-search-results" id="chatSearchResults">
-              <div class="empty-state">Ketik untuk mencari pesan</div>
-            </div>
-          </div>
-
-          <div class="messages-container" id="messagesContainer"></div>
-
-          <div id="replyPreview" class="reply-preview hidden">
-            <div class="reply-preview-content">
-              <div class="reply-indicator"></div>
-              <div class="reply-text">
-                <strong id="replyPreviewName"></strong>
-                <p id="replyPreviewText"></p>
-              </div>
-            </div>
-            <button class="icon-btn" onclick="cancelReply()">
-              <i data-feather="x"></i>
-            </button>
-          </div>
-
-          <div id="filePreview" class="file-preview hidden">
-            <div class="file-info">
-              <i data-feather="file"></i>
-              <div class="file-text">
-                <span id="fileName">file.jpg</span>
-                <small id="fileMeta" class="file-meta-text"></small>
-              </div>
-            </div>
-            <button class="icon-btn danger" onclick="clearFile()">
-              <i data-feather="x"></i>
-            </button>
-          </div>
-
-          <div id="uploadProgress" class="upload-progress hidden">
-            <div class="progress-info">
-              <span class="progress-filename" id="uploadFileName"
-                >Mengirim file...</span
-              >
-              <span class="progress-percent" id="uploadPercent">0%</span>
-            </div>
-            <div class="progress-track">
-              <div id="uploadBar" class="progress-fill"></div>
-            </div>
-          </div>
-
-          <div class="input-area">
-            <label for="fileInput" class="icon-btn file-upload-btn">
-              <i data-feather="paperclip"></i>
-            </label>
-            <input
-              type="file"
-              id="fileInput"
-              hidden
-              accept="image/*,video/*,audio/*,.pdf,.txt"
-            />
-            <input
-              type="text"
-              id="messageInput"
-              placeholder="Ketik pesan..."
-              autocomplete="off"
-            />
-
-            <div id="recordingIndicator" class="recording-indicator hidden">
-              <div class="recording-text">recording...</div>
-              <div class="recording-timer" id="recordingTimer">00:00</div>
-            </div>
-
-            <button
-              class="icon-btn"
-              id="voiceNoteBtn"
-              type="button"
-              title="Voice note"
-            >
-              <i data-feather="mic"></i>
-            </button>
-            <button class="send-btn" onclick="sendMessage()">
-              <i data-feather="send"></i>
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
-
-    <div id="callModal" class="modal hidden">
-      <div class="glass-panel call-modal-content">
-        <div class="video-container hidden" id="videoContainer">
-          <video id="remoteVideo" autoplay playsinline></video>
-          <video id="localVideo" autoplay muted playsinline></video>
-        </div>
-
-        <div class="call-info-container">
-          <div id="callAvatarContainer" class="call-avatar-container"></div>
-          <h2 id="callTargetName">User Name</h2>
-          <div class="call-status" id="callStatus">Memanggil...</div>
-        </div>
-
-        <div id="incomingActions" class="call-actions hidden">
-          <button class="btn-call reject" onclick="rejectCall()">
-            <i data-feather="phone-off"></i>
+      <div class="chat-room hidden" id="chatRoom">
+        <header class="chat-header">
+          <button class="back-btn" onclick="closeChat()">
+            <i data-feather="arrow-left"></i>
           </button>
-          <button class="btn-call accept" onclick="answerCall()">
-            <i data-feather="phone-call"></i>
+          
+          <div class="chat-info" onclick="openUserProfile()">
+            <div class="avatar small" id="chatAvatar">U</div>
+            <div>
+              <h3 id="chatName">User</h3>
+              <span id="chatStatus" class="user-status-text">Offline</span>
+            </div>
+          </div>
+          
+          <div class="header-actions">
+            <button class="icon-btn" id="voiceCallBtn" onclick="if(selectedGroup) startGroupCall('voice'); else startCall('voice');">
+              <i data-feather="phone"></i>
+            </button>
+            <button class="icon-btn" id="videoCallBtn" onclick="if(selectedGroup) startGroupCall('video'); else startCall('video');">
+              <i data-feather="video"></i>
+            </button>
+            <button class="icon-btn" id="chatSearchToggle" title="Cari pesan">
+              <i data-feather="search"></i>
+            </button>
+          </div>
+        </header>
+
+        <div class="chat-search-panel hidden" id="chatSearchPanel">
+          <div class="chat-search-input">
+            <input type="text" id="chatSearchInput" placeholder="Cari pesan di chat ini..." autocomplete="off">
+          </div>
+          <div class="chat-search-results" id="chatSearchResults">
+            <div class="empty-state">Ketik untuk mencari pesan</div>
+          </div>
+        </div>
+
+        <div class="messages-container" id="messagesContainer"></div>
+
+        <div id="replyPreview" class="reply-preview hidden">
+          <div class="reply-preview-content">
+            <div class="reply-indicator"></div>
+            <div class="reply-text">
+              <strong id="replyPreviewName"></strong>
+              <p id="replyPreviewText"></p>
+            </div>
+          </div>
+          <button class="icon-btn" onclick="cancelReply()">
+            <i data-feather="x"></i>
           </button>
         </div>
 
-        <div id="activeCallActions" class="call-actions hidden">
-          <button
-            class="btn-call secondary"
-            onclick="toggleMute()"
-            id="muteBtn"
-          >
+        <div id="filePreview" class="file-preview hidden">
+          <div class="file-info">
+            <i data-feather="file"></i>
+            <div class="file-text">
+              <span id="fileName">file.jpg</span>
+              <small id="fileMeta" class="file-meta-text"></small>
+            </div>
+          </div>
+          <button class="icon-btn danger" onclick="clearFile()">
+            <i data-feather="x"></i>
+          </button>
+        </div>
+
+        <div id="uploadProgress" class="upload-progress hidden">
+          <div class="progress-info">
+            <span class="progress-filename" id="uploadFileName">Mengirim file...</span>
+            <span class="progress-percent" id="uploadPercent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="uploadBar" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="input-area">
+          <label for="fileInput" class="icon-btn file-upload-btn">
+            <i data-feather="paperclip"></i>
+          </label>
+          <input type="file" id="fileInput" hidden accept="image/*,video/*,audio/*,.pdf,.txt">
+          <input type="text" id="messageInput" placeholder="Ketik pesan..." autocomplete="off">
+          
+                    <div id="recordingIndicator" class="recording-indicator hidden">
+            <div class="recording-text">recording...</div>
+            <div class="recording-timer" id="recordingTimer">00:00</div>
+          </div>
+          
+          <button class="icon-btn" id="voiceNoteBtn" type="button" title="Voice note">
             <i data-feather="mic"></i>
           </button>
-          <button class="btn-call reject" onclick="endCall()">
-            <i data-feather="phone-off"></i>
-          </button>
-          <button
-            class="btn-call secondary"
-            onclick="toggleCamera()"
-            id="camBtn"
-          >
-            <i data-feather="video"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="profileModal" class="modal hidden">
-      <div class="glass-panel profile-modal-content">
-        <button class="icon-btn close-modal" onclick="closeProfileModal()">
-          <i data-feather="x"></i>
-        </button>
-
-        <div class="profile-modal-header">
-          <div class="avatar-container">
-            <div
-              class="avatar large profile-avatar-display"
-              id="profileAvatarDisplay"
-            >
-              U
-            </div>
-
-            <label for="profilePhotoInput" class="camera-upload-btn">
-              <i data-feather="camera"></i>
-            </label>
-          </div>
-          <h2>Profile saya</h2>
-          <p class="username-display">
-            @<span id="profileUsernameDisplay">user</span>
-          </p>
-        </div>
-
-        <div class="form-group">
-          <label>
-            <i data-feather="user"></i>
-            Nama Lengkap
-          </label>
-          <input type="text" id="editNama" placeholder="Nama kamu" />
-        </div>
-
-        <div class="form-group">
-          <label>
-            <i data-feather="lock"></i>
-            Password Baru
-          </label>
-          <input
-            type="password"
-            id="editPassword"
-            placeholder="Kosongkan jika tidak diubah"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>
-            <i data-feather="mail"></i>
-            Email
-          </label>
-          <p id="editEmail">user@example.com</p>
-        </div>
-
-        <div class="modal-divider"></div>
-
-        <input
-          type="file"
-          id="profilePhotoInput"
-          accept="image/*"
-          class="hidden-file-input"
-        />
-
-        <div class="modal-footer">
-          <button class="icon-btn close-modal cancel-btn">
-            <i data-feather="x"></i> Batal
-          </button>
-          <button id="saveProfile" class="icon-btn save-btn">
-            <i data-feather="check"></i> Simpan
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="createGroupModal" class="modal hidden">
-      <div class="glass-panel group-modal-content">
-        <button
-          class="icon-btn close-modal"
-          style="position: absolute; top: 20px; right: 20px"
-        >
-          <i data-feather="x"></i>
-        </button>
-
-        <h2>Buat Group Chat</h2>
-
-        <div class="form-group">
-          <label>Nama Group</label>
-          <input
-            type="text"
-            id="groupNameInput"
-            placeholder="Nama group..."
-            maxlength="50"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Pilih Anggota</label>
-          <div class="group-search-container">
-            <i data-feather="search" class="group-search-icon"></i>
-            <input
-              type="text"
-              id="groupMemberSearch"
-              placeholder="Cari teman..."
-              class="group-search-input"
-            />
-          </div>
-          <div id="membersListContainer" class="members-list-container"></div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="icon-btn close-modal cancel-btn">Batal</button>
-          <button id="createGroupBtn" class="save-btn">Buat</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="imagePreviewModal" class="modal hidden">
-      <div class="image-preview-content">
-        <button class="icon-btn close-preview" onclick="closeImagePreview()">
-          <i data-feather="x"></i>
-        </button>
-
-        <img id="previewImageSrc" src="" class="preview-image" />
-
-        <div class="preview-actions">
-          <button
-            class="icon-btn download-btn"
-            onclick="downloadPreviewImage()"
-          >
-            <i data-feather="download"></i>
-            Download
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="userProfileModal" class="modal hidden">
-      <div class="glass-panel user-profile-content">
-        <button class="icon-btn close-modal" onclick="closeUserProfile()">
-          <i data-feather="x"></i>
-        </button>
-
-        <div class="user-profile-body">
-          <div class="user-avatar-container">
-            <div
-              class="avatar large user-profile-avatar"
-              id="userProfileAvatar"
-            >
-              U
-            </div>
-          </div>
-
-          <h2 id="userProfileName">User Name</h2>
-          <p id="userProfileUsername">@username</p>
-
-          <div class="status-container">
-            <span id="userProfileStatus" class="status-badge">Online</span>
-          </div>
-
-          <div class="modal-divider"></div>
-
-          <div class="info-section">
-            <div class="info-label">
-              <i data-feather="mail"></i>
-              <label>Email</label>
-            </div>
-            <p id="userProfileEmail">user@example.com</p>
-          </div>
-
-          <div class="info-section">
-            <div class="info-label">
-              <i data-feather="clock"></i>
-              <label>Last Seen</label>
-            </div>
-            <p id="userProfileLastSeen">Just now</p>
-          </div>
-
-          <div class="modal-divider"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="createStatusModal" class="modal hidden">
-      <div class="glass-panel status-modal-content">
-        <button class="icon-btn close-modal" onclick="closeCreateStatusModal()">
-          <i data-feather="x"></i>
-        </button>
-
-        <div class="status-creator-container">
-          <div id="textStatusCreator">
-            <div class="text-status-wrapper">
-              <textarea
-                id="statusTextInput"
-                placeholder="Ketik status..."
-              ></textarea>
-            </div>
-            <div class="color-palette">
-              <button
-                class="color-dot"
-                style="background: #4a90e2"
-                data-color="#4a90e2"
-              ></button>
-              <button
-                class="color-dot"
-                style="background: #50e3c2"
-                data-color="#50e3c2"
-              ></button>
-              <button
-                class="color-dot"
-                style="background: #f5a623"
-                data-color="#f5a623"
-              ></button>
-              <button
-                class="color-dot"
-                style="background: #d0021b"
-                data-color="#d0021b"
-              ></button>
-              <button
-                class="color-dot"
-                style="background: #9013fe"
-                data-color="#9013fe"
-              ></button>
-              <button
-                class="color-dot active"
-                style="background: #31363f"
-                data-color="#31363F"
-              ></button>
-            </div>
-          </div>
-
-          <div id="imageStatusCreator" class="hidden">
-            <label for="statusImageInput" class="image-upload-placeholder">
-              <i data-feather="image"></i>
-              <span>Pilih Gambar</span>
-            </label>
-            <input
-              type="file"
-              id="statusImageInput"
-              accept="image/*"
-              class="hidden-file-input"
-            />
-            <div class="image-preview-wrapper hidden" id="imagePreviewWrapper">
-              <img id="statusImagePreview" />
-              <input
-                type="text"
-                id="statusImageCaption"
-                placeholder="Tambahkan keterangan..."
-                class="status-caption-input"
-              />
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <div class="status-type-toggle">
-            <button class="toggle-btn active" data-type="text" title="Teks">
-              <i data-feather="type"></i>
-            </button>
-            <button class="toggle-btn" data-type="image" title="Gambar">
-              <i data-feather="camera"></i>
-            </button>
-          </div>
-          <button id="postStatusBtn" class="save-btn">
+          <button class="send-btn" onclick="sendMessage()">
             <i data-feather="send"></i>
           </button>
         </div>
       </div>
-    </div>
+    </main>
+  </div>
 
-    <div id="viewStatusModal" class="modal hidden" style="z-index: 20001">
-      <div class="status-viewer-content">
-        <div class="status-viewer-header">
-          <div
-            class="status-progress-bar-container"
-            id="statusProgressBarContainer"
-          ></div>
-          <div class="status-user-info">
-            <div class="avatar-container-view" id="statusViewerAvatar"></div>
-            <div class="status-text-info">
-              <h4 id="statusViewerName">User</h4>
-              <small id="statusViewerTime">Time</small>
-            </div>
-            <button
-              class="icon-btn close-status-viewer"
-              onclick="closeStatusViewer()"
-            >
-              <i data-feather="x"></i>
-            </button>
-          </div>
-        </div>
+    <div id="callModal" class="modal hidden">
+    <div class="glass-panel call-modal-content">
+      <div class="video-container hidden" id="videoContainer">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay muted playsinline></video>
+      </div>
 
-        <div class="status-viewer-body" id="statusViewerBody"></div>
+      <div class="call-info-container">
+        <div id="callAvatarContainer" class="call-avatar-container"></div>
+        <h2 id="callTargetName">User Name</h2>
+        <div class="call-status" id="callStatus">Memanggil...</div>
+      </div>
 
-        <button class="status-nav-btn prev" onclick="prevStatus()">
-          <i data-feather="chevron-left"></i>
+      <div id="incomingActions" class="call-actions hidden">
+        <button class="btn-call reject" onclick="rejectCall()">
+          <i data-feather="phone-off"></i>
         </button>
-        <button class="status-nav-btn next" onclick="nextStatus()">
-          <i data-feather="chevron-right"></i>
+        <button class="btn-call accept" onclick="answerCall()">
+          <i data-feather="phone-call"></i>
         </button>
+      </div>
 
-        <div class="status-footer" id="statusFooter"></div>
-
-        <div id="statusViewersPanel" class="status-viewers-panel">
-          <div class="viewers-header">
-            <h4>Dilihat oleh <span id="viewersCount">0</span></h4>
-            <button class="icon-btn" onclick="closeViewersPanel()">
-              <i data-feather="chevron-down"></i>
-            </button>
-          </div>
-          <div id="viewersList" class="viewers-list"></div>
-        </div>
+      <div id="activeCallActions" class="call-actions hidden">
+        <button class="btn-call secondary" onclick="toggleMute()" id="muteBtn">
+          <i data-feather="mic"></i>
+        </button>
+        <button class="btn-call reject" onclick="endCall()">
+          <i data-feather="phone-off"></i>
+        </button>
+        <button class="btn-call secondary" onclick="toggleCamera()" id="camBtn">
+          <i data-feather="video"></i>
+        </button>
       </div>
     </div>
+  </div>
 
-    <div id="messageContextMenu" class="context-menu hidden">
-      <button class="context-menu-item" onclick="startReply()">
-        <i data-feather="corner-up-left" class="context-menu-icon"></i> Balas
+<div id="profileModal" class="modal hidden">
+  <div class="glass-panel profile-modal-content">
+    
+        <button class="icon-btn close-modal" onclick="closeProfileModal()">
+      <i data-feather="x"></i>
+    </button>
+
+        <div class="profile-modal-header">
+      <div class="avatar-container">
+        <div class="avatar large profile-avatar-display" id="profileAvatarDisplay">U</div>
+
+                <label for="profilePhotoInput" class="camera-upload-btn">
+          <i data-feather="camera"></i>
+        </label>
+      </div>
+      <h2>Profile saya</h2>
+      <p class="username-display">@<span id="profileUsernameDisplay">user</span></p>
+    </div>
+
+    <div class="form-group">
+      <label>
+        <i data-feather="user"></i>
+        Nama Lengkap
+      </label>
+      <input type="text" id="editNama" placeholder="Nama kamu">
+    </div>
+
+    <div class="form-group">
+      <label>
+        <i data-feather="lock"></i>
+        Password Baru
+      </label>
+      <input type="password" id="editPassword" placeholder="Kosongkan jika tidak diubah">
+    </div>
+
+    <div class="form-group">
+      <label>
+        <i data-feather="mail"></i>
+        Email
+      </label>
+      <p id="editEmail">user@example.com</p>
+    </div>
+
+        <div class="modal-divider"></div>
+
+        <input type="file" id="profilePhotoInput" accept="image/*" class="hidden-file-input">
+
+        <div class="modal-footer">
+      <button class="icon-btn close-modal cancel-btn">
+        <i data-feather="x"></i> Batal
       </button>
-      <button
-        class="context-menu-item danger"
-        onclick="deleteMessageForMe()"
-        id="deleteForMeBtn"
-      >
-        <i data-feather="trash" class="context-menu-icon"></i> Hapus untuk Saya
-      </button>
-      <button
-        class="context-menu-item danger"
-        onclick="deleteMessageForEveryone()"
-        id="deleteForEveryoneBtn"
-        class="context-menu-hidden"
-      >
-        <i data-feather="trash-2" class="context-menu-icon"></i> Hapus untuk
-        Semua
+      <button id="saveProfile" class="icon-btn save-btn">
+        <i data-feather="check"></i> Simpan
       </button>
     </div>
+
+  </div>
+</div>
+
+
+    <div id="createGroupModal" class="modal hidden">
+    <div class="glass-panel group-modal-content">
+      <button class="icon-btn close-modal" style="position: absolute; top: 20px; right: 20px;">
+        <i data-feather="x"></i>
+      </button>
+
+      <h2>Buat Group Chat</h2>
+      
+      <div class="form-group">
+        <label>Nama Group</label>
+        <input type="text" id="groupNameInput" placeholder="Nama group..." maxlength="50">
+      </div>
+
+      <div class="form-group">
+        <label>Pilih Anggota</label>
+        <div class="group-search-container">
+          <i data-feather="search" class="group-search-icon"></i>
+          <input type="text" id="groupMemberSearch" placeholder="Cari teman..." class="group-search-input">
+        </div>
+        <div id="membersListContainer" class="members-list-container">
+                  </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="icon-btn close-modal cancel-btn">Batal</button>
+        <button id="createGroupBtn" class="save-btn">Buat</button>
+      </div>
+    </div>
+  </div>
+
+    <div id="imagePreviewModal" class="modal hidden">
+    <div class="image-preview-content">
+      <button class="icon-btn close-preview" onclick="closeImagePreview()">
+        <i data-feather="x"></i>
+      </button>
+      
+      <img id="previewImageSrc" src="" class="preview-image">
+      
+      <div class="preview-actions">
+        <button class="icon-btn download-btn" onclick="downloadPreviewImage()">
+          <i data-feather="download"></i>
+          Download
+        </button>
+      </div>
+    </div>
+  </div>
+
+    <div id="userProfileModal" class="modal hidden">
+    <div class="glass-panel user-profile-content">
+      
+            <button class="icon-btn close-modal" onclick="closeUserProfile()">
+        <i data-feather="x"></i>
+      </button>
+
+            <div class="user-profile-body">
+        
+                <div class="user-avatar-container">
+          <div class="avatar large user-profile-avatar" id="userProfileAvatar">U</div>
+        </div>
+
+                <h2 id="userProfileName">User Name</h2>
+        <p id="userProfileUsername">@username</p>
+        
+                <div class="status-container">
+          <span id="userProfileStatus" class="status-badge">Online</span>
+        </div>
+
+                <div class="modal-divider"></div>
+        
+                <div class="info-section">
+          <div class="info-label">
+            <i data-feather="mail"></i>
+            <label>Email</label>
+          </div>
+          <p id="userProfileEmail">user@example.com</p>
+        </div>
+
+                <div class="info-section">
+          <div class="info-label">
+            <i data-feather="clock"></i>
+            <label>Last Seen</label>
+          </div>
+          <p id="userProfileLastSeen">Just now</p>
+        </div>
+
+                <div class="modal-divider"></div>
+      </div>
+    </div>
+  </div>
+
+    <div id="createStatusModal" class="modal hidden">
+    <div class="glass-panel status-modal-content">
+      <button class="icon-btn close-modal" onclick="closeCreateStatusModal()">
+        <i data-feather="x"></i>
+      </button>
+      
+      <div class="status-creator-container">
+                <div id="textStatusCreator">
+          <div class="text-status-wrapper">
+            <textarea id="statusTextInput" placeholder="Ketik status..."></textarea>
+          </div>
+          <div class="color-palette">
+            <button class="color-dot" style="background: #4a90e2;" data-color="#4a90e2"></button>
+            <button class="color-dot" style="background: #50e3c2;" data-color="#50e3c2"></button>
+            <button class="color-dot" style="background: #f5a623;" data-color="#f5a623"></button>
+            <button class="color-dot" style="background: #d0021b;" data-color="#d0021b"></button>
+            <button class="color-dot" style="background: #9013fe;" data-color="#9013fe"></button>
+            <button class="color-dot active" style="background: #31363F;" data-color="#31363F"></button>
+          </div>
+        </div>
+        
+                <div id="imageStatusCreator" class="hidden">
+           <label for="statusImageInput" class="image-upload-placeholder">
+              <i data-feather="image"></i>
+              <span>Pilih Gambar</span>
+           </label>
+           <input type="file" id="statusImageInput" accept="image/*" class="hidden-file-input">
+           <div class="image-preview-wrapper hidden" id="imagePreviewWrapper">
+             <img id="statusImagePreview" />
+             <input type="text" id="statusImageCaption" placeholder="Tambahkan keterangan..." class="status-caption-input">
+           </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="status-type-toggle">
+          <button class="toggle-btn active" data-type="text" title="Teks"><i data-feather="type"></i></button>
+          <button class="toggle-btn" data-type="image" title="Gambar"><i data-feather="camera"></i></button>
+        </div>
+        <button id="postStatusBtn" class="save-btn"><i data-feather="send"></i></button>
+      </div>
+    </div>
+  </div>
+
+    <div id="viewStatusModal" class="modal hidden" style="z-index: 20001;">
+    <div class="status-viewer-content">
+      <div class="status-viewer-header">
+        <div class="status-progress-bar-container" id="statusProgressBarContainer"></div>
+        <div class="status-user-info">
+           <div class="avatar-container-view" id="statusViewerAvatar"></div>
+           <div class="status-text-info">
+             <h4 id="statusViewerName">User</h4>
+             <small id="statusViewerTime">Time</small>
+           </div>
+           <button class="icon-btn close-status-viewer" onclick="closeStatusViewer()">
+             <i data-feather="x"></i>
+           </button>
+        </div>
+      </div>
+      
+      <div class="status-viewer-body" id="statusViewerBody"></div>
+      
+      <button class="status-nav-btn prev" onclick="prevStatus()"><i data-feather="chevron-left"></i></button>
+      <button class="status-nav-btn next" onclick="nextStatus()"><i data-feather="chevron-right"></i></button>
+
+            <div class="status-footer" id="statusFooter"></div>
+
+            <div id="statusViewersPanel" class="status-viewers-panel">
+        <div class="viewers-header">
+          <h4>Dilihat oleh <span id="viewersCount">0</span></h4>
+          <button class="icon-btn" onclick="closeViewersPanel()"><i data-feather="chevron-down"></i></button>
+        </div>
+        <div id="viewersList" class="viewers-list"></div>
+      </div>
+    </div>
+  </div>
+
+    <div id="messageContextMenu" class="context-menu hidden">
+    <button class="context-menu-item" onclick="startReply()">
+      <i data-feather="corner-up-left" class="context-menu-icon"></i> Balas
+    </button>
+    <button class="context-menu-item danger" onclick="deleteMessageForMe()" id="deleteForMeBtn">
+      <i data-feather="trash" class="context-menu-icon"></i> Hapus untuk Saya
+    </button>
+    <button class="context-menu-item danger" onclick="deleteMessageForEveryone()" id="deleteForEveryoneBtn" class="context-menu-hidden">
+      <i data-feather="trash-2" class="context-menu-icon"></i> Hapus untuk Semua
+    </button>
+  </div>
 
     <div class="screenshot-overlay" id="screenshotOverlay"></div>
 
     <div id="contactsModal" class="modal hidden">
-      <div class="glass-panel contacts-modal-content"></div>
-    </div>
+    <div class="glass-panel contacts-modal-content">
+          </div>
+  </div>
 
-    <script src="js/app.js"></script>
-    <script src="js/contacts-modal.js"></script>
-    <script src="js/toggle-theme.js" defer></script>
-    <script src="/js/escape-handler.js"></script>
-  </body>
+  <script src="js/app.js"></script>
+  <script src="js/contacts-modal.js"></script>
+  <script src="js/toggle-theme.js" defer></script>
+  <script src="/js/escape-handler.js"></script>
+  
+  
+
+</body>
 </html>

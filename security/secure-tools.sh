@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Secure Files Manager - Unified tool for encrypting/decrypting sensitive files
-# Usage: ./secure-tools.sh <action> [file] [password]
-
 ACTION=$1
 FILE=$2
 PASSWORD=$3
@@ -27,8 +24,6 @@ if [ -z "$ACTION" ]; then
     echo "  ./secure-tools.sh decrypt-all mypassword"
     exit 1
 fi
-
-# If password not provided as argument and action requires it, prompt for it
 if [ -z "$PASSWORD" ] && [[ "$ACTION" == "encrypt" || "$ACTION" == "decrypt" || "$ACTION" == "encrypt-all" || "$ACTION" == "decrypt-all" ]]; then
     read -s -p "Enter encryption password: " PASSWORD
     echo
