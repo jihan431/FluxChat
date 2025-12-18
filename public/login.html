@@ -1,148 +1,245 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FluxChat - Masuk</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/auth.css">
-</head>
-<body>
-  <ul class="circles">
-    <li></li>
-    <li></li>
-    <li></li>
-    <li></li>
-    <li></li>
-    <li></li>
-    <li></li>
-    <li></li>
-  </ul>
-  <div class="login-container"></div>
-  <div class="background-blobs">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FluxChat - Masuk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/auth.css" />
+  </head>
+  <body>
+    <ul class="circles">
+      <li></li>
+      <li></li>
+      <li></li>
+      <li></li>
+      <li></li>
+      <li></li>
+      <li></li>
+      <li></li>
+    </ul>
+    <div class="login-container"></div>
+    <div class="background-blobs">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+    </div>
 
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header">
-        <div class="logo-wrapper">
-          <svg class="app-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="logo-wrapper">
+            <svg
+              class="app-logo"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              ></path>
+            </svg>
+          </div>
+          <h1>FluxChat</h1>
+          <p class="subtitle">Lightweight Design. Powerful Messaging</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="tab-btn active" onclick="setMode('login')">
+            Masuk
+          </button>
+          <button class="tab-btn" onclick="setMode('register')">Daftar</button>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+          <div class="input-group">
+            <input type="email" id="loginEmail" required placeholder=" " />
+            <label>Email</label>
+          </div>
+          <div class="input-group">
+            <input
+              type="password"
+              id="loginPassword"
+              required
+              placeholder=" "
+            />
+            <label>Kata Sandi</label>
+            <button
+              type="button"
+              class="password-toggle"
+              id="loginPasswordToggle"
+              aria-label="Toggle password visibility"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="hidden"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                ></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <button type="submit" class="btn-submit">Masuk Sekarang</button>
+          <div class="divider">
+            <span></span>
+            <p>atau</p>
+            <span></span>
+          </div>
+          <div class="social-login">
+            <button type="button" id="googleLoginBtn" class="btn-google">
+              <img
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                alt="Google"
+              />
+              <span>Masuk dengan Google</span>
+            </button>
+          </div>
+        </form>
+
+        <form id="registerForm" class="auth-form hidden">
+          <div class="input-group">
+            <input type="text" id="regNama" required placeholder=" " />
+            <label>Nama Lengkap</label>
+          </div>
+          <div class="input-group">
+            <input type="text" id="regUsername" required placeholder=" " />
+            <label>Username</label>
+          </div>
+          <div class="input-group">
+            <input type="email" id="regEmail" required placeholder=" " />
+            <label>Email</label>
+          </div>
+          <div class="input-group">
+            <input type="password" id="regPassword" required placeholder=" " />
+            <label>Kata Sandi</label>
+            <button
+              type="button"
+              class="password-toggle"
+              id="regPasswordToggle"
+              aria-label="Toggle password visibility"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="hidden"
+              >
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                ></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <button type="submit" class="btn-submit">Buat Akun</button>
+        </form>
+
+        <form id="otpForm" class="auth-form hidden">
+          <div class="otp-message">
+            Masukkan 6 digit kode yang dikirim ke email Anda.
+          </div>
+          <input type="hidden" id="otpEmailHidden" />
+          <input type="hidden" id="otpType" />
+          <div class="input-group">
+            <input
+              type="text"
+              id="otpCode"
+              maxlength="6"
+              required
+              placeholder=" "
+              class="otp-input"
+            />
+            <label class="otp-label">Kode OTP</label>
+          </div>
+          <button type="submit" class="btn-submit">Verifikasi</button>
+        </form>
+
+        <div class="auth-footer">
+          <p>lupa password? <a href="password.html" target="#">klik here</a></p>
+          <p>
+            &copy; 2025 FluxChat. By
+            <a href="https://instagram.com/jhnngrhaa" target="_blank"
+              >@jhnngrha</a
+            >
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div id="toastBox"></div>
+
+    <div id="loadingScreen" class="loading-screen">
+      <div class="loading-content">
+        <div class="loading-logo">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+            ></path>
           </svg>
         </div>
-        <h1>FluxChat</h1>
-        <p class="subtitle">Lightweight Design. Powerful Messaging</p>
-      </div>
-
-      <div class="auth-tabs">
-        <button class="tab-btn active" onclick="setMode('login')">Masuk</button>
-        <button class="tab-btn" onclick="setMode('register')">Daftar</button>
-      </div>
-
-      <form id="loginForm" class="auth-form">
-        <div class="input-group">
-          <input type="email" id="loginEmail" required placeholder=" ">
-          <label>Email</label>
+        <h2 class="loading-title">FluxChat</h2>
+        <div class="loading-spinner">
+          <div class="spinner-dot"></div>
+          <div class="spinner-dot"></div>
+          <div class="spinner-dot"></div>
         </div>
-        <div class="input-group">
-          <input type="password" id="loginPassword" required placeholder=" ">
-          <label>Kata Sandi</label>
-          <button type="button" class="password-toggle" id="loginPasswordToggle" aria-label="Toggle password visibility">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-              <line x1="1" y1="1" x2="23" y2="23"></line>
-            </svg>
-          </button>
-        </div>
-        <button type="submit" class="btn-submit">Masuk Sekarang</button>
-        <div class="divider">
-          <span></span>
-          <p>atau</p>
-          <span></span>
-        </div>
-        <div class="social-login">
-          <button type="button" id="googleLoginBtn" class="btn-google">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-            <span>Masuk dengan Google</span>
-          </button>
-        </div>
-      </form>
-
-      <form id="registerForm" class="auth-form hidden">
-        <div class="input-group">
-          <input type="text" id="regNama" required placeholder=" ">
-          <label>Nama Lengkap</label>
-        </div>
-        <div class="input-group">
-          <input type="text" id="regUsername" required placeholder=" ">
-          <label>Username</label>
-        </div>
-        <div class="input-group">
-          <input type="email" id="regEmail" required placeholder=" ">
-          <label>Email</label>
-        </div>
-        <div class="input-group">
-          <input type="password" id="regPassword" required placeholder=" ">
-          <label>Kata Sandi</label>
-          <button type="button" class="password-toggle" id="regPasswordToggle" aria-label="Toggle password visibility">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-              <line x1="1" y1="1" x2="23" y2="23"></line>
-            </svg>
-          </button>
-        </div>
-        <button type="submit" class="btn-submit">Buat Akun</button>
-      </form>
-
-      <form id="otpForm" class="auth-form hidden">
-        <div class="otp-message">Masukkan 6 digit kode yang dikirim ke email Anda.</div>
-        <input type="hidden" id="otpEmailHidden">
-        <input type="hidden" id="otpType">
-        <div class="input-group">
-          <input type="text" id="otpCode" maxlength="6" required placeholder=" " class="otp-input">
-          <label class="otp-label">Kode OTP</label>
-        </div>
-        <button type="submit" class="btn-submit">Verifikasi</button>
-      </form>
-
-      <div class="auth-footer">
-        <p> lupa password? <a href="password.html" target="#">klik here</a></p>
-        <p>&copy; 2025 FluxChat. By <a href="https://instagram.com/jhnngrhaa" target="_blank">@jhnngrha</a></p>
       </div>
     </div>
-  </div>
 
-  <div id="toastBox"></div>
-  
-  <!-- Loading Screen -->
-  <div id="loadingScreen" class="loading-screen">
-    <div class="loading-content">
-      <div class="loading-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      </div>
-      <h2 class="loading-title">FluxChat</h2>
-      <div class="loading-spinner">
-        <div class="spinner-dot"></div>
-        <div class="spinner-dot"></div>
-        <div class="spinner-dot"></div>
-      </div>
-    </div>
-  </div>
-  
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="js/login.js"></script>
-</body>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="js/login.js"></script>
+  </body>
 </html>

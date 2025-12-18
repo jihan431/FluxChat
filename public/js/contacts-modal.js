@@ -1,32 +1,29 @@
-// ==================== CONTACTS MODAL COMPONENT ====================
-// Modal untuk menampilkan daftar kontak dengan search functionality
-// Integrates dengan existing search dan contact list logic dari app.js
+
+
+
 
 window.ContactsModal = {
   isOpen: false,
   searchTimeout: null,
 
-  /**
-   * Initialize modal and attach event listeners
-   */
-  init() {
+    init() {
     const modal = document.getElementById('contactsModal');
     if (!modal) return;
 
-    // Render initial HTML structure
+    
     this.renderStructure();
 
-    // Attach event listeners
+    
     this.attachEventListeners();
 
-    // Close on backdrop click
+    
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         this.close();
       }
     });
 
-    // Close on ESC key
+    
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.isOpen) {
         this.close();
@@ -34,10 +31,7 @@ window.ContactsModal = {
     });
   },
 
-  /**
-   * Render modal structure with search bar and contact list
-   */
-  renderStructure() {
+    renderStructure() {
     const content = document.querySelector('.contacts-modal-content');
     if (!content) return;
 
@@ -74,20 +68,17 @@ window.ContactsModal = {
       </div>
     `;
 
-    // Initialize feather icons
+    
     if (typeof feather !== 'undefined') {
       feather.replace();
     }
   },
 
-  /**
-   * Attach event listeners for search and interactions
-   */
-  attachEventListeners() {
+    attachEventListeners() {
     const searchInput = document.getElementById('contactsSearchInput');
     if (!searchInput) return;
 
-    // Focus input on modal open
+    
     searchInput.addEventListener('focus', () => {
       searchInput.parentElement.classList.add('focused');
     });
@@ -96,7 +87,7 @@ window.ContactsModal = {
       searchInput.parentElement.classList.remove('focused');
     });
 
-    // Search with debounce
+    
     searchInput.addEventListener('input', (e) => {
       const query = e.target.value.trim();
       
@@ -115,10 +106,7 @@ window.ContactsModal = {
     });
   },
 
-  /**
-   * Open modal with fade + scale animation
-   */
-  open() {
+    open() {
     const modal = document.getElementById('contactsModal');
     if (!modal) return;
 
@@ -126,7 +114,7 @@ window.ContactsModal = {
     modal.classList.add('active');
     this.isOpen = true;
 
-    // Trigger animation
+    
     setTimeout(() => {
       const content = modal.querySelector('.contacts-modal-content');
       if (content) {
@@ -134,23 +122,20 @@ window.ContactsModal = {
       }
     }, 10);
 
-    // Focus search input
+    
     setTimeout(() => {
       const input = document.getElementById('contactsSearchInput');
       if (input) input.focus();
     }, 100);
 
-    // Load initial contacts
+    
     this.loadAllContacts();
 
-    // Prevent body scroll
+    
     document.body.style.overflow = 'hidden';
   },
 
-  /**
-   * Close modal with fade out animation
-   */
-  close() {
+    close() {
     const modal = document.getElementById('contactsModal');
     if (!modal) return;
 
@@ -165,25 +150,22 @@ window.ContactsModal = {
       modal.classList.remove('active');
       this.isOpen = false;
 
-      // Clear search
+      
       const searchInput = document.getElementById('contactsSearchInput');
       if (searchInput) {
         searchInput.value = '';
       }
 
-      // Restore body scroll
+      
       document.body.style.overflow = '';
     }, 300);
   },
 
-  /**
-   * Load and display all available contacts
-   */
-  async loadAllContacts() {
+    async loadAllContacts() {
     const listContainer = document.getElementById('contactsList');
     if (!listContainer) return;
 
-    // Show loading state
+    
     listContainer.innerHTML = `
       <div class="loading-state">
         <div class="spinner"></div>
@@ -192,12 +174,12 @@ window.ContactsModal = {
     `;
 
     try {
-      // Use existing data from app.js if available
+      
       if (window.allUsers && window.allUsers.length > 0) {
-        // Render requests + friends
+        
         this.renderFullList(listContainer);
       } else {
-        // Fallback: fetch friends list
+        
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         const res = await fetch(`${window.location.origin}/api/friends/list/${currentUser.id}`);
         const data = await res.json();
@@ -223,13 +205,10 @@ window.ContactsModal = {
     }
   },
 
-  /**
-   * Render Full List (Requests + Contacts)
-   */
-  renderFullList(container) {
+    renderFullList(container) {
     container.innerHTML = '';
 
-    // 1. Render Friend Requests
+    
     if (window.allRequests && window.allRequests.length > 0) {
       const reqHeader = document.createElement('div');
       reqHeader.innerHTML = 'Friend Requests';
@@ -273,7 +252,7 @@ window.ContactsModal = {
       container.appendChild(divider);
     }
 
-    // 2. Render Contacts
+    
     if (window.allUsers && window.allUsers.length > 0) {
       this.appendContactItems(window.allUsers, container);
     } else if (!window.allRequests || window.allRequests.length === 0) {
@@ -283,14 +262,11 @@ window.ContactsModal = {
     if (typeof feather !== 'undefined') feather.replace();
   },
 
-  /**
-   * Perform search for contacts
-   */
-  async performSearch(query) {
+    async performSearch(query) {
     const listContainer = document.getElementById('contactsList');
     if (!listContainer) return;
 
-    // Show loading state
+    
     listContainer.innerHTML = `
       <div class="loading-state">
         <div class="spinner"></div>
@@ -323,10 +299,7 @@ window.ContactsModal = {
     }
   },
 
-  /**
-   * Display contacts in the modal
-   */
-  displayContacts(contacts) {
+    displayContacts(contacts) {
     const listContainer = document.getElementById('contactsList');
     if (!listContainer || !contacts || contacts.length === 0) {
       this.showEmptyState();
@@ -337,30 +310,27 @@ window.ContactsModal = {
     if (typeof feather !== 'undefined') feather.replace();
   },
 
-  /**
-   * Helper to append contact items to a container
-   */
-  appendContactItems(contacts, container) {
+    appendContactItems(contacts, container) {
     contacts.forEach(user => {
       const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
       const contactItem = document.createElement('div');
       contactItem.className = 'contact-item';
       if (isOnline) contactItem.classList.add('online');
 
-      // Determine action button based on friendship status
+      
       let actionButton = '';
       if (user.isFriend) {
-        // Friend: don't show action button, just make clickable
+        
         actionButton = '';
       } else if (user.isPending) {
-        // Request pending
+        
         actionButton = `
           <button class="contact-action-btn pending-btn" disabled title="Request pending">
             <i data-feather="clock"></i>
           </button>
         `;
       } else {
-        // Not a friend: show add button
+        
         actionButton = `
           <button class="contact-action-btn add-btn" onclick="window.ContactsModal.sendFriendRequest(event, '${user._id}')" title="Add friend">
             <i data-feather="user-plus"></i>
@@ -368,7 +338,7 @@ window.ContactsModal = {
         `;
       }
 
-      // Get last message if exists (only for non-friends)
+      
       let lastMessageHTML = '';
       if (!user.isFriend) {
         const lastMsg = window.getLastMessageForUser && window.getLastMessageForUser(user.username);
@@ -378,7 +348,7 @@ window.ContactsModal = {
         }
       }
 
-      // Conditional rendering based on isFriend
+      
       let usernameHTML = '';
       if (!user.isFriend) {
         usernameHTML = `<p class="contact-username">@${user.username}</p>`;
@@ -398,7 +368,7 @@ window.ContactsModal = {
         </div>
       `;
 
-      // Add click handler to start chat (if friend)
+      
       if (user.isFriend) {
         contactItem.style.cursor = 'pointer';
         contactItem.addEventListener('click', (e) => {
@@ -411,10 +381,7 @@ window.ContactsModal = {
     });
   },
 
-  /**
-   * Show empty state
-   */
-  showEmptyState(message = 'No contacts available') {
+    showEmptyState(message = 'No contacts available') {
     const listContainer = document.getElementById('contactsList');
     if (!listContainer) return;
 
@@ -430,22 +397,19 @@ window.ContactsModal = {
     }
   },
 
-  /**
-   * Create avatar HTML for contact
-   */
-  createAvatarHTML(user, isOnline = false) {
+    createAvatarHTML(user, isOnline = false) {
     const onlineClass = isOnline ? 'online' : '';
 
     if (user.avatar && user.avatar !== 'default' && 
         (user.avatar.startsWith('data:') || user.avatar.startsWith('http'))) {
       
-      // Fallback logic jika gambar rusak (ORB Error)
+      
       const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
       const gradient = window.getAvatarGradient 
         ? window.getAvatarGradient(user.nama || user.name || 'User')
         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
-      // FIX: Struktur nested div agar badge online tidak terpotong overflow:hidden
+      
       return `<div class="avatar small ${onlineClass} avatar-bg-container" style="overflow: visible !important; background: transparent !important;">
         <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; position: relative;">
           <div class="avatar-bg-overlay" style="background: ${gradient}; width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: center; color: white;">${initial}</div>
@@ -462,10 +426,7 @@ window.ContactsModal = {
     }
   },
 
-  /**
-   * Start chat with a contact
-   */
-  startChat(e, userId) {
+    startChat(e, userId) {
     e.preventDefault();
     e.stopPropagation();
 
@@ -476,10 +437,7 @@ window.ContactsModal = {
     }
   },
 
-  /**
-   * Send friend request
-   */
-  async sendFriendRequest(e, targetId) {
+    async sendFriendRequest(e, targetId) {
     e.preventDefault();
     e.stopPropagation();
 
@@ -512,7 +470,7 @@ window.ContactsModal = {
           window.Toast.show('Friend request sent!', 'success');
         }
 
-        // Reload contacts after short delay
+        
         setTimeout(() => {
           const searchInput = document.getElementById('contactsSearchInput');
           if (searchInput && searchInput.value.trim()) {
@@ -542,7 +500,7 @@ window.ContactsModal = {
   }
 };
 
-// Initialize when DOM is ready
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     window.ContactsModal.init();

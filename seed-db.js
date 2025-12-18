@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/chatapp';
 
-// Definisi Schema User (Hanya yang diperlukan untuk pembuatan user)
+
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   nama: { type: String, required: true },
@@ -31,18 +31,18 @@ const seedDB = async () => {
 
     console.log('🧹 Membersihkan seluruh database...');
     
-    // Ambil semua koleksi (tables) yang ada di database secara dinamis
+    
     const collections = await mongoose.connection.db.collections();
     
     for (let collection of collections) {
-      // Hapus semua dokumen di setiap koleksi (Users, Messages, Groups, Statuses, dll)
+      
       await collection.deleteMany({});
       console.log(`   ✨ Koleksi '${collection.collectionName}' berhasil dibersihkan.`);
     }
 
     console.log('👤 Membuat user admin...');
 
-    // Buat 1 User Admin
+    
     const hashedPassword = await bcrypt.hash('password123', 10);
     
     await User.create({

@@ -1,4 +1,3 @@
-/* ==================== ROOT & GLOBAL ==================== */
 :root {
   --primary: #5a8a8c;
   --primary-dark: #4a7c7e;
@@ -6,7 +5,7 @@
   --accent: #6b9a9c;
 
   --bg-primary: #222831;
-  --bg-secondary: #31363F;
+  --bg-secondary: #31363f;
   --bg-dark: #222831;
   --bg-light: rgba(255, 255, 255, 0.04);
   --bg-lighter: rgba(255, 255, 255, 0.06);
@@ -21,13 +20,13 @@
   --text-primary: #f5f6f8;
   --text-secondary: #f5f6f88e;
 
-  --icon: #76ABAE;
+  --icon: #76abae;
 
   --border: #515866;
   --border-dark: #32363e;
   --border-input: rgba(255, 255, 255, 0.1);
   --border-checkbox: rgba(255, 255, 255, 0.2);
-  --border-color: #515866; /* Added for context menu */
+  --border-color: #515866;
 
   --success: #10b981;
   --danger: #ef4444;
@@ -48,27 +47,50 @@
   --shadow-input-focus: 0 0 0 3px rgba(90, 138, 140, 0.2);
 }
 
-/* ==================== SLIDE COLOR ANIMATIONS ==================== */
 @keyframes slideGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes slideColor {
-  0% { background-color: var(--bg-member-list); }
-  50% { background-color: var(--bg-member-hover); }
-  100% { background-color: var(--bg-member-list); }
+  0% {
+    background-color: var(--bg-member-list);
+  }
+  50% {
+    background-color: var(--bg-member-hover);
+  }
+  100% {
+    background-color: var(--bg-member-list);
+  }
 }
 
 @keyframes slideInLeft {
-  0% { transform: translateX(-20px); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
+  0% {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInRight {
-  0% { transform: translateX(20px); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
+  0% {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .slide-in-left {
@@ -80,16 +102,25 @@
 }
 
 @keyframes slideInStaggered {
-  0% { transform: translateX(-30px); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
+  0% {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes hueRotate {
-  0% { filter: hue-rotate(0deg); }
-  100% { filter: hue-rotate(360deg); }
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
 }
 
-/* ==================== LIGHT THEME MODE ==================== */
 body.light {
   --primary: #4f7f81;
   --primary-dark: #3b6b6d;
@@ -100,23 +131,18 @@ body.light {
   --bg-secondary: #ffffff;
   --bg-dark: #e7eaef;
 
-  /* lawannya bg-light sampai bg-lightest */
   --bg-light: rgba(0, 0, 0, 0.03);
   --bg-lighter: rgba(0, 0, 0, 0.05);
   --bg-lightest: rgba(0, 0, 0, 0.07);
 
-  /* modal terang */
   --bg-modal: rgba(255, 255, 255, 0.75);
 
-  /* input */
   --bg-input: rgba(0, 0, 0, 0.04);
   --bg-input-focus: rgba(0, 0, 0, 0.08);
 
-  /* member list */
   --bg-member-list: rgba(0, 0, 0, 0.02);
   --bg-member-hover: rgba(90, 138, 140, 0.12);
 
-  /* scrollbar */
   --bg-scrollbar: rgba(0, 0, 0, 0.12);
 
   --text-primary: #1d242b;
@@ -138,18 +164,15 @@ body.light {
 
   --glass: blur(6px);
 
-  /* shadows lengkap */
   --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 22px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.1);
   --shadow-modal: 0 6px 20px rgba(0, 0, 0, 0.15);
   --shadow-member: 0 2px 6px rgba(0, 0, 0, 0.08);
   --shadow-avatar: 0 2px 6px rgba(0, 0, 0, 0.1);
   --shadow-input-focus: 0 0 0 3px rgba(90, 138, 140, 0.15);
 }
 
-/* ==================== PERFORMANCE LITE MODE ==================== */
-/* Tambahkan class 'perf-lite' pada body untuk mempercepat rendering */
 body.perf-lite {
   --glass: none;
   --transition: none;
@@ -190,15 +213,15 @@ body.perf-lite .message.incoming {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
-              color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-              border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-              fill 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-              stroke 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    fill 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    stroke 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: "Outfit", sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
@@ -210,7 +233,6 @@ body {
 body.light {
   background: #f0f2f5;
 }
-/* ==================== APP LAYOUT ==================== */
 .app-layout {
   display: flex;
   height: 100vh;
@@ -222,7 +244,6 @@ body.light {
   align-items: stretch;
 }
 
-/* ==================== SIDEBAR ==================== */
 .sidebar {
   width: 100%;
   background: var(--bg-secondary);
@@ -235,7 +256,7 @@ body.light {
   backdrop-filter: var(--glass);
   border-radius: 20px;
   min-width: 320px;
-  max-width: 90vw; /* Izinkan sidebar melebar lebih dari 500px */
+  max-width: 90vw;
   container-type: inline-size;
   container-name: sidebar;
 }
@@ -248,7 +269,7 @@ body.light {
 }
 
 .sidebar-resizer::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
@@ -346,6 +367,36 @@ body.light {
   min-width: 0;
 }
 
+.tab-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background-color: var(--danger);
+  color: white;
+  border-radius: 9px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--bg-secondary);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
 .tab-btn:hover {
   color: var(--text-primary);
 }
@@ -356,7 +407,7 @@ body.light {
 }
 
 .tab-btn::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 10px;
   right: 10px;
@@ -372,7 +423,6 @@ body.light {
   transform: scaleX(1);
 }
 
-/* ==================== USER LIST ==================== */
 .users-list {
   flex: 1;
   overflow-y: auto;
@@ -398,8 +448,14 @@ body.light {
 }
 
 @keyframes tabContentSlideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .list-item {
@@ -419,7 +475,6 @@ body.light {
   border: 1px solid var(--border);
 }
 
-/* ==================== AVATAR ==================== */
 .avatar {
   border-radius: 50%;
   display: flex;
@@ -449,7 +504,7 @@ body.light {
 }
 
 .avatar.online::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0px;
   right: 0px;
@@ -462,7 +517,6 @@ body.light {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-/* ==================== CHAT INFO ==================== */
 .chat-item-info {
   flex: 1;
   min-width: 0;
@@ -485,7 +539,16 @@ body.light {
   text-overflow: ellipsis;
 }
 
-/* Unread Message Badge */
+.chat-header .chat-info {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+.chat-header .chat-info:hover {
+  background-color: var(--bg-light);
+}
+
 .unread-badge {
   display: inline-flex;
   align-items: center;
@@ -500,7 +563,6 @@ body.light {
   font-weight: 700;
 }
 
-/* ==================== CHAT AREA ==================== */
 .chat-area {
   flex: 1;
   display: flex;
@@ -528,8 +590,7 @@ body.light {
   margin-bottom: 30px;
   color: var(--primary);
   opacity: 0.7;
-  transform: scale(2.5); 
-  
+  transform: scale(2.5);
 }
 
 .welcome-screen h2 {
@@ -542,7 +603,6 @@ body.light {
   max-width: 300px;
 }
 
-/* ==================== CHAT ROOM ==================== */
 .chat-room {
   display: grid;
   grid-template-rows: auto 1fr auto auto;
@@ -608,8 +668,14 @@ body.light {
 }
 
 @keyframes slide-status {
-  0%, 15% { transform: translateX(0); }
-  85%, 100% { transform: translateX(min(0px, calc(100cqw - 100%))); }
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(min(0px, calc(100cqw - 100%)));
+  }
 }
 
 .header-actions {
@@ -618,7 +684,6 @@ body.light {
   flex-shrink: 0;
 }
 
-/* ==================== MESSAGES ==================== */
 .messages-container {
   grid-row: 2;
   overflow-y: auto;
@@ -776,6 +841,14 @@ body.light {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.file-bubble-text span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .file-bubble-text small {
@@ -819,7 +892,6 @@ body.light {
   box-shadow: var(--shadow-md);
 }
 
-
 .msg-time {
   display: block;
   font-size: 0.7rem;
@@ -828,7 +900,6 @@ body.light {
   text-align: right;
 }
 
-/* ==================== INPUT AREA ==================== */
 .input-area {
   position: sticky;
   padding: 14px 18px;
@@ -839,7 +910,7 @@ body.light {
   gap: 10px;
   flex-wrap: nowrap;
   width: 100%;
-  z-index: 50; /* biarkan modal overlay di atas */
+  z-index: 50;
   grid-row: 4;
   backdrop-filter: var(--glass);
   border-top: 1px solid #51586693;
@@ -849,7 +920,7 @@ body.light {
   flex: 1;
   min-width: 0;
   padding: 12px 16px;
-  font-size: 16px; /* Ukuran font untuk mencegah zoom */
+  font-size: 16px;
   min-height: 44px;
   border-radius: 99px;
   border: 1px solid var(--border);
@@ -868,7 +939,6 @@ body.light {
   box-shadow: 0 0 0 3px rgba(122, 128, 255, 0.14);
 }
 
-/* Send button styling - tambahkan jika belum ada */
 .input-area .send-btn {
   width: 44px;
   height: 44px;
@@ -893,7 +963,6 @@ body.light {
   transform: scale(0.95);
 }
 
-/* Voice note button styling */
 .input-area #voiceNoteBtn {
   width: 44px;
   height: 44px;
@@ -923,7 +992,6 @@ body.light {
   animation: pulse-red 1s infinite;
 }
 
-/* Recording indicator */
 .recording-indicator {
   display: flex;
   align-items: center;
@@ -951,7 +1019,8 @@ body.light {
 }
 
 @keyframes pulse-red {
-  0%, 100% {
+  0%,
+  100% {
     background: var(--danger);
   }
   50% {
@@ -959,13 +1028,10 @@ body.light {
   }
 }
 
-
-
 .hidden {
   display: none !important;
 }
 
-/* ==================== FILE PREVIEW ==================== */
 .file-preview {
   padding: 10px 20px;
   background: var(--bg-secondary);
@@ -991,7 +1057,6 @@ body.light {
   font-size: 0.8rem;
 }
 
-/* ==================== CHAT SEARCH PANEL (HEADER) ==================== */
 .chat-search-panel {
   position: absolute;
   top: 70px;
@@ -1063,7 +1128,6 @@ body.light {
   font-size: 0.9rem;
 }
 
-/* ==================== MODAL ==================== */
 .modal {
   position: fixed;
   top: 0;
@@ -1074,7 +1138,7 @@ body.light {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 20000; /* pastikan lebih tinggi dari input-area */
+  z-index: 20000;
   padding: 20px;
 }
 
@@ -1085,7 +1149,6 @@ body.light {
   border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: var(--shadow-lg);
   backdrop-filter: var(--glass);
-  animation: slideInDown 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   justify-content: center;
   align-items: center;
 }
@@ -1108,9 +1171,8 @@ body.light {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0px;           /* biar ada jarak saat layar kecil */
+  padding: 0px;
 }
-/* ==================== PROFILE MODAL ==================== */
 #profileModal .glass-panel {
   width: min(480px, 92vw);
   max-width: 520px;
@@ -1123,7 +1185,6 @@ body.light {
   filter: brightness(110%);
 }
 
-/* Profile Modal Header */
 .profile-modal-header {
   padding: 12px 10px;
   background: transparent;
@@ -1131,14 +1192,12 @@ body.light {
   position: relative;
 }
 
-/* Avatar Container */
 .avatar-container {
   position: relative;
   width: 80px;
   height: 80px;
 }
 
-/* Profile Avatar Display */
 .profile-avatar-display {
   width: 120px;
   height: 120px;
@@ -1153,7 +1212,6 @@ body.light {
   margin: 0 auto;
 }
 
-/* Camera Upload Button */
 .camera-upload-btn {
   position: absolute;
   bottom: 0;
@@ -1174,7 +1232,6 @@ body.light {
   transform: scale(1.1);
 }
 
-/* Profile Photo Preview */
 .profile-photo-preview {
   width: 140px;
   height: 140px;
@@ -1208,7 +1265,6 @@ body.light {
   color: var(--text-secondary);
 }
 
-/* Form Groups */
 .form-group {
   margin-bottom: 16px;
 }
@@ -1253,9 +1309,6 @@ body.light {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-
-
-/* Modal Footer */
 .modal-footer {
   display: flex;
   gap: 12px;
@@ -1287,8 +1340,44 @@ body.light {
   border: none;
 }
 
+#callModal.desktop-embedded:not(.hidden) {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-secondary) !important;
+  z-index: 60;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
 
-/* ==================== CALL MODAL ==================== */
+#callModal.desktop-embedded.closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#callModal.desktop-embedded .glass-panel,
+#callModal.desktop-embedded .call-modal-content {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+  padding-top: 0px;
+  padding-right: 0px;
+  padding-left: 0px;
+  padding-bottom: 20px;
+}
+
 .call-modal-content {
   width: min(400px, 90vw);
   max-height: 95vh;
@@ -1301,7 +1390,6 @@ body.light {
   transition: width 0.3s ease;
 }
 
-/* Otomatis melebar jika ada video container yang aktif (tidak hidden) */
 .call-modal-content:has(.video-container:not(.hidden)) {
   width: min(900px, 90vw);
 }
@@ -1313,9 +1401,6 @@ body.light {
   height: 420px;
   border-radius: 16px;
   overflow: hidden;
-  margin-bottom: 20px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border);
   padding: 10px;
   box-sizing: border-box;
 }
@@ -1355,8 +1440,8 @@ body.light {
   width: 120px;
   height: 120px;
   font-size: 3rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  border: 4px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 4px solid rgba(255, 255, 255, 0.1);
 }
 
 .call-status {
@@ -1369,7 +1454,7 @@ body.light {
   display: flex;
   justify-content: center;
   gap: 20px;
-  margin-top: 10px;
+  margin-bottom: 10px;
   z-index: 2;
 }
 
@@ -1384,7 +1469,7 @@ body.light {
   font-size: 1rem;
   padding: 20px;
   min-height: 300px;
-} 
+}
 .call-item {
   display: flex;
   align-items: center;
@@ -1430,8 +1515,6 @@ body.light {
   height: 22px;
   border-radius: 50%;
 }
-
-/*hilangkan dulu call statusnya awokaok bingung*/
 
 .btn-call {
   width: 64px;
@@ -1499,7 +1582,6 @@ body.light {
   text-align: center;
 }
 
-/* ==================== CREATE GROUP MODAL ==================== */
 #createGroupModal .glass-panel {
   width: 92%;
   max-width: 520px;
@@ -1536,8 +1618,14 @@ body.light {
 }
 
 @keyframes modalPopIn {
-  0% { opacity: 0; transform: scale(0.95) translateY(10px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 #createGroupModal h2 {
@@ -1574,7 +1662,7 @@ body.light {
 
 .group-search-input {
   width: 100%;
-  padding: 10px 10px 10px 36px !important; /* Override default input padding */
+  padding: 10px 10px 10px 36px !important;
   background: var(--bg-input);
   border: 1px solid var(--border-input);
   border-radius: 10px;
@@ -1603,7 +1691,7 @@ body.light {
   overflow-y: auto;
   margin-top: 8px;
   padding-right: 4px;
-  /* Custom scrollbar */
+
   scrollbar-width: thin;
   scrollbar-color: var(--primary) var(--bg-scrollbar);
 }
@@ -1640,27 +1728,46 @@ body.light {
   border-radius: 12px;
   transition: all 0.3s ease;
   color: var(--text-primary);
-  background: var(--bg-member-list);
   margin-bottom: 6px;
   animation: fadeInUp 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
   animation-fill-mode: backwards;
 }
 
 .member-checkbox.selected {
-  background: rgba(90, 138, 140, 0.15); /* Primary color with opacity */
+  background: rgba(90, 138, 140, 0.15);
   border: 1px solid var(--primary);
 }
 
-.member-checkbox:nth-child(1) { animation-delay: 0.1s; }
-.member-checkbox:nth-child(2) { animation-delay: 0.2s; }
-.member-checkbox:nth-child(3) { animation-delay: 0.3s; }
-.member-checkbox:nth-child(4) { animation-delay: 0.4s; }
-.member-checkbox:nth-child(5) { animation-delay: 0.5s; }
-.member-checkbox:nth-child(6) { animation-delay: 0.6s; }
-.member-checkbox:nth-child(7) { animation-delay: 0.7s; }
-.member-checkbox:nth-child(8) { animation-delay: 0.8s; }
-.member-checkbox:nth-child(9) { animation-delay: 0.9s; }
-.member-checkbox:nth-child(10) { animation-delay: 1.0s; }
+.member-checkbox:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.member-checkbox:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.member-checkbox:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.member-checkbox:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.member-checkbox:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.member-checkbox:nth-child(6) {
+  animation-delay: 0.6s;
+}
+.member-checkbox:nth-child(7) {
+  animation-delay: 0.7s;
+}
+.member-checkbox:nth-child(8) {
+  animation-delay: 0.8s;
+}
+.member-checkbox:nth-child(9) {
+  animation-delay: 0.9s;
+}
+.member-checkbox:nth-child(10) {
+  animation-delay: 1s;
+}
 
 .member-checkbox:hover {
   background: var(--bg-member-hover);
@@ -1673,7 +1780,7 @@ body.light {
   height: 20px;
   accent-color: var(--primary);
   cursor: pointer;
-  margin-left: auto; /* Push checkbox to the right */
+  margin-left: auto;
   border-radius: 6px;
   border: 2px solid var(--border-checkbox);
 }
@@ -1704,9 +1811,15 @@ body.light {
 }
 
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .member-name {
@@ -1742,7 +1855,6 @@ body.light {
   box-shadow: var(--shadow-sm);
 }
 
-/* ==================== IMAGE PREVIEW MODAL ==================== */
 #imagePreviewModal .modal-content {
   position: relative;
   width: 100%;
@@ -1760,7 +1872,6 @@ body.light {
   object-fit: contain;
 }
 
-/* ==================== USER PROFILE MODAL ==================== */
 .user-profile-avatar {
   width: 100px;
   height: 100px;
@@ -1780,7 +1891,6 @@ body.light {
   letter-spacing: 0.5px;
 }
 
-/* ==================== DROPDOWN ==================== */
 .dropdown {
   position: relative;
 }
@@ -1790,9 +1900,8 @@ body.light {
   top: 100%;
   right: 0;
   width: 200px;
-  background: transparent;
+  background: var(--bg-secondary);
   border-radius: 12px;
-  backdrop-filter: blur(12px);
   padding: 8px;
   margin-top: 8px;
   z-index: 100;
@@ -1837,7 +1946,6 @@ body.light {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* ==================== REQUEST ITEM ==================== */
 .request-item {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
@@ -1851,7 +1959,6 @@ body.light {
   color: var(--text-primary);
 }
 
-/* ==================== CONTACTS MODAL ==================== */
 #contactsModal .contacts-modal-content {
   width: min(480px, 90vw);
   max-height: 150rvh;
@@ -1993,7 +2100,6 @@ body.light {
   background: rgba(255, 255, 255, 0.03);
 }
 
-
 .contact-avatar {
   flex-shrink: 0;
   position: relative;
@@ -2037,7 +2143,7 @@ body.light {
 
 .contact-action {
   flex-shrink: 0;
-  width: 36px;
+  width: auto;
   height: 36px;
   display: flex;
   align-items: center;
@@ -2091,7 +2197,6 @@ body.light {
   opacity: 0.6;
 }
 
-/* Empty and Loading States */
 .empty-state,
 .loading-state,
 .error-state {
@@ -2134,7 +2239,6 @@ body.light {
   }
 }
 
-/* Scrollbar styling for contacts list */
 .contacts-list-container::-webkit-scrollbar {
   width: 6px;
 }
@@ -2152,7 +2256,6 @@ body.light {
   background: rgba(148, 163, 184, 0.5);
 }
 
-/* Close modal button styling */
 #contactsModal .close-modal {
   position: absolute;
   top: 12px;
@@ -2175,8 +2278,6 @@ body.light {
   border-radius: 6px;
 }
 
-/* ==================== RESPONSIVE ==================== */
-/* ==================== RESPONSIVE (Ganti bagian ini di style.css) ==================== */
 @media screen and (max-width: 768px) {
   .tabs-container {
     width: 100%;
@@ -2198,40 +2299,35 @@ body.light {
     min-width: 0;
   }
 
-  /* 1. Pastikan layout utama mengambil tinggi penuh viewport dinamis (dvh) */
   .app-layout {
     flex-direction: row;
     width: 100vw;
     height: 100vh;
-    height: 100dvh; /* Penting untuk mobile browser modern */
+    height: 100dvh;
     overflow: hidden;
     padding: 0;
     gap: 0;
   }
 
-  /* 2. Reset Chat Room menjadi Flex Column murni */
   .chat-room {
     display: flex;
     flex-direction: column;
     height: 100%;
     width: 100%;
     overflow: hidden;
-    position: relative; /* Reset dari grid layout desktop */
+    position: relative;
   }
 
-  /* 3. Area Pesan harus flex-grow tapi bisa mengecil (min-height: 0) */
   .messages-container {
     flex: 1;
     overflow-y: auto;
     padding: 15px 12px;
-    min-height: 0; /* SANGAT PENTING: mencegah flex item overflow */
+    min-height: 0;
     scroll-behavior: smooth;
     display: flex;
     flex-direction: column;
-    /* Hapus padding-bottom 120px yang lama, tidak diperlukan lagi */
   }
 
-  /* Styling Sidebar Mobile (Tetap sama seperti sebelumnya) */
   .sidebar {
     width: 100%;
     height: 100%;
@@ -2240,11 +2336,10 @@ body.light {
     background: var(--bg-primary);
     border-radius: 0;
     border: none;
-    max-width: none; /* FIX: Reset max-width agar full screen di mobile */
+    max-width: none;
     min-width: 0;
   }
 
-  /* Call modal: portrait split 2: penerima di atas, penelpon di bawah */
   .call-modal-content {
     width: 96vw;
     max-height: 88vh;
@@ -2264,12 +2359,12 @@ body.light {
   .video-container #localVideo {
     height: 50%;
   }
-  
+
   .sidebar.hidden-mobile {
     transform: translateX(-100%);
     z-index: 0;
   }
-  
+
   .chat-area {
     width: 100%;
     height: 100%;
@@ -2283,7 +2378,7 @@ body.light {
     transform: translateX(0);
     z-index: 998;
   }
-  
+
   .chat-room {
     display: flex;
     flex-direction: column;
@@ -2292,73 +2387,70 @@ body.light {
     overflow: hidden;
     min-height: 0;
   }
-  
+
   .messages-container {
     flex: 1;
     overflow-y: auto;
     padding: 12px 12px 5px 12px;
     min-height: 0;
   }
-  
 
   .sidebar-header {
     display: flex !important;
     padding: 20px 16px;
     gap: 12px;
   }
-  
+
   .sidebar-header .brand-name {
     font-size: 1.3rem;
   }
-  
+
   .header-actions-container {
     display: flex;
     gap: 6px;
   }
-  
+
   .back-btn {
     display: flex !important;
   }
-  
+
   .message {
     max-width: 85%;
   }
-  
+
   .welcome-screen h2 {
     font-size: 1.5rem;
   }
-  
+
   .welcome-screen p {
     font-size: 0.9rem;
   }
-  
-  /* Profile Modal Mobile */
+
   #profileModal .glass-panel {
     width: 95%;
     max-width: 95%;
     padding: 20px;
     border-radius: 16px;
   }
-  
+
   .profile-avatar-display {
     width: 120px;
     height: 120px;
     font-size: 2.5rem;
   }
-  
+
   .profile-photo-preview {
     width: 120px;
     height: 120px;
   }
-  
+
   .tab-btn {
     font-size: 0.8rem;
   }
-  
+
   .list-item {
     padding: 12px 16px;
   }
-  
 
   .chat-room {
     display: flex;
@@ -2367,14 +2459,13 @@ body.light {
     width: 100%;
     overflow: hidden;
   }
-  
+
   .messages-container {
     flex: 1;
     overflow-y: auto;
     padding: 15px 12px 5px 12px;
   }
 
-  /* ==================== MOBILE FIX: INPUT KEEP VISIBLE ON ANDROID ==================== */
   /*
     On mobile, ensure the input area stays visible and accessible:
     - Keep input in normal document flow so it resizes with viewport
@@ -2417,19 +2508,17 @@ body.light {
     }
 
     .attachment-menu {
-      width: 200px; /* Kecilkan sedikit di mobile agar pas */
+      width: 200px;
     }
   }
 }
 
-
-/* ==================== CONTEXT MENU ==================== */
 .context-menu {
   position: fixed;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   min-width: 150px;
   overflow: hidden;
@@ -2457,7 +2546,6 @@ body.light {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* ==================== REPLY PREVIEW ==================== */
 .reply-preview {
   display: flex;
   align-items: center;
@@ -2467,8 +2555,8 @@ body.light {
   border-top: 1px solid var(--border-color);
   transition: all 0.2s ease;
 }
-.reply-preview.hidden { 
-  display: none; 
+.reply-preview.hidden {
+  display: none;
 }
 .reply-preview-content {
   display: flex;
@@ -2481,8 +2569,8 @@ body.light {
   background-color: var(--primary);
   border-radius: 3px;
 }
-.reply-text { 
-  overflow: hidden; 
+.reply-text {
+  overflow: hidden;
 }
 .reply-text strong {
   color: var(--primary);
@@ -2498,34 +2586,33 @@ body.light {
   text-overflow: ellipsis;
 }
 
-/* ==================== REPLY QUOTE ==================== */
 .reply-quote {
   display: block;
   background: var(--bg-dark);
   padding: 6px 10px;
-  background: rgba(0,0,0, 0.3); 
+  background: var(--bg-secondary);
   margin-bottom: 8px;
   border-left: 3px solid var(--primary);
   border-radius: 4px;
   text-decoration: none;
   cursor: pointer;
 }
-.reply-quote:hover { 
-  background: rgba(0,0,0,0.2); 
+.reply-quote:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
-.reply-quote strong { 
-  display: block; 
-  color: var(--text-primary); 
-  font-size: 0.8rem; 
-  font-weight: 600; 
+.reply-quote strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
-.reply-quote p { 
-  margin: 0; 
-  font-size: 0.8rem; 
-  color: var(--text-secondary); 
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
+.reply-quote p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .reply-quote {
   display: flex;
@@ -2540,22 +2627,20 @@ body.light {
   flex-shrink: 0;
 }
 
-/* ==================== MESSAGE HIGHLIGHT ==================== */
-.message.highlight, .message-img.highlight { 
-  animation: highlight-anim 1.5s ease-out; 
+.message.highlight,
+.message-img.highlight {
+  animation: highlight-anim 1.5s ease-out;
 }
-@keyframes highlight-anim { 
-  50% { 
-    background-color: rgba(99, 102, 241, 0.3); 
-  } 
+@keyframes highlight-anim {
+  50% {
+    background-color: rgba(99, 102, 241, 0.3);
+  }
 }
 
-/* ==================== CHAT SEARCH RESULT TIMESTAMP ==================== */
 .chat-search-result-item .meta span:last-child {
   font-size: 0.7rem;
 }
 
-/* ==================== AVATAR WITH BACKGROUND IMAGE ==================== */
 .avatar-bg-container {
   position: relative;
   overflow: hidden;
@@ -2586,7 +2671,6 @@ body.light {
   object-fit: cover;
 }
 
-/* ==================== AVATAR WITH GRADIENT ==================== */
 .avatar-gradient {
   display: flex !important;
   align-items: center !important;
@@ -2597,7 +2681,6 @@ body.light {
   flex-shrink: 0;
 }
 
-/* ==================== TOAST ICONS ==================== */
 .toast-success-icon {
   color: var(--success);
   font-size: 1.2rem;
@@ -2613,7 +2696,6 @@ body.light {
   font-size: 1.2rem;
 }
 
-/* ==================== ATTACHMENT MENU ==================== */
 .attachment-container {
   position: relative;
   display: flex;
@@ -2639,8 +2721,8 @@ body.light {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  display: flex; /* Pastikan menggunakan Flexbox */
-  flex-direction: column; /* Paksa susunan ke bawah (Vertikal) */
+  display: flex;
+  flex-direction: column;
 }
 
 .attachment-container:hover .attachment-menu,
@@ -2660,8 +2742,8 @@ body.light {
   font-size: 0.95rem;
   font-weight: 500;
   transition: var(--transition);
-  margin-bottom: 8px; /* Tambah jarak vertikal antar item */
-  gap: 16px; /* Tambah jarak horizontal antara icon dan teks */
+  margin-bottom: 8px;
+  gap: 16px;
 }
 
 .attachment-menu a:last-child {
@@ -2674,19 +2756,25 @@ body.light {
 }
 
 .attachment-menu a i {
-  margin-right: 0; /* Hapus margin, gunakan gap */
+  margin-right: 0;
   width: 20px;
   height: 20px;
   stroke-width: 2;
 }
 
-/* Colorful Icons */
-.attachment-menu a:nth-child(1) i { color: #8b5cf6; } /* Image - Violet */
-.attachment-menu a:nth-child(2) i { color: #f59e0b; } /* Doc - Amber */
-.attachment-menu a:nth-child(3) i { color: #ec4899; } /* Audio - Pink */
-.attachment-menu a:nth-child(4) i { color: #10b981; } /* All - Emerald */
+.attachment-menu a:nth-child(1) i {
+  color: #8b5cf6;
+}
+.attachment-menu a:nth-child(2) i {
+  color: #f59e0b;
+}
+.attachment-menu a:nth-child(3) i {
+  color: #ec4899;
+}
+.attachment-menu a:nth-child(4) i {
+  color: #10b981;
+}
 
-/* ==================== FRIEND REQUEST ITEM ==================== */
 .request-item-styled {
   background: rgba(255, 165, 0, 0.1);
   border: 1px solid orange;
@@ -2706,7 +2794,6 @@ body.light {
   background: none;
 }
 
-/* ==================== SEARCH RESULTS ==================== */
 .search-center-padding {
   text-align: center;
   padding: 10px;
@@ -2742,7 +2829,6 @@ body.light {
   text-align: right;
 }
 
-/* ==================== LOADING MESSAGES ==================== */
 .loading-messages {
   text-align: center;
   padding: 20px;
@@ -2762,7 +2848,6 @@ body.light {
   font-size: 0.85rem;
 }
 
-/* ==================== STATUS FOOTER & VIEWERS ==================== */
 .status-footer {
   position: absolute;
   bottom: 0;
@@ -2776,7 +2861,6 @@ body.light {
   background: transparent;
 }
 
-/* Reply Input */
 .status-reply-container {
   display: flex;
   width: 100%;
@@ -2794,7 +2878,9 @@ body.light {
   font-size: 0.9rem;
   backdrop-filter: blur(5px);
 }
-.status-reply-input::placeholder { color: rgba(255,255,255,0.7); }
+.status-reply-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
 .status-reply-btn {
   background: var(--primary);
   border: none;
@@ -2808,7 +2894,6 @@ body.light {
   cursor: pointer;
 }
 
-/* Viewers Trigger */
 .status-viewers-trigger {
   color: white;
   display: flex;
@@ -2818,16 +2903,21 @@ body.light {
   padding-bottom: 10px;
   gap: 8px;
 }
-.status-viewers-trigger i { width: 20px; height: 20px; }
-.status-viewers-trigger span { font-size: 0.9rem; font-weight: 600; }
+.status-viewers-trigger i {
+  width: 20px;
+  height: 20px;
+}
+.status-viewers-trigger span {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
 
-/* Viewers Panel (Slide Up) */
 .status-viewers-panel {
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 60%;
+  height: 40%;
   background: var(--bg-secondary);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
@@ -2837,9 +2927,11 @@ body.light {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.3);
 }
-.status-viewers-panel.active { transform: translateY(0); }
+.status-viewers-panel.active {
+  transform: translateY(0);
+}
 
 .viewers-header {
   padding: 15px 20px;
@@ -2848,7 +2940,10 @@ body.light {
   justify-content: space-between;
   align-items: center;
 }
-.viewers-header h4 { margin: 0; font-size: 1rem; }
+.viewers-header h4 {
+  margin: 0;
+  font-size: 1rem;
+}
 .viewers-list {
   flex: 1;
   overflow-y: auto;
@@ -2863,9 +2958,17 @@ body.light {
   padding: 10px;
   border-radius: 10px;
 }
-.viewer-item:hover { background: var(--bg-light); }
-.viewer-info h5 { margin: 0; font-size: 0.9rem; }
-.viewer-info small { color: var(--text-secondary); font-size: 0.75rem; }
+.viewer-item:hover {
+  background: var(--bg-light);
+}
+.viewer-info h5 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.viewer-info small {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
 
 .no-groups-message {
   display: flex;
@@ -2879,7 +2982,6 @@ body.light {
   padding: 20px;
   min-height: 300px;
 }
-
 
 .no-friends-message {
   padding: 10px;
@@ -2933,9 +3035,10 @@ body.light {
   background-color: var(--danger);
 }
 
-/* ==================== SPINNER ANIMATION ==================== */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner-animation {
@@ -2954,7 +3057,6 @@ body.light {
   vertical-align: -4px;
 }
 
-/* ==================== AVATAR WITH BACKGROUND IMAGE ==================== */
 .avatar-bg-container {
   position: relative;
   overflow: hidden;
@@ -3000,14 +3102,12 @@ body.light {
   background-position: center;
 }
 
-/* ==================== DELETED MESSAGE ==================== */
 .deleted-message {
   margin: 0;
   font-style: italic;
   opacity: 0.7;
 }
 
-/* ==================== AUDIO PLAYER ==================== */
 .audio-hidden {
   display: none;
 }
@@ -3016,17 +3116,14 @@ body.light {
   display: none;
 }
 
-/* ==================== IMAGE MESSAGE ==================== */
 .clickable-image {
   cursor: pointer;
 }
 
-/* ==================== MESSAGE TEXT ==================== */
 .message-text {
   margin: 0;
 }
 
-/* ==================== LOADING MESSAGES ==================== */
 .loading-messages-spinner {
   text-align: center;
   padding: 20px;
@@ -3039,7 +3136,6 @@ body.light {
   color: var(--text-secondary);
 }
 
-/* ==================== OTP INPUT ==================== */
 .otp-input {
   letter-spacing: 8px;
   text-align: center;
@@ -3050,12 +3146,10 @@ body.light {
   transform: translateX(-50%);
 }
 
-/* ==================== HIDDEN FILE INPUT ==================== */
 .hidden-file-input {
   display: none;
 }
 
-/* ==================== CONTEXT MENU ICONS ==================== */
 .context-menu-icon {
   width: 16px;
   height: 16px;
@@ -3065,13 +3159,11 @@ body.light {
   display: none;
 }
 
-/* ==================== CLOSE BUTTON ==================== */
 .close-btn-icon {
   width: 24px;
   height: 24px;
 }
 
-/* ==================== UTILITIES ==================== */
 .hidden {
   display: none !important;
 }
@@ -3084,7 +3176,6 @@ body.light {
   display: flex !important;
 }
 
-/* Toast Notification */
 .toast-container {
   position: fixed;
   top: 24px;
@@ -3130,10 +3221,18 @@ body.light {
   flex-shrink: 0;
 }
 
-.toast.success .toast-icon { color: var(--success); }
-.toast.error .toast-icon { color: var(--danger); }
-.toast.info .toast-icon { color: var(--primary-light); }
-.toast.warning .toast-icon { color: var(--warning); }
+.toast.success .toast-icon {
+  color: var(--success);
+}
+.toast.error .toast-icon {
+  color: var(--danger);
+}
+.toast.info .toast-icon {
+  color: var(--primary-light);
+}
+.toast.warning .toast-icon {
+  color: var(--warning);
+}
 
 .toast-content {
   flex: 1;
@@ -3145,77 +3244,144 @@ body.light {
 @media (max-width: 768px) {
   .toast-container {
     top: auto;
-    bottom: 90px; /* Posisi di bawah, di atas input area */
+    bottom: 90px;
     left: 0;
     right: 0;
     align-items: center;
-    pointer-events: none; /* Agar klik tembus di area kosong */
+    pointer-events: none;
   }
   .toast {
     width: auto;
     min-width: auto;
     max-width: 85%;
-    border-radius: 50px; /* Bentuk kapsul/pill */
+    border-radius: 50px;
     padding: 10px 20px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     margin-bottom: 8px;
     font-size: 0.85rem;
-    transform: translateY(20px); /* Animasi muncul dari bawah */
+    transform: translateY(20px);
   }
   .toast.show {
     transform: translateY(0);
   }
 }
 
-/* ==================== THEME TRANSITION ANIMATION ==================== */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
 
-/* ANIMASI KELUAR (Dark -> Light): Lingkaran membesar */
 [data-theme-transition="out"]::view-transition-new(root) {
-  animation: reveal 1.2s ease-in-out forwards; /* Tambahkan forwards */
-  clip-path: circle(0px at var(--x) var(--y)); /* State awal: lingkaran 0px */
+  animation: reveal 1.2s ease-in-out forwards;
+  clip-path: circle(0px at var(--x) var(--y));
   z-index: 9999;
 }
 [data-theme-transition="out"]::view-transition-old(root) {
   z-index: 1;
 }
 
-/* ANIMASI MASUK (Light -> Dark): Lingkaran mengecil */
 [data-theme-transition="in"]::view-transition-old(root) {
-  animation: unreveal 1.2s ease-in-out forwards; /* Tambahkan forwards */
-  z-index: 9999; /* Layer lama (terang) di atas agar bisa mengecil */
+  animation: unreveal 1.2s ease-in-out forwards;
+  z-index: 9999;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.status-skeleton-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+  margin: 4px 4px 0 4px;
+  border-radius: 14px;
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    var(--bg-light) 25%,
+    var(--bg-lighter) 37%,
+    var(--bg-light) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+  flex-shrink: 0;
+}
+
+.skeleton-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-text {
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-light) 25%,
+    var(--bg-lighter) 37%,
+    var(--bg-light) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+.skeleton-text.title {
+  width: 35%;
+  height: 14px;
+}
+.skeleton-text.subtitle {
+  width: 50%;
+  height: 10px;
 }
 [data-theme-transition="in"]::view-transition-new(root) {
   z-index: 1;
 }
 
 @keyframes reveal {
-  0% { clip-path: circle(0px at var(--x) var(--y)); }
-  100% { clip-path: circle(var(--r) at var(--x) var(--y)); }
+  0% {
+    clip-path: circle(0px at var(--x) var(--y));
+  }
+  100% {
+    clip-path: circle(var(--r) at var(--x) var(--y));
+  }
 }
 
 @keyframes unreveal {
-  0% { clip-path: circle(var(--r) at var(--x) var(--y)); }
-  100% { clip-path: circle(0px at var(--x) var(--y)); }
+  0% {
+    clip-path: circle(var(--r) at var(--x) var(--y));
+  }
+  100% {
+    clip-path: circle(0px at var(--x) var(--y));
+  }
 }
 
-/* Class untuk mematikan transisi CSS standar saat View Transition berjalan */
 .disable-transitions,
 .disable-transitions * {
   transition: none !important;
 }
 
-/* Loading Animation */
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-/* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -3234,8 +3400,6 @@ body.light {
   background: rgba(99, 102, 241, 0.5);
   border-radius: 3px;
 }
-
-/* Additional Classes for Cleaned HTML */
 
 .header-actions-container {
   display: flex;
@@ -3311,7 +3475,7 @@ body.light {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 100;
 }
 
@@ -3371,6 +3535,10 @@ body.light {
 
 .block-btn {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: rgba(239, 68, 68, 0.15);
   border-radius: 10px;
   padding: 12px;
@@ -3390,7 +3558,6 @@ body.light {
   padding: 25px;
 }
 
-/* ==================== STATUS TAB ==================== */
 .status-placeholder {
   display: flex;
   flex-direction: column;
@@ -3456,36 +3623,35 @@ body.light {
   color: var(--text-secondary);
 }
 .add-status-icon {
-    position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 20px;
-    height: 20px;
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
-    border: 2px solid var(--bg-secondary);
-    cursor: pointer;
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  border: 2px solid var(--bg-secondary);
+  cursor: pointer;
 }
 
-/* ==================== CREATE STATUS MODAL ==================== */
 .status-modal-content {
   width: min(420px, 90vw);
   padding: 24px;
 }
 .status-creator-container {
   margin: 20px 0;
-  overflow: hidden; /* Masking untuk animasi slide */
-  padding: 4px; /* FIX: Tambah padding agar shadow/scale tidak terpotong */
+  overflow: hidden;
+  padding: 4px;
 }
 .text-status-wrapper {
   width: 100%;
-  height: 450px; /* FIX: Tinggi fixed agar konsisten */
+  height: 450px;
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 15px;
@@ -3501,13 +3667,13 @@ body.light {
   padding: 20px;
   font-size: 1.8rem;
   font-weight: 600;
-  font-family: 'Outfit', sans-serif;
+  font-family: "Outfit", sans-serif;
   text-align: center;
   resize: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 40%; /* Center text vertically roughly */
+  padding-top: 40%;
 }
 #textStatusCreator textarea:focus {
   outline: none;
@@ -3533,43 +3699,43 @@ body.light {
   transform: scale(1.1);
 }
 #imageStatusCreator .image-upload-placeholder {
-    width: 100%;
-    height: 300px; /* FIX: Samakan dengan total tinggi Teks + Palet (450 + 70) */
-    background-color: var(--bg-input);
-    border: 2px dashed var(--border);
-    border-radius: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: var(--transition);
-    gap: 16px;
+  width: 100%;
+  height: 300px;
+  background-color: var(--bg-input);
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: var(--transition);
+  gap: 16px;
 }
 #imageStatusCreator .image-upload-placeholder:hover {
-    border-color: var(--primary);
-    background-color: var(--bg-light);
-    color: var(--primary);
+  border-color: var(--primary);
+  background-color: var(--bg-light);
+  color: var(--primary);
 }
 #imageStatusCreator .image-upload-placeholder i {
-    width: 64px;
-    height: 64px;
-    stroke-width: 1.5;
-    opacity: 0.7;
+  width: 64px;
+  height: 64px;
+  stroke-width: 1.5;
+  opacity: 0.7;
 }
 #imageStatusCreator .image-upload-placeholder span {
-    font-size: 1.1rem;
-    font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 #imageStatusCreator .image-upload-placeholder.hidden {
-    display: none;
+  display: none;
 }
 #statusImagePreview {
-    max-width: 100%;
-    max-height: 200px;
-    border-radius: 8px;
-    margin-top: 10px;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  margin-top: 10px;
 }
 
 .image-preview-wrapper {
@@ -3597,7 +3763,6 @@ body.light {
   box-shadow: var(--shadow-input-focus);
 }
 
-/* ==================== STATUS VIEWER MODAL ==================== */
 .status-viewer-content {
   width: 100%;
   height: 100%;
@@ -3624,8 +3789,8 @@ body.light {
   left: 0;
   width: 100%;
   padding: 10px 15px;
-  z-index: 500; /* FIX: Z-index tinggi agar tidak tertutup gambar/video */
-  background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+  z-index: 500;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
 }
 .status-progress-bar-container {
   display: flex;
@@ -3635,7 +3800,7 @@ body.light {
 .status-progress-bar {
   flex: 1;
   height: 3px;
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -3645,7 +3810,9 @@ body.light {
   width: 0%;
   transition: width 0.1s linear;
 }
-.status-progress-fill.filled { width: 100%; }
+.status-progress-fill.filled {
+  width: 100%;
+}
 
 .status-user-info {
   display: flex;
@@ -3656,17 +3823,17 @@ body.light {
 .avatar-container-view .avatar {
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255,255,255,0.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 .status-text-info h4 {
   font-size: 0.95rem;
   margin: 0;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .status-text-info small {
   font-size: 0.75rem;
   opacity: 0.8;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .close-status-viewer {
   margin-left: auto;
@@ -3689,17 +3856,17 @@ body.light {
   align-items: center;
   justify-content: center;
   background: #111;
-  position: relative; /* Penting untuk absolute positioning anak */
+  position: relative;
   width: 100%;
   overflow: hidden;
 }
 .status-image-content {
-  position: absolute; /* Paksa gambar mengisi container tanpa peduli flexbox */
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain !important; /* Pastikan gambar tidak pernah terpotong (cover) */
+  object-fit: contain !important;
   background-color: #000;
 }
 .status-text-content {
@@ -3720,12 +3887,12 @@ body.light {
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 20px 20px 90px 20px; /* Tambah padding bawah agar tidak tertutup input */
-  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  padding: 20px 20px 90px 20px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
   color: #fff;
   text-align: center;
   font-size: 1rem;
-  pointer-events: none; /* Agar klik tembus ke navigasi jika perlu */
+  pointer-events: none;
 }
 .status-nav-btn {
   position: absolute;
@@ -3733,30 +3900,36 @@ body.light {
   transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
   padding: 20px;
   cursor: pointer;
-  z-index: 200; /* FIX: Tingkatkan z-index agar di atas gambar status */
-  pointer-events: auto; /* Pastikan bisa diklik */
+  z-index: 200;
+  pointer-events: auto;
 }
-.status-nav-btn:hover { color: #fff; }
-.status-nav-btn.prev { left: 0; }
-.status-nav-btn.next { right: 0; }
+.status-nav-btn:hover {
+  color: #fff;
+}
+.status-nav-btn.prev {
+  left: 0;
+}
+.status-nav-btn.next {
+  right: 0;
+}
 .status-type-toggle {
   display: flex;
   background: var(--bg-input);
   border-radius: 10px;
-  border-radius: 99px; /* Lebih bulat (capsule shape) */
+  border-radius: 99px;
   padding: 4px;
-  margin-bottom: 0; /* Hapus margin bottom karena di footer */
+  margin-bottom: 0;
 }
 .status-type-toggle .toggle-btn {
-  width: 42px; /* Ukuran fixed untuk icon only */
+  width: 42px;
   height: 42px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 50%; /* Tombol bulat */
+  border-radius: 50%;
   cursor: pointer;
   transition: var(--transition);
   display: flex;
@@ -3772,7 +3945,6 @@ body.light {
   box-shadow: var(--shadow-sm);
 }
 
-/* ==================== STATUS VIEWER DESKTOP EMBEDDED ==================== */
 #viewStatusModal.desktop-embedded:not(.hidden) {
   position: absolute !important;
   top: 0;
@@ -3781,12 +3953,12 @@ body.light {
   height: 100%;
   background: #000 !important;
   z-index: 50;
-  border-radius: 0 !important; /* Hapus radius agar pas di container chat */
+  border-radius: 0 !important;
   padding: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  pointer-events: auto; /* Pastikan modal menangkap klik */
+  pointer-events: auto;
 }
 
 #viewStatusModal.desktop-embedded .status-viewer-content {
@@ -3794,38 +3966,36 @@ body.light {
   height: 100%;
   max-width: none;
   max-height: none;
-  border-radius: 0 !important; /* Hapus radius agar gambar full */
+  border-radius: 0 !important;
   box-shadow: none;
 }
 
-/* Fix untuk preview saat upload status agar tidak gepeng/terpotong */
 #statusImagePreview {
   object-fit: contain;
   background-color: #000;
   width: 100%;
-  max-height: 60vh; /* Perbesar preview upload agar portrait terlihat lebih jelas */
+  max-height: 60vh;
 }
 
 #createStatusModal .modal-footer {
-  justify-content: center; /* Pindahkan ke end (kanan) */
+  justify-content: center;
   align-items: center;
-  gap: 15px; /* Jarak antara toggle dan tombol kirim */
+  gap: 15px;
   padding-top: 10px;
   display: flex;
 }
 
 #postStatusBtn {
-  flex: 0 0 auto; /* Jangan stretch */
+  flex: 0 0 auto;
   width: 40px;
   height: 40px;
-  border-radius: 50%; /* Buat bulat */
+  border-radius: 50%;
   padding: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* ==================== CREATE STATUS MODAL DESKTOP EMBEDDED ==================== */
 #createStatusModal.desktop-embedded:not(.hidden) {
   position: absolute !important;
   top: 0;
@@ -3862,7 +4032,6 @@ body.light {
   max-width: 500px;
 }
 
-/* ==================== AVATAR STATUS RING (CHAT LIST) ==================== */
 .avatar-container-ring {
   position: relative;
   display: flex;
@@ -3871,7 +4040,7 @@ body.light {
   flex-shrink: 0;
   cursor: pointer;
   padding: 2px;
-  width: 54px; /* FIX: Ukuran fixed agar sejajar */
+  width: 54px;
   height: 54px;
 }
 
@@ -3886,9 +4055,8 @@ body.light {
   pointer-events: none;
 }
 
-/* Wrapper to standardize avatar size in chat list */
 .chat-avatar-wrapper {
-  width: 54px; /* FIX: Samakan dengan container ring */
+  width: 54px;
   height: 54px;
   display: flex;
   align-items: center;
@@ -3897,13 +4065,16 @@ body.light {
   position: relative;
 }
 
-/* ==================== GEMINI TAB STYLES ==================== */
 .gemini-interface {
   display: flex;
   flex-direction: column;
   height: 100%;
   background: transparent;
-  background-image: radial-gradient(circle at 50% 50%, rgba(66, 133, 244, 0.05) 0%, transparent 50%);
+  background-image: radial-gradient(
+    circle at 50% 50%,
+    rgba(66, 133, 244, 0.05) 0%,
+    transparent 50%
+  );
   position: relative;
 }
 .gemini-chat-list {
@@ -3956,15 +4127,21 @@ body.light {
   animation: fadeIn 0.3s ease;
 }
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .gemini-message.user {
   align-self: flex-end;
   background: var(--primary);
   color: white;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 .gemini-message.ai {
   align-self: flex-start;
@@ -3972,9 +4149,9 @@ body.light {
   color: var(--text-primary);
   border: 1px solid var(--border-dark);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
-/* Typing Indicator Animation */
+
 .typing-indicator {
   display: inline-flex;
   align-items: center;
@@ -3988,16 +4165,26 @@ body.light {
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out both;
 }
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
 @keyframes typing {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }
 .gemini-input-wrapper {
   padding: 15px;
   background: transparent;
-  border:none;
+  border: none;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -4039,7 +4226,7 @@ body.light {
 .gemini-input-wrapper button:active {
   transform: scale(0.95);
 }
-/* Markdown Styles for AI */
+
 .gemini-message.ai code {
   background: rgba(127, 127, 127, 0.15);
   padding: 2px 5px;
@@ -4067,35 +4254,33 @@ body.light {
   color: var(--text-primary);
 }
 
-/* ==================== GEMINI FULLSCREEN ANIMATION ==================== */
-/* Saat mode Gemini aktif */
 .app-layout.gemini-mode .sidebar {
   width: 100% !important;
   max-width: 100% !important;
   border-right: none;
-  border-radius: 20px; /* Tetap rounded agar konsisten */
+  border-radius: 20px;
   z-index: 50;
 }
 
-/* Hapus padding dari container list saat mode gemini aktif */
 .app-layout.gemini-mode .users-list {
   padding: 0;
 }
 
 .app-layout.gemini-mode .chat-area {
-  flex: 0 0 0;       /* Kecilkan flex basis ke 0 */
-  width: 0;          /* Lebar 0 */
-  min-width: 0;      /* Izinkan mengecil di bawah min-content */
-  padding: 0;        /* Hilangkan padding */
-  opacity: 0;        /* Fade out konten */
-  overflow: hidden;  /* Sembunyikan scrollbar/konten */
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  opacity: 0;
+  overflow: hidden;
   border: none;
   margin: 0;
-  /* Animasi transisi halus */
-  transition: flex 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease, padding 0.5s ease;
+
+  transition: flex 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
+    width 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease,
+    padding 0.5s ease;
 }
 
-/* ==================== GEMINI TAB RESPONSIVE ==================== */
 .gemini-icon-tab {
   display: flex;
   align-items: center;
@@ -4113,21 +4298,19 @@ body.light {
 
 @media screen and (max-width: 768px) {
   .tab-btn[data-tab="gemini"] {
-    flex: 0 0 auto; /* Jangan stretch, sesuaikan konten */
+    flex: 0 0 auto;
     padding: 0 14px;
     min-width: auto;
   }
   .tab-btn[data-tab="gemini"] .gemini-text-tab {
-    display: none; /* Sembunyikan teks di mobile */
+    display: none;
   }
   .tab-btn[data-tab="gemini"] .gemini-icon-tab svg {
-    width: 24px; /* Sedikit perbesar ikon di mobile */
+    width: 24px;
     height: 24px;
   }
 }
 
-/* ==================== GEMINI TAB RESIZE BEHAVIOR ==================== */
-/* Saat sidebar dikecilkan di bawah 400px, sembunyikan teks Gemini */
 @container sidebar (max-width: 500px) {
   .tab-btn[data-tab="gemini"] .gemini-text-tab {
     opacity: 0;
@@ -4138,4 +4321,111 @@ body.light {
   .tab-btn[data-tab="gemini"] {
     flex: 0 0 auto;
   }
+}
+
+.app-layout.call-mode .sidebar {
+  width: 0 !important;
+  min-width: 0 !important;
+  flex: 0 0 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  opacity: 0;
+  margin: 0 !important;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.app-layout.call-mode .sidebar-resizer {
+  display: none !important;
+}
+
+.profile-modal-content {
+  max-width: 380px;
+  width: 90%;
+}
+
+.profile-modal-content.fade-scale-in {
+  animation: fadeScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.profile-modal-content.fade-scale-out {
+  animation: fadeScaleOut 0.3s ease;
+}
+
+.profile-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.user-avatar-container {
+  margin-bottom: 20px;
+}
+
+.user-avatar-container .avatar.large {
+  width: 100px;
+  height: 100px;
+  font-size: 2.5rem;
+}
+
+.info-section {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.info-section h2 {
+  margin-bottom: 5px;
+}
+
+.info-section .username-display {
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.info-section .status-badge {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-size: 0.8rem;
+}
+
+.action-buttons {
+  width: 100%;
+  padding: 0 25px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.main-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.main-actions .action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  height: auto;
+  padding: 12px 8px;
+  gap: 6px;
+  background: var(--bg-light);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 12px;
+}
+
+.main-actions .action-btn:hover {
+  background: var(--bg-lighter);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.main-actions .action-btn span {
+  font-size: 0.8rem;
+  font-weight: 600;
 }

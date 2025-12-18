@@ -15,7 +15,7 @@
     "FluxChat",
     "real-time"
   ],
-  "author": "",
+  "author": "Jihan Nugraha",
   "license": "MIT",
   "dependencies": {
     "bcrypt": "^6.0.0",

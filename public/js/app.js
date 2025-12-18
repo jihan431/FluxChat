@@ -1,4 +1,4 @@
-//
+
 const socket = io({
   extraHeaders: {
     "ngrok-skip-browser-warning": "true"
@@ -6,7 +6,7 @@ const socket = io({
 });
 const API_URL = `${window.location.origin}/api`;
 
-// --- NGROK BYPASS: Override fetch untuk menambahkan header otomatis ---
+
 const originalFetch = window.fetch;
 window.fetch = function(url, options = {}) {
   const newOptions = { ...options };
@@ -26,24 +26,24 @@ let searchTimeout = null;
 let callTimer = null;
 let callDuration = 0;
 let isVideo = false;
-let currentReplyContext = null; // To store { messageId, senderName, content }
-let selectedMessageElement = null; // To store the DOM element being right-clicked
+let currentReplyContext = null; 
+let selectedMessageElement = null; 
 const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-// --- CHAT HISTORY TRACKING ---
-let chatHistory = {}; // { username/groupId: { name, lastMessage, timestamp, unreadCount, isGroup } }
-let typingUsers = {}; // { username: true/false }
-let callHistory = []; // Array untuk menyimpan history call
-let recentChats = []; // Array untuk riwayat chat (user + group)
-let currentTab = 'chats'; // Track tab mana yang aktif
-window.userStatusMap = {}; // Initialize status map globally
-const FILE_MAX_BYTES = 10 * 1024 * 1024; // 10MB (Sesuaikan dengan server)
+
+let chatHistory = {}; 
+let typingUsers = {}; 
+let callHistory = []; 
+let recentChats = []; 
+let currentTab = 'chats'; 
+window.userStatusMap = {}; 
+const FILE_MAX_BYTES = 10 * 1024 * 1024; 
 const ALLOWED_FILE_TYPES = ['image/', 'video/', 'audio/', 'application/pdf', 'text/plain'];
 let voiceRecorder = { recorder: null, chunks: [], stream: null, timer: null, startTime: null, interval: null };
 let chatSearchTimeout = null;
-let callStartTime = null; // Timestamp when call started
+let callStartTime = null; 
 
-// Status Viewer Globals
+
 let currentStatuses = {};
 let statusQueue = [];
 let currentStatusIndex = 0;
@@ -52,9 +52,9 @@ let statusUserOrder = [];
 let currentViewedUserId = null;
 
 let statusImageBase64 = null;
-let statusNavLock = false; // Mencegah double-click/skip tidak sengaja
+let statusNavLock = false; 
 
-// --- 1. TOAST NOTIFICATION SYSTEM ---
+
 const Toast = {
   container: null,
   init() {
@@ -137,7 +137,7 @@ function getUserStatusText(user) {
   return 'Offline';
 }
 
-// --- SECURITY: Prevent XSS ---
+
 function escapeHtml(text) {
   if (!text) return text;
   return text
@@ -253,7 +253,7 @@ async function toggleVoiceRecording() {
     return;
   }
 
-  // Stop jika sedang merekam
+  
   if (voiceRecorder.recorder && voiceRecorder.recorder.state === 'recording') {
     stopVoiceRecording(true);
     return;
@@ -288,17 +288,17 @@ async function toggleVoiceRecording() {
     recorder.start();
     updateVoiceButtonState(true);
     
-    // Show recording indicator
+    
     showRecordingIndicator();
     
-    // Start timer
+    
     voiceRecorder.startTime = Date.now();
     updateRecordingTimer();
     voiceRecorder.interval = setInterval(() => {
       updateRecordingTimer();
     }, 100);
 
-    voiceRecorder.timer = setTimeout(() => stopVoiceRecording(), 120000); // auto stop 2 menit
+    voiceRecorder.timer = setTimeout(() => stopVoiceRecording(), 120000); 
   } catch (err) {
     Toast.show('Gagal mengakses mikrofon: ' + err.message, 'error');
     cleanupVoiceRecording();
@@ -360,7 +360,7 @@ function sendVoiceNoteBlob(blob) {
       };
       socket.emit('send_message', payload);
       addGroupMessageToUI({ ...payload, timestamp: new Date().toISOString(), _id: tempId });
-      saveLastMessageGroup(selectedGroup._id, '🎤 Voice note', new Date(), tempId);
+      saveLastMessageGroup(selectedGroup._id, '🎤 Voice note', new Date(), tempId); 
     } else if (selectedUser) {
       const payload = {
         from: currentUser.username,
@@ -371,7 +371,7 @@ function sendVoiceNoteBlob(blob) {
       };
       socket.emit('send_message', payload);
       addMessageToUI({ ...payload, timestamp: new Date().toISOString(), _id: tempId });
-      saveLastMessage(selectedUser.username, '🎤 Voice note', new Date(), tempId);
+      saveLastMessage(selectedUser._id, '🎤 Voice note', new Date(), tempId);
     }
   };
   reader.readAsDataURL(blob);
@@ -412,7 +412,7 @@ function hideRecordingIndicator() {
     messageInput.style.display = '';
     recordingIndicator.classList.add('hidden');
     
-    // Restore normal button visibility based on input content
+    
     const hasText = messageInput.value.trim().length > 0;
     if (hasText) {
       voiceNoteBtn.style.display = 'none';
@@ -424,11 +424,11 @@ function hideRecordingIndicator() {
   }
 }
 
-// Store wavesurfer instances
+
 const wavesurferInstances = {};
 
 function toggleAudioPlayback(audioId, audioSrc) {
-  // Get the wavesurfer instance (should already be initialized)
+  
   const wavesurfer = wavesurferInstances[audioId];
   
   if (!wavesurfer) return;
@@ -436,7 +436,7 @@ function toggleAudioPlayback(audioId, audioSrc) {
   if (wavesurfer.isPlaying()) {
     wavesurfer.pause();
   } else {
-    // Pause all other audio players
+    
     Object.keys(wavesurferInstances).forEach(key => {
       if (key !== audioId && wavesurferInstances[key].isPlaying()) {
         wavesurferInstances[key].pause();
@@ -458,13 +458,13 @@ function updateTimeDisplay(currentTime, duration, timeDisplay) {
 function initializeWaveform(audioId, audioSrc) {
   const waveformContainer = document.getElementById(`waveform-${audioId}`);
   
-  // Return if already initialized
+  
   if (wavesurferInstances[audioId]) return;
   
-  // Initialize wavesurfer
+  
   const wavesurfer = WaveSurfer.create({
     container: waveformContainer,
-    waveColor: 'rgba(90, 138, 140, 0.3)', // --primary with transparency
+    waveColor: 'rgba(90, 138, 140, 0.3)', 
     progressColor: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
     cursorColor: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
     barWidth: 2,
@@ -478,7 +478,7 @@ function initializeWaveform(audioId, audioSrc) {
   wavesurfer.load(audioSrc);
   wavesurferInstances[audioId] = wavesurfer;
   
-  // Update time display when ready
+  
   wavesurfer.on('ready', () => {
     const duration = wavesurfer.getDuration();
     const timeDisplay = document.querySelector(`#${audioId} .audio-time`);
@@ -487,7 +487,7 @@ function initializeWaveform(audioId, audioSrc) {
     }
   });
   
-  // Update progress when playing
+  
   wavesurfer.on('audioprocess', () => {
     const currentTime = wavesurfer.getCurrentTime();
     const duration = wavesurfer.getDuration();
@@ -497,7 +497,7 @@ function initializeWaveform(audioId, audioSrc) {
     }
   });
   
-  // Handle play/pause
+  
   wavesurfer.on('play', () => {
     const playIcon = document.querySelector(`#${audioId} .play-icon`);
     const pauseIcon = document.querySelector(`#${audioId} .pause-icon`);
@@ -519,10 +519,10 @@ function initializeWaveform(audioId, audioSrc) {
     if (pauseIcon) pauseIcon.style.display = 'none';
   });
   
-  // Handle click on waveform container
+  
   const waveformParent = waveformContainer.parentElement;
   waveformParent.addEventListener('click', (e) => {
-    // Don't trigger if clicking on the play button
+    
     if (e.target.closest('.audio-play-pause')) return;
     
     const rect = waveformParent.getBoundingClientRect();
@@ -542,22 +542,22 @@ function updateRecordingTimer() {
   timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-// --- FUNGSI BARU: Dropdown untuk Lampiran File ---
+
 function setupAttachmentDropdown() {
   const fileInput = document.getElementById('fileInput');
-  // Jika elemen input file tidak ditemukan, hentikan eksekusi.
+  
   if (!fileInput) {
     console.warn('Gagal menyiapkan dropdown lampiran: elemen #fileInput tidak ditemukan.');
     return;
   }
 
-  // Sembunyikan tombol lampiran asli (biasanya berupa label) untuk menghindari duplikasi.
+  
   const originalLabel = document.querySelector('label[for="fileInput"]');
   if (originalLabel) {
     originalLabel.style.display = 'none';
   }
 
-  // 1. Buat struktur HTML untuk dropdown
+  
   const dropdownHTML = `
     <div class="attachment-container">
       <button class="icon-btn" id="attachmentDropdownBtn" title="Kirim File">
@@ -580,24 +580,24 @@ function setupAttachmentDropdown() {
     </div>
   `;
 
-  // 3. Sisipkan HTML sebelum input file
+  
   fileInput.insertAdjacentHTML('beforebegin', dropdownHTML);
   if (typeof feather !== 'undefined') feather.replace();
 
-  // 4. Tambahkan Event Listener untuk fungsionalitas
+  
   const menu = document.getElementById('attachmentMenu');
   const btn = document.getElementById('attachmentDropdownBtn');
 
   if (!menu) return;
 
-  // Toggle menu saat tombol diklik (untuk Mobile/Android)
+  
   if (btn) {
     btn.addEventListener('click', (e) => {
-      e.stopPropagation(); // Mencegah event bubbling ke document
+      e.stopPropagation(); 
       menu.classList.toggle('active');
     });
 
-    // Tutup menu saat klik di luar area menu/tombol
+    
     document.addEventListener('click', (e) => {
       if (!menu.contains(e.target) && !btn.contains(e.target)) {
         menu.classList.remove('active');
@@ -618,26 +618,267 @@ function setupAttachmentDropdown() {
       }
       
       fileInput.click();
-      menu.classList.remove('active'); // Tutup menu setelah memilih file
+      menu.classList.remove('active'); 
     }
   });
 }
 
-// --- 2. AUTH & INITIALIZATION ---
+
+const ContactsModal = {
+  isOpen: false,
+  currentUsers: [],
+
+  init() {
+    if (document.getElementById('contactsModal')) return;
+
+    const modalHtml = `
+      <div id="contactsModal" class="modal hidden">
+        <div class="contacts-modal-content glass-panel">
+          <button class="close-modal"><i data-feather="x"></i></button>
+          <div class="contacts-modal-header">
+            <h2>Kontak Baru</h2>
+            <p class="contacts-modal-subtitle">Temukan teman di FluxChat</p>
+          </div>
+          <div class="contacts-search-bar">
+            <i data-feather="search" class="search-icon"></i>
+            <input type="text" class="contacts-search-input" placeholder="Cari username atau email..." id="contactsSearchInput">
+          </div>
+          <div class="contacts-list-container" id="contactsList">
+            <div class="loading-state"><div class="spinner"></div><p>Memuat kontak...</p></div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const modal = document.getElementById('contactsModal');
+    const closeBtn = modal.querySelector('.close-modal');
+    const searchInput = document.getElementById('contactsSearchInput');
+
+    closeBtn.onclick = () => this.close();
+    modal.onclick = (e) => {
+      if (e.target === modal) this.close();
+    };
+
+    searchInput.oninput = (e) => {
+      const query = e.target.value.trim();
+      if (query) {
+        this.search(query);
+      } else {
+        this.renderFullList();
+      }
+    };
+  },
+
+  open() {
+    this.init();
+    const modal = document.getElementById('contactsModal');
+    const content = modal.querySelector('.contacts-modal-content');
+    const searchInput = document.getElementById('contactsSearchInput');
+
+    this.isOpen = true;
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
+
+    
+    content.classList.remove('fade-scale-out');
+    content.classList.add('fade-scale-in');
+
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+    }
+
+    this.renderFullList();
+    if (typeof feather !== 'undefined') feather.replace();
+  },
+
+  close() {
+    const modal = document.getElementById('contactsModal');
+    const content = modal.querySelector('.contacts-modal-content');
+
+    this.isOpen = false;
+    
+    content.classList.remove('fade-scale-in');
+    content.classList.add('fade-scale-out');
+
+    setTimeout(() => {
+      if (!this.isOpen) {
+        modal.classList.add('hidden');
+        modal.classList.remove('active');
+        content.classList.remove('fade-scale-out'); 
+      }
+    }, 250);
+  },
+
+  async renderFullList(container = null) {
+    const list = container || document.getElementById('contactsList');
+    if (!list) return;
+
+    
+    if (window.allRequests && window.allRequests.length > 0) {
+      list.innerHTML = `
+        <div class="requests-section">
+          <h3 style="padding: 15px 15px 10px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--primary); font-weight: 800; display: flex; align-items: center; gap: 8px; opacity: 0.8;">
+            <i data-feather="user-plus" style="width: 14px; height: 14px;"></i> Permintaan Masuk
+          </h3>
+        </div>`;
+      const section = list.querySelector('.requests-section');
+      
+      window.allRequests.forEach(req => {
+        const user = req.from;
+        const div = document.createElement('div');
+        div.className = 'contact-item request-item';
+        div.style.margin = '4px 12px 8px';
+        div.style.padding = '12px';
+        div.style.background = 'var(--glass-bg)';
+        div.style.borderRadius = '16px';
+        div.style.border = '1px solid var(--border-color)';
+        div.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+
+        div.innerHTML = `
+            <div class="contact-avatar">
+                ${createAvatarHTML(user, 'avatar small', false)}
+            </div>
+            <div class="contact-info">
+                <h4 class="contact-name" style="font-size: 0.95rem; margin-bottom: 2px;">${user.nama}</h4>
+                <p class="contact-username" style="font-size: 0.8rem; opacity: 0.6;">@${user.username}</p>
+            </div>
+            <div class="contact-action" style="display: flex; gap: 6px;">
+                <button class="contact-action-btn accept-btn" onclick="respondFriend('${user._id}', 'accept')" title="Terima" style="background: var(--primary); color: white; border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <i data-feather="check" style="width: 18px; height: 18px;"></i>
+                </button>
+                <button class="contact-action-btn reject-btn" onclick="respondFriend('${user._id}', 'reject')" title="Tolak" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <i data-feather="x" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+        `;
+        section.appendChild(div);
+      });
+      const spacer = document.createElement('div');
+      spacer.style.height = '10px';
+      list.appendChild(spacer);
+    } else {
+      list.innerHTML = '';
+    }
+
+    list.innerHTML += `
+      <div class="empty-state">
+        <i data-feather="users"></i>
+        <p>Ketik username untuk mencari teman baru</p>
+      </div>
+    `;
+    if (typeof feather !== 'undefined') feather.replace();
+  },
+
+  async search(query) {
+    const list = document.getElementById('contactsList');
+    list.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Mencari...</p></div>';
+
+    try {
+        const res = await fetch(`${API_URL}/users/search?query=${encodeURIComponent(query)}&currentUserId=${currentUser.id}`);
+        const data = await res.json();
+        
+        if (data.success) {
+            this.renderUserList(data.users);
+        } else {
+            list.innerHTML = '<div class="error-state"><p>Gagal mencari</p></div>';
+        }
+    } catch (e) {
+        list.innerHTML = '<div class="error-state"><p>Error koneksi</p></div>';
+    }
+  },
+
+  renderUserList(users) {
+    const list = document.getElementById('contactsList');
+    list.innerHTML = '';
+    this.currentUsers = users;
+
+    if (!users || users.length === 0) {
+        list.innerHTML = '<div class="empty-state"><p>Tidak ditemukan</p></div>';
+        return;
+    }
+
+    users.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'contact-item';
+        
+        const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
+        
+        let actionBtn = '';
+        if (user.isFriend) {
+            actionBtn = `<button class="contact-action-btn chat-btn" onclick="selectUser({username: '${user.username}', nama: '${user.nama}', _id: '${user._id}', avatar: '${user.avatar}'}); ContactsModal.close();"><i data-feather="message-square"></i></button>`;
+        } else if (user.isPending) {
+            actionBtn = `<button class="contact-action-btn pending-btn" disabled><i data-feather="clock"></i></button>`;
+        } else {
+            actionBtn = `<button class="contact-action-btn add-btn" onclick="sendFriendRequest(event, '${user._id}')"><i data-feather="user-plus"></i></button>`;
+        }
+
+        div.innerHTML = `
+            <div class="contact-avatar">
+                ${createAvatarHTML(user, 'avatar small', isOnline)}
+            </div>
+            <div class="contact-info">
+                <h4 class="contact-name">${user.nama}</h4>
+                <p class="contact-username">@${user.username}</p>
+            </div>
+            <div class="contact-action">
+                ${actionBtn}
+            </div>
+        `;
+        list.appendChild(div);
+    });
+    if (typeof feather !== 'undefined') feather.replace();
+  }
+};
+
+
+window.ContactsModal = ContactsModal;
+
+
 if (!currentUser) window.location.href = 'login.html';
 
 document.addEventListener('DOMContentLoaded', () => {
   if(typeof feather !== 'undefined') feather.replace();
 
-  // Initialize Wavesurfer.js
+  
+  const uiStyle = document.createElement('style');
+  uiStyle.textContent = `
+    #callModal.desktop-embedded .glass-panel, 
+    #callModal.desktop-embedded .call-modal-content {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        box-sizing: border-box !important;
+    }
+    #callModal.desktop-embedded #videoContainer {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      height: 100%;
+      padding: 1rem;
+    }
+    #callModal.desktop-embedded #videoContainer video {
+        width: 100% !important;
+        height: 100%;
+        aspect-ratio: unset;
+        object-fit: cover !important; 
+        border-radius: 16px !important; 
+        background-color: #000 !important;
+    }
+  `;
+  document.head.appendChild(uiStyle);
+
+  
   if (typeof WaveSurfer === 'undefined') {
     console.warn('Wavesurfer.js not loaded');
   }
 
-  // Panggil fungsi untuk membuat dropdown lampiran
+  
   setupAttachmentDropdown();
 
-  // --- EVENT LISTENERS FOR CREATE STATUS MODAL ---
+  
   const statusTypeToggle = document.querySelector('.status-type-toggle');
   if (statusTypeToggle) {
     statusTypeToggle.addEventListener('click', (e) => {
@@ -671,32 +912,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Sembunyikan modal saat load
+  
   document.getElementById('callModal').classList.add('hidden');
   document.getElementById('profileModal').classList.remove('active');
 
-  // Load unread counts from localStorage
+  
   loadUnreadCounts();
 
-  // Load Daftar Teman & Request (Logika Baru)
+  
   loadFriendsAndRequests();
 
-  // Load Groups dan join socket rooms
+  
   loadGroups();
 
-  // Load Call History
+  
   loadCallHistory();
 
-  // Load Status placeholder
+  
   displayStatusUpdates();
 
-  // Cek lebar layar saat pertama kali load
+  
   checkScreenSize();
   
-  // Event listener untuk resize window
+  
   window.addEventListener('resize', checkScreenSize);
 
-  // Sidebar resizer
+  
   setupSidebarResizer();
 
   const chatSearchToggle = document.getElementById('chatSearchToggle');
@@ -708,7 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chatSearchInput.addEventListener('input', handleChatSearchInput);
   }
   
-  // Gemini Input Listener
+  
   const geminiInput = document.getElementById('geminiInput');
   if (geminiInput) {
     geminiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendGeminiMessage(); });
@@ -729,22 +970,22 @@ document.addEventListener('DOMContentLoaded', () => {
     voiceBtn.addEventListener('click', toggleVoiceRecording);
   }
 
-  // --- Event Listeners ---
+  
   const messageInput = document.getElementById('messageInput');
   const sendBtn = document.querySelector('.send-btn');
   
-  // Initialize button state on page load
+  
   updateSendButtonVisibility();
   
   messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
   });
   
-  // Monitor input untuk toggle button
+  
   messageInput.addEventListener('input', () => {
     updateSendButtonVisibility();
     
-    // Kalo belum milih user, jangan ngapa-ngapain
+    
     if (!selectedUser) return;
 
     socket.emit('typing', { 
@@ -755,7 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(typingTimeout);
 
     typingTimeout = setTimeout(() => {
-        // cek sekali lagi biar aman
+        
         if (!selectedUser) return;
         socket.emit('stop_typing', { 
             to: selectedUser.username, 
@@ -765,12 +1006,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   
-// Typing indicator
+
 let typingTimeout;
 
-  // Close dropdown user menu
+  
   document.addEventListener('click', (e) => {
-    // 1. Handle Close Status Button (Delegation) - FIX untuk tombol tidak bisa diklik
+    
     const closeStatusBtn = e.target.closest('.close-status-viewer');
     if (closeStatusBtn) {
       e.preventDefault();
@@ -789,7 +1030,7 @@ let typingTimeout;
   const backBtn = document.getElementById('backToSidebar');
   if (backBtn) backBtn.addEventListener('click', closeChat);
 
-  // Modal Profil Listeners
+  
   const closeModalBtns = document.querySelectorAll('.close-modal');
   closeModalBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -800,7 +1041,7 @@ let typingTimeout;
     });
   });
 
-  // Specific handler for Create Status Modal close button to ensure UI restoration
+  
   const createStatusModal = document.getElementById('createStatusModal');
   if (createStatusModal) {
     const closeBtn = createStatusModal.querySelector('.close-modal');
@@ -818,7 +1059,7 @@ let typingTimeout;
     saveProfileBtn.addEventListener('click', saveProfile);
   }
 
-  // Event Listeners untuk Profile Photo Upload (Unified)
+  
   const profilePhotoInput = document.getElementById('profilePhotoInput');
   const profilePhotoPreview = document.getElementById('profilePhotoPreview');
   
@@ -828,7 +1069,7 @@ let typingTimeout;
       if(file) {
         const reader = new FileReader();
         reader.onload = (evt) => {
-          // Update avatar display in header
+          
           const avatarDisplay = document.getElementById('profileAvatarDisplay');
           avatarDisplay.style.backgroundImage = `url('${evt.target.result}')`;
           avatarDisplay.textContent = '';
@@ -844,20 +1085,20 @@ let typingTimeout;
     });
   }
 
-  // Event Listeners untuk Create Group Modal
+  
   const createGroupBtn = document.getElementById('createGroupBtn');
   if (createGroupBtn) {
     createGroupBtn.addEventListener('click', createGroup);
   }
 
-  // --- CONTEXT MENU FOR MESSAGES ---
+  
   const messagesContainer = document.getElementById('messagesContainer');
   messagesContainer.addEventListener('contextmenu', function(e) {
     const messageEl = e.target.closest('.message, .message-img');
-    // Prevent context menu on already deleted messages
+    
     if (messageEl && !messageEl.classList.contains('deleted-message')) {
       e.preventDefault();
-      selectedMessageElement = messageEl; // Store the element
+      selectedMessageElement = messageEl; 
       
       const menu = document.getElementById('messageContextMenu');
       const deleteForMeBtn = document.getElementById('deleteForMeBtn');
@@ -867,7 +1108,7 @@ let typingTimeout;
       if (deleteForMeBtn) deleteForMeBtn.style.display = 'flex';
       if (deleteForEveryoneBtn) deleteForEveryoneBtn.style.display = isMyMessage ? 'flex' : 'none';
       
-      // Temporarily show menu off-screen to get its dimensions
+      
       menu.style.visibility = 'hidden';
       menu.classList.remove('hidden');
       const menuWidth = menu.offsetWidth;
@@ -875,7 +1116,7 @@ let typingTimeout;
       menu.style.visibility = '';
 
       let leftPosition = e.clientX;
-      // For outgoing messages (on the right), position menu to the left of the cursor
+      
       if (isMyMessage) {
         leftPosition = e.clientX - menuWidth;
       }
@@ -886,7 +1127,7 @@ let typingTimeout;
     }
   });
 
-  // Hide context menu on click outside
+  
   document.addEventListener('click', function(e) {
     const menu = document.getElementById('messageContextMenu');
     if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target)) {
@@ -895,7 +1136,7 @@ let typingTimeout;
     }
   });
 
-  // --- Event Listeners untuk Modal Pengaturan Grup ---
+  
   const saveGroupBtn = document.getElementById('saveGroupProfileBtn');
   if (saveGroupBtn) {
       saveGroupBtn.addEventListener('click', saveGroupProfile);
@@ -919,7 +1160,7 @@ let typingTimeout;
   }
 });
 
-// --- FUNGSI CEK UKURAN LAYAR ---
+
 function checkScreenSize() {
   const isMobile = window.innerWidth <= 768;
   const sidebar = document.getElementById('sidebar');
@@ -928,25 +1169,25 @@ function checkScreenSize() {
   const welcomeScreen = document.getElementById('welcomeScreen');
   
   if (isMobile) {
-    // Di mobile, tampilkan sidebar atau chat area sesuai state
+    
     if (selectedUser || selectedGroup) {
-      // Jika sedang dalam chat, tampilkan chat area
+      
       sidebar.classList.add('hidden-mobile');
       chatArea.classList.add('active');
     } else {
-      // Jika tidak dalam chat, tampilkan sidebar
+      
       sidebar.classList.remove('hidden-mobile');
       chatArea.classList.remove('active');
     }
-    // Reset width style on mobile to allow CSS 100% to take over
+    
     sidebar.style.width = '';
   } else {
-    // Di desktop, tampilkan kedua-duanya (sidebar dan chat area)
+    
     sidebar.classList.remove('hidden-mobile');
     chatArea.classList.remove('active');
     
-    // Logic lebar sidebar desktop
-    // FIX: Cek juga apakah status viewer/creator sedang terbuka
+    
+    
     const isStatusOpen = (document.getElementById('viewStatusModal') && !document.getElementById('viewStatusModal').classList.contains('hidden')) || 
                          (document.getElementById('createStatusModal') && !document.getElementById('createStatusModal').classList.contains('hidden'));
 
@@ -957,7 +1198,7 @@ function checkScreenSize() {
     }
   }
 
-  // Handle Status Viewer responsiveness during resize
+  
   const statusModal = document.getElementById('viewStatusModal');
   if (statusModal && !statusModal.classList.contains('hidden')) {
     if (isMobile) {
@@ -976,7 +1217,7 @@ function checkScreenSize() {
     }
   }
 
-  // Handle Create Status Modal responsiveness
+  
   const createStatusModal = document.getElementById('createStatusModal');
   if (createStatusModal && !createStatusModal.classList.contains('hidden')) {
     if (isMobile) {
@@ -994,22 +1235,43 @@ function checkScreenSize() {
       }
     }
   }
+
+  
+  const callModal = document.getElementById('callModal');
+  if (callModal && !callModal.classList.contains('hidden')) {
+    if (isMobile) {
+      if (callModal.parentNode !== document.body) {
+        document.body.appendChild(callModal);
+        callModal.classList.remove('desktop-embedded');
+      }
+      document.querySelector('.app-layout').classList.remove('call-mode');
+    } else {
+      const chatArea = document.getElementById('chatArea');
+      if (callModal.parentNode !== chatArea) {
+        chatArea.appendChild(callModal);
+        callModal.classList.add('desktop-embedded');
+        document.getElementById('welcomeScreen').classList.add('hidden');
+        document.getElementById('chatRoom').classList.add('hidden');
+      }
+      document.querySelector('.app-layout').classList.add('call-mode');
+    }
+  }
 }
 
-// --- HELPER: Update Sidebar User Avatar (DEPRECATED - Removed from HTML) ---
+
 function updateSidebarUserAvatar() {
   const sidebarAvatar = document.getElementById('sidebarUserAvatar');
   if (!sidebarAvatar) return;
   
   if (currentUser.avatar) {
-    // User has uploaded a profile photo
+    
     sidebarAvatar.style.backgroundImage = `url('${currentUser.avatar}')`;
     sidebarAvatar.style.backgroundSize = 'cover';
     sidebarAvatar.style.backgroundPosition = 'center';
     sidebarAvatar.style.background = '';
     sidebarAvatar.textContent = '';
   } else {
-    // Show gradient avatar with first letter
+    
     const initial = (currentUser.nama || 'U').charAt(0).toUpperCase();
     const gradient = getAvatarGradient(currentUser.nama || 'User');
     sidebarAvatar.style.backgroundImage = 'none';
@@ -1024,9 +1286,9 @@ function updateSidebarUserAvatar() {
   }
 }
 
-// --- 3. UI HELPERS ---
 
-// Function to update button visibility based on input
+
+
 function updateSendButtonVisibility() {
   const messageInput = document.getElementById('messageInput');
   const voiceBtn = document.getElementById('voiceNoteBtn');
@@ -1035,7 +1297,7 @@ function updateSendButtonVisibility() {
   const fileInput = document.getElementById('fileInput');
   
   if (messageInput && voiceBtn && sendBtn) {
-    // If recording is active, don't change button visibility
+    
     if (recordingIndicator && !recordingIndicator.classList.contains('hidden')) {
       return;
     }
@@ -1044,11 +1306,11 @@ function updateSendButtonVisibility() {
     const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
     
     if (hasText || hasFile) {
-      // Ada teks atau file: tampilkan send button, sembunyikan voice button
+      
       voiceBtn.style.display = 'none';
       sendBtn.style.display = 'flex';
     } else {
-      // Tidak ada teks atau file: sembunyikan send button, tampilkan voice button
+      
       voiceBtn.style.display = 'flex';
       sendBtn.style.display = 'none';
     }
@@ -1056,34 +1318,34 @@ function updateSendButtonVisibility() {
 }
 
 function switchTab(tabName) {
-  // Hide all tabs
+  
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.classList.remove('active');
     tab.classList.add('hidden');
   });
   
-  // Remove active from all buttons
+  
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.remove('active');
   });
   
-  // Show selected tab
+  
   const selectedTab = document.getElementById(`${tabName}-tab`);
   if (selectedTab) {
     selectedTab.classList.add('active');
     selectedTab.classList.remove('hidden');
   }
   
-  // Mark button as active
+  
   const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
   if (activeBtn) {
     activeBtn.classList.add('active');
   }
   
-  // Track current tab
+  
   currentTab = tabName;
 
-  // --- GEMINI FULLSCREEN MODE ---
+  
   const appLayout = document.querySelector('.app-layout');
   const resizer = document.getElementById('sidebarResizer');
 
@@ -1093,13 +1355,13 @@ function switchTab(tabName) {
   } else {
     if (appLayout) appLayout.classList.remove('gemini-mode');
     if (resizer) resizer.classList.remove('hidden');
-    // Kembalikan ukuran sidebar seperti semula
+    
     checkScreenSize();
   }
 }
 
 function toggleSearchBar() {
-  // Open contacts modal instead of showing search bar
+  
   if (typeof ContactsModal !== 'undefined') {
     ContactsModal.open();
   }
@@ -1110,30 +1372,50 @@ function toggleUserMenu() {
   userMenu.classList.toggle('hidden');
 }
 
-// --- 4. PROFILE MANAGEMENT ---
+
 
 function openProfile(e) {
   e.preventDefault();
   document.getElementById('userMenu').classList.add('hidden');
   
-  // Input nama
+  
   const nameInput = document.getElementById('editNama');
   if (nameInput) nameInput.value = currentUser.nama;
 
-  // Input password (kosong tiap buka)
+  
   const passInput = document.getElementById('editPassword');
   if (passInput) passInput.value = '';
 
-  // Email (readonly)
+  
   const emailInput = document.getElementById('editEmail');
   if (emailInput) emailInput.textContent = currentUser.email || 'user@example.com';
 
-  // Username
+  
   const usernameDisplay = document.getElementById('profileUsernameDisplay');
   if (usernameDisplay) usernameDisplay.textContent = currentUser.username || 'user';
 
-  // Avatar di atas modal
+  
   const avatarDisplay = document.getElementById('profileAvatarDisplay');
+  const cameraIcon = document.getElementById('profilePhotoPreview');
+  
+  
+  if (avatarDisplay && avatarDisplay.parentElement) {
+    const container = avatarDisplay.parentElement;
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'center';
+    container.style.position = 'relative';
+    container.style.width = 'fit-content'; 
+    container.style.margin = '0 auto';     
+  }
+
+  if (cameraIcon) {
+    cameraIcon.style.position = 'absolute';
+    cameraIcon.style.bottom = '5px';
+    cameraIcon.style.right = '5px';
+    cameraIcon.style.zIndex = '10';
+  }
+
   if (
     currentUser.avatar &&
     currentUser.avatar !== 'default' &&
@@ -1144,7 +1426,8 @@ function openProfile(e) {
       background-size: cover !important;
       background-position: center !important;
       background-color: transparent !important;
-      display: block !important;
+      display: flex !important;
+      margin: 0 auto !important;
     `;
     avatarDisplay.textContent = '';
   } else {
@@ -1158,11 +1441,12 @@ function openProfile(e) {
       color: white !important;
       font-weight: 600 !important;
       font-size: 1.5rem !important;
+      margin: 0 auto !important;
     `;
     avatarDisplay.textContent = initial;
   }
 
-  // Buka modal
+  
   const modal = document.getElementById('profileModal');
   modal.classList.remove('hidden');
   modal.classList.add('active');
@@ -1190,7 +1474,7 @@ async function saveProfile() {
   try {
     let photoBase64 = null;
     
-    // Convert file to base64 if exists
+    
     if(photoFile) {
       photoBase64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1205,12 +1489,12 @@ async function saveProfile() {
       nama: newNama
     };
     
-    // Only include password if provided
+    
     if (newPass && newPass.trim() !== '') {
       payload.password = newPass;
     }
     
-    // Only include avatar if provided
+    
     if (photoBase64) {
       payload.avatar = photoBase64;
     }
@@ -1229,10 +1513,10 @@ async function saveProfile() {
       currentUser = { ...currentUser, ...data.user };
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
       
-      // Clear file input
+      
       if(photoInput) photoInput.value = '';
       
-      // Close modal
+      
       closeProfileModal();
     } else {
       Toast.show(data.error || 'Gagal menyimpan profil', 'error');
@@ -1248,14 +1532,14 @@ async function saveProfile() {
 
 function logout(e) {
   if(e) e.preventDefault();
-  localStorage.clear(); // Hapus semua cache (history chat, unread, user) agar bersih
+  localStorage.clear(); 
   window.location.href = 'login.html';
 }
 
-// --- HELPER: Create Avatar HTML ---
-// Helper: Generate consistent gradient color based on user name
+
+
 function getAvatarGradient(name) {
-  // Use single gradient for all avatars
+  
   return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 }
 
@@ -1265,12 +1549,12 @@ function createAvatarHTML(user, cssClass = 'avatar small', isOnline = false) {
                          (user.avatar.startsWith('data:') || user.avatar.startsWith('http'));
 
   if (hasValidAvatar) {
-    // User has uploaded a profile photo
-    // Menggunakan struktur img dengan fallback untuk menangani error ORB/404
+    
+    
     const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
     const gradient = getAvatarGradient(user.nama || user.name || 'User');
     
-    // FIX: Struktur nested div. Outer div (overflow visible) untuk badge online, Inner div (overflow hidden) untuk crop gambar.
+    
     return `<div class="${cssClass} ${onlineClass}" style="position: relative; padding: 0; flex-shrink: 0; background: transparent !important; overflow: visible !important;">
       <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; position: relative;">
         <div style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: ${gradient}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">${initial}</div>
@@ -1278,40 +1562,40 @@ function createAvatarHTML(user, cssClass = 'avatar small', isOnline = false) {
       </div>
     </div>`;
   } else {
-    // Show gradient avatar with first letter
+    
     const initial = (user.nama || user.name || 'U').charAt(0).toUpperCase();
     const gradient = getAvatarGradient(user.nama || user.name || 'User');
     return `<div class="${cssClass} ${onlineClass}" style="background: ${gradient} !important; display: flex !important; align-items: center !important; justify-content: center !important; color: white !important; font-weight: 600 !important; flex-shrink: 0;">${initial}</div>`;
   }
 }
 
-// --- 5. FRIEND & SEARCH SYSTEM (CORE NEW LOGIC) ---
 
-// A. Load Teman & Request saat start (dengan cache ringan untuk percepat load/ngrok)
-const FRIENDS_CACHE_TTL = 2 * 60 * 1000; // 2 menit
+
+
+const FRIENDS_CACHE_TTL = 2 * 60 * 1000; 
 let friendsFetchPromise = null;
 
 function applyFriendsPayload(payload) {
   if (!payload) return;
   const { friends = [], requests = [] } = payload;
   window.allUsers = friends;
-  window.allRequests = requests; // Simpan requests secara global
+  window.allRequests = requests; 
   
-  updateContactBadge(); // Update badge notifikasi
+  updateContactBadge(); 
 
-  // Jika ContactsModal sedang terbuka, refresh isinya
+  
   if (window.ContactsModal && window.ContactsModal.isOpen) {
-    // FIX: Gunakan renderFullList langsung agar tidak loading ulang (spinner)
+    
     const listContainer = document.getElementById('contactsList');
     if (listContainer) {
       window.ContactsModal.renderFullList(listContainer);
     }
   } else if (requests.length > 0) {
-    // Opsional: Tampilkan notifikasi toast jika ada request baru dan modal tertutup
-    // Toast.show(`Ada ${requests.length} permintaan pertemanan baru!`, 'info');
+    
+    
   }
 
-  // Re-load unread counts before updating display
+  
   loadUnreadCounts();
   updateRecentChatsDisplay();
 }
@@ -1331,7 +1615,7 @@ function updateContactBadge() {
 async function loadFriendsAndRequests(forceRefresh = false) {
   const cacheKey = `friends-cache-${currentUser.id}`;
 
-  // 1) Gunakan cache jika masih fresh untuk kurangi waktu tunggu di koneksi lambat/ngrok
+  
   try {
     const cached = localStorage.getItem(cacheKey);
     if (!forceRefresh && cached) {
@@ -1341,15 +1625,15 @@ async function loadFriendsAndRequests(forceRefresh = false) {
       }
     }
   } catch (err) {
-    // abaikan cache error
+    
   }
 
-  // 2) Hindari fetch paralel yang sama
+  
   if (friendsFetchPromise && !forceRefresh) {
     return friendsFetchPromise;
   }
 
-  // 3) Fetch terbaru di background, lalu update UI + cache
+  
   friendsFetchPromise = (async () => {
     try {
       const res = await fetch(`${API_URL}/friends/list/${currentUser.id}`);
@@ -1360,7 +1644,7 @@ async function loadFriendsAndRequests(forceRefresh = false) {
         try {
           localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: { friends: data.friends, requests: data.requests } }));
         } catch (err) {
-          // abaikan write error
+          
         }
       }
     } catch (err) {
@@ -1373,14 +1657,14 @@ async function loadFriendsAndRequests(forceRefresh = false) {
   return friendsFetchPromise;
 }
 
-// Sidebar resizer (desktop)
+
 function setupSidebarResizer() {
   const sidebar = document.getElementById('sidebar');
   const resizer = document.getElementById('sidebarResizer');
   if (!sidebar || !resizer) return;
 
   const MIN = 300;
-  const MAX = window.innerWidth * 0.8; // Izinkan resize hingga 80% layar
+  const MAX = window.innerWidth * 0.8; 
   let startX = 0;
   let startWidth = 0;
   let dragging = false;
@@ -1411,9 +1695,9 @@ function setupSidebarResizer() {
   });
 }
 
-// B. Fungsi Search dengan Debounce
+
 function searchUsers(query) {
-  // Jika search kosong, kembali tampilkan daftar teman saya
+  
   if (!query) {
     if (currentTab === 'chats') {
       updateRecentChatsDisplay();
@@ -1431,10 +1715,10 @@ function searchUsers(query) {
   
   searchTimeout = setTimeout(async () => {
     try {
-      // Tentukan list mana yang akan di-update
+      
       const listId = currentTab === 'chats' ? 'recentChatsList' : 
                      currentTab === 'groups' ? 'groupsList' : 
-                     'recentChatsList'; // Default ke chats jika tab tidak valid
+                     'recentChatsList'; 
       const list = document.getElementById(listId);
       
       if (list) {
@@ -1446,7 +1730,7 @@ function searchUsers(query) {
 
       if (data.success) {
         if (currentTab === 'chats' || currentTab === 'groups') {
-          // Filter results to show in chats/groups tab
+          
           displaySearchResultsInTab(data.users, currentTab);
         }
       }
@@ -1456,7 +1740,7 @@ function searchUsers(query) {
   }, 300);
 }
 
-// Helper untuk menampilkan search results di tab chats/groups
+
 function displaySearchResultsInTab(users, tab) {
   const listId = tab === 'chats' ? 'recentChatsList' : 'groupsList';
   const list = document.getElementById(listId);
@@ -1475,23 +1759,23 @@ function displaySearchResultsInTab(users, tab) {
     div.className = 'list-item chat-item';
     div.id = `search-user-${user.username}`;
 
-    // Check if user is online
+    
     const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
     const onlineClass = isOnline ? 'online' : '';
 
-    // Get last message untuk user ini (hanya untuk teman)
+    
     let lastMessageText = '';
     let lastMessageTime = '';
     if (user.isFriend) {
-      const lastMsg = getLastMessageForUser(user.username);
+      const lastMsg = getLastMessageForUser(user._id);
       lastMessageText = lastMsg ? lastMsg.message : 'Tap to start chatting';
       lastMessageTime = lastMsg ? formatMessageTime(lastMsg.timestamp) : '';
     }
 
-    // Logic Tampilan: Jika Teman -> Bisa Chat. Jika Belum -> Tombol Add.
+    
     let actionButton = '';
     if (user.isFriend) {
-        // Tampilkan action button kosong untuk space consistency
+        
         actionButton = ``;
     } else if (user.isPending) {
         actionButton = `<button class="icon-btn search-user-pending">Pending ⏳</button>`;
@@ -1512,7 +1796,7 @@ function displaySearchResultsInTab(users, tab) {
       ${actionButton}
     `;
     
-    // Add click handler ke div utama (hanya jika sudah teman)
+    
     if (user.isFriend) {
       div.onclick = () => selectUser(user);
     }
@@ -1523,9 +1807,9 @@ function displaySearchResultsInTab(users, tab) {
   if(typeof feather !== 'undefined') feather.replace();
 }
 
-// Di dalam file app.js
+
 async function sendFriendRequest(e, targetId) {
-  e.stopPropagation(); // Mencegah chat terbuka saat klik tombol add
+  e.stopPropagation(); 
   
   const btn = e.currentTarget;
   const originalContent = btn.innerHTML;
@@ -1550,7 +1834,7 @@ async function sendFriendRequest(e, targetId) {
       btn.style.cursor = "default";
       btn.classList.add('disabled');
       
-      // Update UI untuk menunjukkan status pending
+      
       const userItem = document.querySelector(`#search-user-${data.targetUsername}`);
       if (userItem) {
         const btnContainer = userItem.querySelector('button');
@@ -1573,16 +1857,16 @@ async function sendFriendRequest(e, targetId) {
   }
 }
 
-// F. Respon Request (Terima/Tolak)
+
 async function respondFriend(requesterId, action) {
     const endpoint = action === 'accept' ? '/friends/accept' : '/friends/reject';
     
-    // Simpan state lama untuk rollback jika error
+    
     const prevRequests = window.allRequests ? [...window.allRequests] : [];
     const prevFriends = window.allUsers ? [...window.allUsers] : [];
 
-    // 0. INSTANT VISUAL FEEDBACK (Fallback)
-    // Sembunyikan elemen HTML secara langsung agar terasa instan
+    
+    
     try {
         if (window.event && window.event.target) {
             const btn = window.event.target.closest('.contact-action-btn');
@@ -1591,14 +1875,14 @@ async function respondFriend(requesterId, action) {
                 if (item) item.style.display = 'none';
             }
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) {  }
 
     try {
-      // 1. Optimistic Update: Update UI duluan sebelum server merespon
+      
       let newRequests = [...prevRequests];
       let newFriends = [...prevFriends];
       
-      // FIX: Pencarian ID yang lebih aman (handle string/object)
+      
       const reqIndex = newRequests.findIndex(req => {
           const fromId = req.from && (req.from._id || req.from);
           return fromId && fromId.toString() === requesterId.toString();
@@ -1606,19 +1890,19 @@ async function respondFriend(requesterId, action) {
 
       if (reqIndex !== -1) {
           const request = newRequests[reqIndex];
-          newRequests.splice(reqIndex, 1); // Hapus dari list request
+          newRequests.splice(reqIndex, 1); 
           
           if (action === 'accept') {
-              // Tambahkan ke list teman secara instan
+              
               const friendData = request.from;
               const newFriend = { ...friendData, isFriend: true, isPending: false };
-              // Cek duplikasi ID sebelum push
+              
               if (!newFriends.find(u => u._id.toString() === newFriend._id.toString())) {
                   newFriends.push(newFriend);
               }
           }
       }
-      // Terapkan perubahan ke UI
+      
       applyFriendsPayload({ friends: newFriends, requests: newRequests });
 
       const res = await fetch(`${API_URL}${endpoint}`, {
@@ -1629,29 +1913,29 @@ async function respondFriend(requesterId, action) {
   
       const data = await res.json();
       if (data.success) {
-        // Toast dihapus sesuai permintaan
-        // FIX: Beri jeda 500ms sebelum sync server agar DB pasti sudah update
+        
+        
         setTimeout(() => loadFriendsAndRequests(true), 500);
       } else {
         throw new Error(data.error);
       }
     } catch (err) {
-      // Rollback ke state sebelumnya jika error
+      
       applyFriendsPayload({ friends: prevFriends, requests: prevRequests });
       Toast.show('Gagal memproses permintaan', 'error');
     }
   }
 
-// Expose function to window agar bisa dipanggil dari onclick HTML
+
 window.respondFriend = respondFriend;
 
-// --- 6. CHAT LOGIC ---
+
 
 function selectUser(user) {
   selectedUser = user;
   selectedGroup = null;
   
-  // FIX: Tutup modal status jika sedang terbuka agar chat langsung terlihat
+  
   if (document.getElementById('viewStatusModal') && !document.getElementById('viewStatusModal').classList.contains('hidden')) {
     closeStatusViewer();
   }
@@ -1659,10 +1943,10 @@ function selectUser(user) {
     closeCreateStatusModal();
   }
 
-  // Clear unread count for this user
+  
   clearUnread(user.username);
 
-  // Animasi Sidebar Desktop: Kecilkan saat chat dibuka
+  
   if (window.innerWidth > 768) {
     const sidebar = document.getElementById('sidebar');
     if (sidebar) sidebar.style.width = '380px';
@@ -1671,7 +1955,7 @@ function selectUser(user) {
   const isMobile = window.innerWidth <= 768;
   
   if (isMobile) {
-    // Di mobile, sembunyikan sidebar dan tampilkan chat area
+    
     document.getElementById('sidebar').classList.add('hidden-mobile');
     document.getElementById('chatArea').classList.add('active');
   }
@@ -1681,7 +1965,7 @@ function selectUser(user) {
 
   document.getElementById('chatName').textContent = user.nama;
   
-  // Set avatar with image if available, otherwise gradient avatar
+  
   const chatAvatarEl = document.getElementById('chatAvatar');
   const hasValidAvatar = user.avatar && 
                          user.avatar !== 'default' && 
@@ -1714,7 +1998,7 @@ function selectUser(user) {
 
   updateChatStatusHeader();
 
-  // Highlight active items
+  
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
@@ -1725,9 +2009,15 @@ function selectUser(user) {
   const activeChatItem = document.getElementById(`chat-item-${user.username}`);
   if (activeChatItem) activeChatItem.classList.add('active');
 
-  // Toggle menu items
+  
   document.getElementById('menuOpenProfile')?.style.setProperty('display', 'flex', 'important');
   document.getElementById('menuGroupSettings')?.style.setProperty('display', 'none', 'important');
+
+  
+  const chatInfoEl = document.querySelector('#chatRoom .chat-info');
+  if (chatInfoEl) {
+    chatInfoEl.onclick = () => showUserProfilePopup(user);
+  }
 
   loadMessages(user.username);
 }
@@ -1736,7 +2026,7 @@ function closeChat() {
   selectedUser = null;
   selectedGroup = null;
   
-  // Animasi Sidebar Desktop: Lebarkan (50%) saat chat ditutup
+  
   if (window.innerWidth > 768) {
     const sidebar = document.getElementById('sidebar');
     if (sidebar) sidebar.style.width = '50%';
@@ -1745,7 +2035,7 @@ function closeChat() {
   const isMobile = window.innerWidth <= 768;
   
   if (isMobile) {
-    // Di mobile, tampilkan kembali sidebar dan sembunyikan chat area
+    
     document.getElementById('sidebar').classList.remove('hidden-mobile');
     document.getElementById('chatArea').classList.remove('active');
   }
@@ -1753,7 +2043,7 @@ function closeChat() {
   document.getElementById('welcomeScreen').classList.remove('hidden');
   document.getElementById('chatRoom').classList.add('hidden');
   
-  // Clear selection highlights
+  
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
@@ -1771,11 +2061,11 @@ async function loadMessages(otherUser) {
     if (data.messages.length === 0) {
       container.innerHTML = '<div class="empty-chat-message">Belum ada pesan. Sapa dia! 👋</div>';
       
-      // FIX: Hapus cache lokal jika server kosong (Sinkronisasi setelah reset DB)
-      const cacheKey = `lastMsg-${currentUser.username}-${otherUser}`;
+      
+      const cacheKey = `lastMsg-${currentUser.id}-${selectedUser._id}`;
       if (localStorage.getItem(cacheKey)) {
         localStorage.removeItem(cacheKey);
-        updateRecentChatsDisplay(); // Refresh sidebar agar pesan hantu hilang
+        updateRecentChatsDisplay(); 
       }
     } else {
       data.messages.forEach(addMessageToUI);
@@ -1794,7 +2084,7 @@ async function loadMessages(otherUser) {
       sendPrivateMessage();
     }
     
-    // Update button visibility after sending
+    
     const messageInput = document.getElementById('messageInput');
     if (messageInput) {
       updateSendButtonVisibility();
@@ -1824,7 +2114,7 @@ function sendPrivateMessage() {
       return;
     }
     
-    // Kirim file langsung tanpa kompresi
+    
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
@@ -1840,11 +2130,11 @@ function sendPrivateMessage() {
       }
       socket.emit('send_message', payload);
 
-      // Optimistic UI update to show reply immediately
+      
       addMessageToUI({ ...payload, timestamp: new Date().toISOString(), _id: tempId });
 
       const displayMsg = msg || `📎 ${file.name}`;
-      saveLastMessage(selectedUser.username, displayMsg, new Date(), tempId);
+      saveLastMessage(selectedUser._id, displayMsg, new Date(), tempId);
       input.value = '';
       clearFile();
       if (currentReplyContext) cancelReply();
@@ -1861,19 +2151,19 @@ function sendPrivateMessage() {
     }
     socket.emit('send_message', payload);
 
-    // Optimistic UI update to show reply immediately
+    
     addMessageToUI({ ...payload, timestamp: new Date().toISOString(), _id: tempId });
 
-    // Save last message
-    saveLastMessage(selectedUser.username, msg, new Date(), tempId);
+    
+    saveLastMessage(selectedUser._id, msg, new Date(), tempId);
     input.value = '';
-    // Update button visibility after clearing input
+    
     if (currentReplyContext) cancelReply();
     updateSendButtonVisibility();
   }
 }
 
-// Function to compress image
+
 function compressImage(file, callback, maxWidth = 800, maxHeight = 800) {
   const reader = new FileReader();
   reader.readAsDataURL(file);
@@ -1902,15 +2192,15 @@ function compressImage(file, callback, maxWidth = 800, maxHeight = 800) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
       
-      // Compress dengan quality lebih rendah - mulai dari 0.4 (40%)
+      
       let compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
       
-      // Jika masih terlalu besar (>300KB), compress lagi dengan quality 0.2
+      
       if (compressedBase64.length > 300000) {
         compressedBase64 = canvas.toDataURL('image/jpeg', 0.2);
       }
       
-      // Jika masih terlalu besar (>200KB), compress dengan quality 0.1
+      
       if (compressedBase64.length > 200000) {
         compressedBase64 = canvas.toDataURL('image/jpeg', 0.1);
       }
@@ -1935,6 +2225,10 @@ function addMessageToUI(msg) {
     div.innerHTML = deletedContent;
     container.appendChild(div);
     scrollToBottom();
+
+    if (selectedUser) {
+      saveLastMessage(selectedUser._id, 'Pesan ini telah dihapus', msg.timestamp, msg._id);
+    }
     return;
   }
 
@@ -1942,7 +2236,7 @@ function addMessageToUI(msg) {
     container.innerHTML = '';
   }
 
-  // Fallback for missing message ID from server
+  
   if (!msg._id) {
     msg._id = `${msg.from}-${msg.timestamp}`;
   }
@@ -1952,23 +2246,23 @@ function addMessageToUI(msg) {
   div.id = `message-${msg._id}`;
   div.dataset.messageId = msg._id;
   
-  // Set sender name for reply context. Use display name for consistency.
+  
   let senderDisplayName = '';
   if (isMe) {
     senderDisplayName = currentUser.nama;
   } else if (selectedUser) {
     senderDisplayName = selectedUser.nama;
   } else {
-    senderDisplayName = msg.from; // Fallback to username
+    senderDisplayName = msg.from; 
   }
   div.dataset.senderName = senderDisplayName;
   
-  // Jika ada image, jangan kasih background/padding
+  
   const hasImage = msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('image/');
   const fileOnly = msg.file && msg.file.data && !msg.message && !hasImage;
   
   if (hasImage && !msg.message) {
-    // Hanya gambar tanpa text
+    
     div.className = `message-img ${isMe ? 'outgoing' : 'incoming'}`;
   } else {
     div.className = `message ${isMe ? 'outgoing' : 'incoming'}${fileOnly ? ' file-only' : ''}`;
@@ -1976,10 +2270,10 @@ function addMessageToUI(msg) {
 
   let content = '';
 
-  // RENDER REPLY BLOCK
+  
   if (msg.replyTo) {
     const isStatus = msg.replyTo.messageId && msg.replyTo.messageId.startsWith('status-');
-    // Jika status reply, arahkan ke viewStatus. Jika chat reply biasa, scroll ke pesan.
+    
     const clickAction = isStatus && msg.replyTo.userId 
       ? `viewStatus('${msg.replyTo.userId}', '${msg.replyTo.messageId.replace('status-', '')}')` 
       : `scrollToMessage(event, '${msg.replyTo.messageId}')`;
@@ -2016,7 +2310,7 @@ function addMessageToUI(msg) {
         </div>
       `;
     } else if (msg.file.type && msg.file.type.startsWith('image/')) {
-      content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
+      content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview(this.src)" style="cursor: pointer;">`;
     } else {
       content += `<div class="file-bubble">
                     <a href="${msg.file.data}" download="${msg.file.name || 'file'}" class="file-bubble-link">
@@ -2029,15 +2323,18 @@ function addMessageToUI(msg) {
                   </div>`;
     }
   }
-  if (msg.message) content += `<p style="margin:0;">${escapeHtml(msg.message)}</p>`;
+
+  if (msg.message) {
+    content += `<p style="margin:0;">${escapeHtml(msg.message)}</p>`;
+  }
   content += `<span class="msg-time">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
 
   div.innerHTML = content;
   container.appendChild(div);
   
-  // Initialize waveform for audio messages
+  
   if (msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('audio/')) {
-    // Find the audioId in the newly added content
+    
     const audioElements = div.querySelectorAll('[id^="audio-"]');
     if (audioElements.length > 0) {
       const audioId = audioElements[0].id.replace('audio-element-', '');
@@ -2048,12 +2345,12 @@ function addMessageToUI(msg) {
   if(typeof feather !== 'undefined') feather.replace();
   scrollToBottom();
 
-  // Save last message for display in contacts
-  if (selectedUser && !isMe) {
+  
+  if (selectedUser) {
     const messageText = msg.message 
       || (msg.file && msg.file.type && msg.file.type.startsWith('audio/') ? '🎤 Voice note' : '')
       || (msg.file && msg.file.name ? `📎 ${msg.file.name}` : '');
-    saveLastMessage(selectedUser.username, messageText, msg.timestamp, msg._id);
+    saveLastMessage(selectedUser._id, messageText, msg.timestamp, msg._id);
   }
 }
 
@@ -2092,7 +2389,7 @@ if(fileInput){
           if (typeof feather !== 'undefined') feather.replace();
         }
         
-        // Update send button visibility when file is selected
+        
         updateSendButtonVisibility();
       }
     });
@@ -2112,17 +2409,17 @@ function clearFile() {
     if (metaEl) metaEl.textContent = '';
   }
   
-  // Update send button visibility when file is cleared
+  
   updateSendButtonVisibility();
 }
 
-// --- CHAT HISTORY FUNCTIONS ---
+
 
 function addToChatHistory(id, name, message, isGroup, messageId, timestamp) {
-  // Truncate long messages
+  
   const truncated = message.length > 50 ? message.substring(0, 50) + '...' : message;
   
-  // Initialize unread count if not exists
+  
   if (!chatHistory[id]) {
     chatHistory[id] = {
       name: name,
@@ -2136,24 +2433,28 @@ function addToChatHistory(id, name, message, isGroup, messageId, timestamp) {
     chatHistory[id].timestamp = new Date(timestamp);
   }
   
-  // Save to localStorage untuk persistent storage
+  
   if (isGroup) {
     saveLastMessageGroup(id, truncated, timestamp || new Date(), messageId);
   } else {
-    saveLastMessage(id, truncated, timestamp || new Date(), messageId);
+    
+    const user = window.allUsers ? window.allUsers.find(u => u.username === id) : null;
+    const targetId = user ? user._id : id; 
+    saveLastMessage(targetId, truncated, timestamp || new Date(), messageId);
   }
   
-  // Update recent chats display
+  
   updateRecentChatsDisplay();
 }
 
 function incrementUnread(id) {
-  // Increment unread counter
+  
   if (chatHistory[id]) {
     chatHistory[id].unreadCount = (chatHistory[id].unreadCount || 0) + 1;
   }
-  // Save to localStorage
+  
   saveUnreadCount(id, (chatHistory[id]?.unreadCount || 0));
+  updateTotalUnreadBadge(); 
   updateRecentChatsDisplay();
 }
 
@@ -2161,12 +2462,13 @@ function clearUnread(id) {
   if (chatHistory[id]) {
     chatHistory[id].unreadCount = 0;
   }
-  // Save to localStorage
+  
   saveUnreadCount(id, 0);
+  updateTotalUnreadBadge(); 
   updateRecentChatsDisplay();
 }
 
-// Save unread count to localStorage
+
 function saveUnreadCount(id, count) {
   try {
     const unreadMap = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
@@ -2177,13 +2479,13 @@ function saveUnreadCount(id, count) {
   }
 }
 
-// Load unread counts from localStorage
+
 function loadUnreadCounts() {
   try {
     const unreadMap = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
-    // Apply unread counts to chatHistory
+    
     Object.keys(unreadMap).forEach(id => {
-      // Initialize chatHistory entry if not exists
+      
       if (!chatHistory[id]) {
         chatHistory[id] = {
           unreadCount: unreadMap[id] || 0
@@ -2192,33 +2494,58 @@ function loadUnreadCounts() {
         chatHistory[id].unreadCount = unreadMap[id];
       }
     });
+    updateTotalUnreadBadge(); 
     console.log('Loaded unread counts from localStorage:', unreadMap);
   } catch (err) {
     console.error('Error loading unread counts:', err);
   }
 }
 
-// Build recent chats from localStorage
+
+function updateTotalUnreadBadge() {
+  let totalUnread = 0;
+  if (chatHistory) {
+    Object.values(chatHistory).forEach(chat => {
+      if (chat.unreadCount) totalUnread += chat.unreadCount;
+    });
+  }
+
+  const chatsTabBtn = document.querySelector('.tab-btn[data-tab="chats"]');
+  if (!chatsTabBtn) return;
+
+  
+  const existingBadge = chatsTabBtn.querySelector('.tab-badge');
+  if (existingBadge) existingBadge.remove();
+
+  if (totalUnread > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'tab-badge';
+    badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+    chatsTabBtn.appendChild(badge);
+  }
+}
+
+
 function buildRecentChatsFromStorage() {
   recentChats = [];
   
-  // Load all chat histories dari localStorage
+  
   if (window.allUsers) {
     window.allUsers.forEach(user => {
-      const lastMsg = getLastMessageForUser(user.username);
-      // Selalu tampilkan semua teman, bahkan yang belum ada chat
+      const lastMsg = getLastMessageForUser(user._id);
+      
       recentChats.push({
         id: user.username,
         name: user.nama,
         lastMessage: lastMsg ? lastMsg.message : 'Ketuk untuk memulai chat',
-        timestamp: lastMsg ? new Date(lastMsg.timestamp) : new Date(0), // Timestamp 0 untuk sorting
+        timestamp: lastMsg ? new Date(lastMsg.timestamp) : new Date(0), 
         isGroup: false,
         user: user
       });
     });
   }
   
-  // Load group histories
+  
   if (window.allGroups) {
     window.allGroups.forEach(group => {
       const lastMsg = getLastMessageForGroup(group._id);
@@ -2235,14 +2562,14 @@ function buildRecentChatsFromStorage() {
     });
   }
   
-  // Sort by timestamp (most recent first)
+  
   recentChats.sort((a, b) => b.timestamp - a.timestamp);
 }
 
-// Get last message untuk group
+
 function getLastMessageForGroup(groupId) {
   try {
-    const storage = localStorage.getItem(`lastMsg-${currentUser.username}-group-${groupId}`);
+    const storage = localStorage.getItem(`lastMsg-${currentUser.id}-group-${groupId}`);
     if (storage) return JSON.parse(storage);
   } catch (err) {
 
@@ -2250,11 +2577,11 @@ function getLastMessageForGroup(groupId) {
   return null;
 }
 
-// Save last message untuk group
+
 function saveLastMessageGroup(groupId, message, timestamp, messageId) {
   try {
     const lastMsg = { message, timestamp, id: messageId };
-    localStorage.setItem(`lastMsg-${currentUser.username}-group-${groupId}`, JSON.stringify(lastMsg));
+    localStorage.setItem(`lastMsg-${currentUser.id}-group-${groupId}`, JSON.stringify(lastMsg));
   } catch (err) {
 
   }
@@ -2264,13 +2591,18 @@ function updateRecentChatsDisplay() {
   const list = document.getElementById('recentChatsList');
   if (!list) return;
   
-  // Build recent chats dari storage
+  
   buildRecentChatsFromStorage();
   
   list.innerHTML = '';
   
   if (recentChats.length === 0) {
-    list.innerHTML = '<div class="empty-chat-message-start">Mulai chat...</div>';
+    list.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary);">
+        <i data-feather="message-square" style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.5;"></i>
+        <p>Belum ada chat. Mulai percakapan!</p>
+      </div>`;
+    if(typeof feather !== 'undefined') feather.replace();
     return;
   }
   
@@ -2284,37 +2616,37 @@ function updateRecentChatsDisplay() {
     
     if (isActive) div.classList.add('active');
     
-    // Jangan tampilkan waktu jika tidak ada history chat
+    
     const timeText = chat.timestamp.getTime() > 0 ? formatMessageTime(chat.timestamp) : '';
     
-    // Check if user is online (only for non-group chats)
+    
     const isOnline = !chat.isGroup && window.userStatusMap && window.userStatusMap[chat.id] === 'online';
     
-    // Use createAvatarHTML for consistent avatar display with photos/initials
+    
     let avatarHTML;
     let avatarContent;
     if (chat.isGroup) {
-      // For groups, show gradient background with first letter
+      
       avatarContent = `<div class="avatar small ${isOnline ? 'online' : ''} group-avatar">${chat.name.charAt(0).toUpperCase()}</div>`;
     } else {
-      // For users, use createAvatarHTML to show photo or initial
+      
       if (chat.user) {
         avatarContent = createAvatarHTML(chat.user, 'avatar small', isOnline);
       } else {
-        // Fallback if user data not available
+        
         avatarContent = `<div class="avatar small ${isOnline ? 'online' : ''}">${chat.name.charAt(0).toUpperCase()}</div>`;
       }
     }
     
-    // Wrapper for avatar to standardize size and add status ring if needed
+    
     if (!chat.isGroup && chat.user && currentStatuses && currentStatuses[chat.user._id]) {
-      // User with status: wrap with ring container
+      
       avatarHTML = `<div class="avatar-container-ring" onclick="event.stopPropagation(); viewStatus('${chat.user._id}')">
           <div class="status-ring"></div>
           ${avatarContent}
       </div>`;
     } else {
-      // Group or user without status: wrap with a standard size container
+      
       avatarHTML = `<div class="chat-avatar-wrapper">${avatarContent}</div>`;
     }
 
@@ -2325,7 +2657,7 @@ function updateRecentChatsDisplay() {
       ${avatarHTML}
       <div class="chat-item-info">
         <h4>${chat.name}</h4>
-        <small class="last-message-small">${chat.lastMessage}</small>
+        <small class="last-message-small" ${chat.lastMessage === 'Pesan ini telah dihapus' ? 'style="font-style: italic; opacity: 0.7;"' : ''}>${chat.lastMessage}</small>
       </div>
       <div class="last-message-time">
         <span>${timeText}</span>
@@ -2333,7 +2665,7 @@ function updateRecentChatsDisplay() {
       </div>
     `;
     
-    // Ensure online status is properly applied to avatar
+    
     if (!chat.isGroup && isOnline) {
       const avatar = div.querySelector('.avatar.small');
       if (avatar && !avatar.classList.contains('online')) {
@@ -2356,10 +2688,10 @@ function updateRecentChatsDisplay() {
   if(typeof feather !== 'undefined') feather.replace();
 }
 
-// --- 7. SOCKET LISTENERS ---
+
 
 socket.on('message_sent', (msg) => {
-  // Update the temporary message ID with the permanent one from the DB
+  
   if (msg.tempId) {
     const tempElement = document.getElementById(`message-${msg.tempId}`);
     if (tempElement) {
@@ -2368,13 +2700,13 @@ socket.on('message_sent', (msg) => {
     }
   }
 
-  // Track chat history upon confirmation from server
+  
   const summaryText = msg.message || (msg.file && msg.file.name ? `📎 ${msg.file.name}` : 'Pesan media');
   if (msg.groupId) {
-    // It's a group message confirmation
+    
     addToChatHistory(msg.groupId, selectedGroup?.nama || 'Group', summaryText, true, msg._id, msg.timestamp);
   } else {
-    // It's a private message confirmation
+    
     addToChatHistory(msg.to, selectedUser?.nama || msg.to, summaryText, false, msg._id, msg.timestamp);
   }
 });
@@ -2384,37 +2716,37 @@ socket.on('message_error', (payload) => {
   Toast.show(message, 'error');
 });
 
-// Request online users list when socket connects
+
 socket.on('connect', () => {
   socket.emit('get_online_users');
 });
 
-// Receive online users list from server
+
 socket.on('online_users_list', (users) => {
   window.userStatusMap = window.userStatusMap || {};
   
-  // First, mark all users as offline
+  
   if (window.allUsers) {
     window.allUsers.forEach(user => {
       window.userStatusMap[user.username] = 'offline';
     });
   }
   
-  // Then mark received online users as online
+  
   users.forEach(username => {
     window.userStatusMap[username] = 'online';
   });
   
-  // Update DOM for all users (both in chat list and contacts)
+  
   users.forEach(username => {
-    // Update chat item avatar
+    
     const chatItem = document.getElementById(`chat-item-${username}`);
     if (chatItem) {
       const avatar = chatItem.querySelector('.avatar.small');
       if (avatar) avatar.classList.add('online');
     }
     
-    // Update user item avatar (in contacts tab)
+    
     const userItem = document.getElementById(`user-item-${username}`);
     if (userItem) {
       const avatar = userItem.querySelector('.avatar.small');
@@ -2422,11 +2754,11 @@ socket.on('online_users_list', (users) => {
     }
   });
   
-  // Mark all others as offline in DOM
+  
   if (window.allUsers) {
     window.allUsers.forEach(user => {
       if (!users.includes(user.username)) {
-        // Remove online class for offline users
+        
         const chatItem = document.getElementById(`chat-item-${user.username}`);
         if (chatItem) {
           const avatar = chatItem.querySelector('.avatar.small');
@@ -2442,10 +2774,10 @@ socket.on('online_users_list', (users) => {
     });
   }
   
-  // Re-render recent chats to show updated status
+  
   updateRecentChatsDisplay();
   
-  // Also update contacts modal if it's rendered
+  
   if (window.ContactsModal && window.ContactsModal.currentUsers) {
     window.ContactsModal.renderUserList(window.ContactsModal.currentUsers);
   }
@@ -2455,7 +2787,7 @@ socket.on('user_status_change', (data) => {
   const statusEl = document.getElementById(`status-${data.username}`);
   if (statusEl) statusEl.className = `user-status ${data.status}`;
 
-  // Update global status map
+  
   window.userStatusMap = window.userStatusMap || {};
   window.userStatusMap[data.username] = data.status;
 
@@ -2466,8 +2798,8 @@ socket.on('user_status_change', (data) => {
     updateChatStatusHeader();
   }
 
-  // Update avatar status indicator di list items
-  // Update di tab CHATS
+  
+  
   const chatItem = document.getElementById(`chat-item-${data.username}`);
   if (chatItem) {
     const avatar = chatItem.querySelector('.avatar.small');
@@ -2480,7 +2812,7 @@ socket.on('user_status_change', (data) => {
     }
   }
 
-  // Update di tab CONTACTS
+  
   const userItem = document.getElementById(`user-item-${data.username}`);
   if (userItem) {
     const avatar = userItem.querySelector('.avatar.small');
@@ -2493,43 +2825,44 @@ socket.on('user_status_change', (data) => {
     }
   }
   
-  // Also update contacts modal if it's rendered
+  
   if (window.ContactsModal && window.ContactsModal.currentUsers) {
     window.ContactsModal.renderUserList(window.ContactsModal.currentUsers);
   }
 
-  // Re-render recent chats jika ada perubahan status
-  // Ini memastikan status online selalu muncul dengan benar
+  
+  
   setTimeout(() => {
     updateRecentChatsDisplay();
   }, 50);
 });
 
-// Notifikasi Request Pertemanan Realtime
+
 socket.on('new_friend_request', (data) => {
-    // Toast dihapus, hanya update badge via reload
-    loadFriendsAndRequests(); // Refresh list otomatis
+    
+    
+    loadFriendsAndRequests(true); 
 });
 
-// Notifikasi saat teman menerima request
+
 socket.on('friend_request_accepted', (data) => {
   Toast.show(`${data.user.nama} menerima permintaan pertemanan!`, 'success');
-  loadFriendsAndRequests(true); // Force refresh friends list
+  loadFriendsAndRequests(true); 
 });
 
-// Typing indicator
+
 socket.on('user_typing', (data) => {
   if (selectedUser && selectedUser.username === data.from) {
     document.getElementById('chatStatus').innerHTML = '<em class="typing-indicator">sedang mengetik...</em>';
     
-    // Clear after 3 seconds
+    
     if (window.typingTimeout) clearTimeout(window.typingTimeout);
     window.typingTimeout = setTimeout(() => {
       updateChatStatusHeader();
     }, 3000);
   }
   
-  // Update chat list item to show typing
+  
   const chatItem = document.getElementById(`chat-item-${data.from}`);
   if (chatItem) {
     const msg = chatItem.querySelector('small');
@@ -2541,7 +2874,7 @@ socket.on('user_typing', (data) => {
 });
 
 socket.on('stop_typing', (data) => {
-  // Restore last message in chat item
+  
   if (chatHistory[data.from]) {
     const chatItem = document.getElementById(`chat-item-${data.from}`);
     if (chatItem) {
@@ -2556,23 +2889,66 @@ socket.on('stop_typing', (data) => {
   }
 });
 
-// --- 8. WEBRTC / CALL LOGIC ---
 
-// Initiate call dari history
+socket.on('status_deleted', (data) => {
+  const { statusId, userId } = data;
+
+  
+  if (currentStatuses && currentStatuses[userId]) {
+    currentStatuses[userId].statuses = currentStatuses[userId].statuses.filter(s => s._id !== statusId);
+    
+    if (currentStatuses[userId].statuses.length === 0) {
+      delete currentStatuses[userId];
+    }
+  }
+
+  
+  displayStatusUpdates();
+
+  
+  const viewerModal = document.getElementById('viewStatusModal');
+  if (viewerModal && !viewerModal.classList.contains('hidden')) {
+    if (currentViewedUserId === userId) {
+      
+      const deletedIndex = statusQueue.findIndex(s => s._id === statusId);
+      
+      if (deletedIndex !== -1) {
+        
+        statusQueue.splice(deletedIndex, 1);
+        
+        if (statusQueue.length === 0) {
+          
+          closeStatusViewer();
+          Toast.show('Status telah dihapus', 'info');
+        } else {
+          
+          if (currentStatusIndex >= statusQueue.length) {
+            currentStatusIndex = Math.max(0, statusQueue.length - 1);
+          }
+          renderStatus();
+        }
+      }
+    }
+  }
+});
+
+
+
+
 async function initiateCallFromHistory(event, username, callType, name = '') {
   event.stopPropagation();
   
-  // Cari user dari allUsers berdasarkan username
+  
   let user = window.allUsers ? window.allUsers.find(u => u.username === username) : null;
   
   if (!user) {
-    // Fallback: Jika user tidak ada di list teman (allUsers), buat objek sementara
+    
     if (name) {
       user = {
         username: username,
         nama: name,
-        avatar: 'default', // Avatar default
-        _id: username // Fallback ID jika diperlukan
+        avatar: 'default', 
+        _id: username 
       };
     } else {
       Toast.show('User tidak ditemukan', 'error');
@@ -2580,10 +2956,10 @@ async function initiateCallFromHistory(event, username, callType, name = '') {
     }
   }
   
-  // Select user terlebih dahulu
+  
   selectUser(user);
   
-  // Tunggu sebentar agar UI update
+  
   setTimeout(() => {
     startCall(callType);
   }, 100);
@@ -2591,7 +2967,7 @@ async function initiateCallFromHistory(event, username, callType, name = '') {
 
 function startCallTimer() {
   callDuration = 0;
-  callStartTime = Date.now(); // Record when the call started
+  callStartTime = Date.now(); 
   if (callTimer) clearInterval(callTimer);
   callTimer = setInterval(() => {
     callDuration++;
@@ -2612,7 +2988,7 @@ function stopCallTimer() {
 async function startCall(type) {
   if (!selectedUser && !selectedGroup) return;
   
-  // Group call belum support, hanya personal call
+  
   if (selectedGroup) {
     Toast.show('Group video call sedang dalam pengembangan', 'info');
     return;
@@ -2623,6 +2999,18 @@ async function startCall(type) {
   const modal = document.getElementById('callModal');
   modal.classList.remove('hidden');
   modal.classList.add('active');
+  
+  
+  if (window.innerWidth > 768) {
+    const chatArea = document.getElementById('chatArea');
+    if (modal.parentNode !== chatArea) {
+      chatArea.appendChild(modal);
+    }
+    modal.classList.add('desktop-embedded');
+    document.getElementById('welcomeScreen').classList.add('hidden');
+    document.getElementById('chatRoom').classList.add('hidden');
+    document.querySelector('.app-layout').classList.add('call-mode');
+  }
 
   document.getElementById('callTargetName').textContent = selectedUser.nama;
   document.getElementById('callStatus').textContent = '';
@@ -2631,7 +3019,7 @@ async function startCall(type) {
 
   document.getElementById('videoContainer').classList.toggle('hidden', !isVideo);
   
-  // Set Avatar
+  
   const avatarContainer = document.getElementById('callAvatarContainer');
   avatarContainer.innerHTML = createAvatarHTML(selectedUser, 'avatar', false);
   avatarContainer.classList.remove('pulse');
@@ -2657,8 +3045,20 @@ socket.on('call_offer', (data) => {
   const modal = document.getElementById('callModal');
   modal.classList.remove('hidden');
   modal.classList.add('active');
+  
+  
+  if (window.innerWidth > 768) {
+    const chatArea = document.getElementById('chatArea');
+    if (modal.parentNode !== chatArea) {
+      chatArea.appendChild(modal);
+    }
+    modal.classList.add('desktop-embedded');
+    document.getElementById('welcomeScreen').classList.add('hidden');
+    document.getElementById('chatRoom').classList.add('hidden');
+    document.querySelector('.app-layout').classList.add('call-mode');
+  }
 
-  // Find caller info
+  
   let caller = window.allUsers ? window.allUsers.find(u => u.username === data.from) : null;
   if (!caller) {
      caller = { username: data.from, nama: data.from, avatar: 'default' };
@@ -2671,7 +3071,7 @@ socket.on('call_offer', (data) => {
   document.getElementById('videoContainer').classList.add('hidden');
   document.querySelector('.call-info-container').classList.remove('hidden');
 
-  // Set Avatar with Pulse
+  
   const avatarContainer = document.getElementById('callAvatarContainer');
   avatarContainer.innerHTML = createAvatarHTML(caller, 'avatar', false);
   const avatarEl = avatarContainer.querySelector('.avatar');
@@ -2681,19 +3081,22 @@ socket.on('call_offer', (data) => {
   window.pendingOffer = data.offer;
   window.callerUsername = data.from;
   
-  // Set timer untuk missed call (30 detik)
+  
   window.missedCallTimer = setTimeout(() => {
     if (window.callerUsername && !window.callAnswered) {
-      // Panggilan tidak dijawab
-      saveCallToHistoryWithStatus(data.from, data.from, data.type, 0, 'missed');
+      
+      saveCallToHistoryWithStatus(data.from, data.from, data.type, 0, 'missed', 'incoming');
       Toast.show('Panggilan tidak terjawab', 'info');
+      
+      
+      socket.emit('end_call', { to: data.from, reason: 'missed' });
       closeCallUI();
     }
   }, 30000);
 });
 
 async function answerCall() {
-  // Clear missed call timer
+  
   if (window.missedCallTimer) clearTimeout(window.missedCallTimer);
   window.callAnswered = true;
   
@@ -2711,7 +3114,7 @@ async function answerCall() {
   await peerConnection.setLocalDescription(answer);
   socket.emit('call_answer', { answer, to: window.callerUsername, from: currentUser.username });
   
-  // Start the call timer when the call is answered
+  
   startCallTimer();
 }
 
@@ -2719,13 +3122,13 @@ function endCall() {
   const target = selectedUser ? selectedUser.username : window.callerUsername;
   const targetName = selectedUser ? selectedUser.nama : window.callerUsername;
   
-  // Save call history with 'completed' status
-  // Save for both outgoing and incoming calls
+  
+  
   if (selectedUser) {
-    // Outgoing call
+    
     saveCallToHistoryWithStatus(target, targetName, isVideo ? 'video' : 'voice', callDuration, 'completed');
   } else if (window.callerUsername) {
-    // Incoming call (when ending from receiver side)
+    
     const callerName = window.callerUsername;
     saveCallToHistoryWithStatus(callerName, callerName, isVideo ? 'video' : 'voice', callDuration, 'completed');
   }
@@ -2737,9 +3140,9 @@ function endCall() {
 function rejectCall() {
   if (window.callerUsername && window.userStatusMap) {
     const callerName = window.callerUsername;
-    saveCallToHistoryWithStatus(window.callerUsername, callerName, isVideo ? 'video' : 'voice', 0, 'rejected');
+    saveCallToHistoryWithStatus(window.callerUsername, callerName, isVideo ? 'video' : 'voice', 0, 'rejected', 'incoming');
   }
-  if (window.callerUsername) socket.emit('end_call', { to: window.callerUsername });
+  if (window.callerUsername) socket.emit('end_call', { to: window.callerUsername, reason: 'rejected' });
   closeCallUI();
 }
 
@@ -2754,27 +3157,93 @@ function closeCallUI() {
     localStream = null;
   }
   const modal = document.getElementById('callModal');
-  modal.classList.add('hidden');
-  modal.classList.remove('active');
+  
+  
+  if (window.innerWidth > 768) {
+    
+    selectedUser = null;
+    selectedGroup = null;
+    document.getElementById('chatRoom').classList.add('hidden');
+    document.getElementById('welcomeScreen').classList.remove('hidden');
+    document.querySelectorAll('.user-item, .chat-item, .group-item').forEach(el => el.classList.remove('active'));
 
-  document.querySelector('.call-info-container').classList.remove('hidden');
-  window.pendingOffer = null;
-  window.callerUsername = null;
-  callStartTime = null; // Reset call start time
-  isVideo = false;
+    
+    
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+      sidebar.style.width = '50%';
+    }
+    document.querySelector('.app-layout').classList.remove('call-mode');
+
+    
+    modal.classList.add('closing');
+
+    
+    setTimeout(() => {
+      modal.classList.remove('closing');
+      modal.classList.add('hidden');
+      modal.classList.remove('active');
+      modal.classList.remove('desktop-embedded');
+      
+      if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
+      
+      
+      document.querySelector('.call-info-container').classList.remove('hidden');
+      window.pendingOffer = null;
+      window.callerUsername = null;
+      callStartTime = null;
+      isVideo = false;
+    }, 500); 
+  } else {
+    
+    modal.classList.add('hidden');
+    modal.classList.remove('active');
+    modal.classList.remove('desktop-embedded');
+    
+    if (modal.parentNode !== document.body) {
+      document.body.appendChild(modal);
+    }
+
+    document.querySelector('.call-info-container').classList.remove('hidden');
+    window.pendingOffer = null;
+    window.callerUsername = null;
+    callStartTime = null;
+    isVideo = false;
+  }
 }
 
-socket.on('call_ended', () => {
+socket.on('call_ended', (data) => {
     Toast.show('Panggilan diakhiri', 'info');
+
     
-    // Save call history for incoming calls when ended by caller
-    if (window.callerUsername && callStartTime) {
-        const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
-        const callerName = window.callerUsername;
-        saveCallToHistoryWithStatus(callerName, callerName, isVideo ? 'video' : 'voice', callDuration, 'completed');
-        displayCallHistory(); // Refresh the call history display
+    if (window.callerUsername) {
+      if (callStartTime) {
+        
+        const duration = Math.floor((Date.now() - callStartTime) / 1000);
+        saveCallToHistoryWithStatus(window.callerUsername, window.callerUsername, isVideo ? 'video' : 'voice', duration, 'completed', 'incoming');
+      } else {
+        
+        saveCallToHistoryWithStatus(window.callerUsername, window.callerUsername, isVideo ? 'video' : 'voice', 0, 'missed', 'incoming');
+      }
+    } 
+    
+    else if (selectedUser) {
+      if (callStartTime) {
+        const duration = Math.floor((Date.now() - callStartTime) / 1000);
+        saveCallToHistoryWithStatus(selectedUser.username, selectedUser.nama, isVideo ? 'video' : 'voice', duration, 'completed', 'outgoing');
+      } else {
+        
+        const reason = data && data.reason ? data.reason : 'missed';
+        const isRejected = reason === 'rejected';
+        const status = isRejected ? 'rejected' : 'missed';
+        
+        saveCallToHistoryWithStatus(selectedUser.username, selectedUser.nama, isVideo ? 'video' : 'voice', 0, status, 'outgoing');
+      }
     }
     
+    displayCallHistory(); 
     closeCallUI();
 });
 
@@ -2825,11 +3294,11 @@ function toggleCamera() {
   document.getElementById('camBtn').style.backgroundColor = track.enabled ? '#475569' : '#ef4444';
 }
 
-// --- 9. GROUP CHAT FUNCTIONS ---
+
 
 let allGroups = [];
 
-// Load groups saat aplikasi dimulai
+
 async function loadGroups() {
   try {
     const res = await fetch(`${API_URL}/groups/${currentUser.id}`);
@@ -2839,7 +3308,7 @@ async function loadGroups() {
       allGroups = data.groups || [];
       displayGroups();
       
-      // Initialize chat history for groups
+      
       allGroups.forEach(group => {
         if (!chatHistory[group._id]) {
           chatHistory[group._id] = {
@@ -2854,17 +3323,16 @@ async function loadGroups() {
       });
       updateRecentChatsDisplay();
       
-      // Request online users list before joining
+      
       socket.emit('get_online_users');
       
-      // Emit join dengan username dan group IDs
-      const groupIds = allGroups.map(g => g._id);
-      socket.emit('join', { username: currentUser.username, groupIds });
+      
+      socket.emit('join', { username: currentUser.username });
     }
   } catch (err) {
 
-    // Fallback: emit join dengan format lama jika error
-    // Request online users list sebelum join
+    
+    
     socket.emit('get_online_users');
     socket.emit('join', currentUser.username);
   }
@@ -2878,7 +3346,7 @@ function displayGroups() {
   
   if (!allGroups || allGroups.length === 0) {
     list.innerHTML = `
-      <div class="no-groups-message">
+      <div class="no-groups-message" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary);">
         <i data-feather="users" style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.5;"></i>
         <span>Belum ada group</span>
       </div>`;
@@ -2886,7 +3354,7 @@ function displayGroups() {
     return;
   }
 
-  // Sort groups by last message timestamp
+  
   const sortedGroups = [...allGroups].sort((a, b) => {
     const lastMsgA = getLastMessageForGroup(a._id);
     const lastMsgB = getLastMessageForGroup(b._id);
@@ -2928,7 +3396,17 @@ async function displayStatusUpdates() {
   const list = document.getElementById('statusList');
   if (!list) return;
 
-  list.innerHTML = '<div class="status-placeholder"><div class="spinner"></div><p>Memuat status...</p></div>';
+  
+  const skeletonHTML = Array(5).fill(0).map(() => `
+    <div class="status-skeleton-item">
+      <div class="skeleton-avatar"></div>
+      <div class="skeleton-info">
+        <div class="skeleton-text title"></div>
+        <div class="skeleton-text subtitle"></div>
+      </div>
+    </div>
+  `).join('');
+  list.innerHTML = skeletonHTML;
 
   try {
     const res = await fetch(`${API_URL}/statuses?userId=${currentUser.id}`);
@@ -2938,9 +3416,9 @@ async function displayStatusUpdates() {
       throw new Error(data.error || 'Gagal memuat status');
     }
 
-    list.innerHTML = ''; // Clear loading
+    list.innerHTML = ''; 
 
-    // Group statuses by user
+    
     const groupedStatuses = data.statuses.reduce((acc, status) => {
       const userIdStr = status.user._id.toString();
       if (!acc[userIdStr]) {
@@ -2953,12 +3431,12 @@ async function displayStatusUpdates() {
       return acc;
     }, {});
 
-    currentStatuses = groupedStatuses; // Store globally for viewer
+    currentStatuses = groupedStatuses; 
     
-    // FIX: Refresh tampilan chat list agar ring status muncul
+    
     updateRecentChatsDisplay();
 
-    // 1. "My Status" item
+    
     const myStatusData = groupedStatuses[currentUser.id];
     const myStatusItem = document.createElement('div');
     myStatusItem.className = 'status-item';
@@ -2980,20 +3458,23 @@ async function displayStatusUpdates() {
     `;
     list.appendChild(myStatusItem);
 
-    // Add a divider
-    const divider = document.createElement('div');
-    divider.innerHTML = `<small style="padding: 8px 16px; display: block; color: var(--text-secondary);text-align:center;">Pembaruan terkini</small>`;
-    list.appendChild(divider);
-
-    // 2. Friends' statuses
+    
     const friendStatuses = Object.values(groupedStatuses).filter(s => s.user._id !== currentUser.id);
     
-    // FIX: Simpan urutan user untuk navigasi next/prev antar user
+    
     statusUserOrder = friendStatuses.map(s => s.user._id);
 
     if (friendStatuses.length === 0) {
-      list.innerHTML += '<div class="status-placeholder"><p>Belum ada status dari teman Anda.</p></div>';
+      list.innerHTML += `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: calc(100% - 85px); text-align: center; color: var(--text-secondary);">
+          <p>Belum ada status dari teman Anda.</p>
+        </div>`;
     } else {
+      
+      const divider = document.createElement('div');
+      divider.innerHTML = `<small style="padding: 8px 16px; display: block; color: var(--text-secondary);text-align:center;">Pembaruan terkini</small>`;
+      list.appendChild(divider);
+
       friendStatuses.forEach(statusGroup => {
         const friendItem = document.createElement('div');
         const lastStatus = statusGroup.statuses[0];
@@ -3022,8 +3503,8 @@ async function displayStatusUpdates() {
 }
 
 async function viewStatus(userId, startStatusId = null) {
-  currentViewedUserId = userId; // FIX: Track user yang sedang dilihat
-  // Jika data status belum ada (misal klik dari chat), coba fetch dulu
+  currentViewedUserId = userId; 
+  
   if (!currentStatuses[userId]) {
     await displayStatusUpdates();
   }
@@ -3033,11 +3514,11 @@ async function viewStatus(userId, startStatusId = null) {
     return Toast.show('Status tidak tersedia atau sudah kadaluarsa', 'info');
   }
 
-  // Sort oldest to newest for viewing (Story style)
-  // Backend sends newest first, so we reverse it
+  
+  
   statusQueue = [...data.statuses].reverse();
   
-  // Jika ada ID status spesifik (dari reply), mulai dari situ
+  
   if (startStatusId) {
     const index = statusQueue.findIndex(s => s._id === startStatusId);
     currentStatusIndex = index !== -1 ? index : 0;
@@ -3047,7 +3528,7 @@ async function viewStatus(userId, startStatusId = null) {
 
   const modal = document.getElementById('viewStatusModal');
   
-  // LOGIC: Pindahkan modal ke dalam chatArea jika Desktop
+  
   const isDesktop = window.innerWidth > 768;
   if (isDesktop) {
     const chatArea = document.getElementById('chatArea');
@@ -3058,7 +3539,7 @@ async function viewStatus(userId, startStatusId = null) {
     document.getElementById('chatRoom').classList.add('hidden');
     modal.classList.add('desktop-embedded');
     
-    // FIX: Resize sidebar saat buka status
+    
     const sidebar = document.getElementById('sidebar');
     if (sidebar) sidebar.style.width = '380px';
   } else {
@@ -3069,7 +3550,7 @@ async function viewStatus(userId, startStatusId = null) {
   }
 
   modal.classList.remove('hidden');
-  modal.classList.add('active'); // Ensure flex display
+  modal.classList.add('active'); 
 
   renderStatus();
 }
@@ -3078,18 +3559,18 @@ function closeStatusViewer() {
   const modal = document.getElementById('viewStatusModal');
   modal.classList.add('hidden');
   modal.classList.remove('active');
-  modal.classList.remove('desktop-embedded'); // FIX: Hapus class agar display:flex tidak memaksa tampil
+  modal.classList.remove('desktop-embedded'); 
   
-  // Restore Desktop UI
+  
   if (window.innerWidth > 768) {
       if (selectedUser || selectedGroup) {
-          document.getElementById('welcomeScreen').classList.add('hidden'); // Pastikan welcome hidden
+          document.getElementById('welcomeScreen').classList.add('hidden'); 
           document.getElementById('chatRoom').classList.remove('hidden');
       } else {
-          document.getElementById('chatRoom').classList.add('hidden'); // Pastikan chatroom hidden
+          document.getElementById('chatRoom').classList.add('hidden'); 
           document.getElementById('welcomeScreen').classList.remove('hidden');
           
-          // FIX: Kembalikan sidebar ke 50% jika tidak ada chat aktif
+          
           const sidebar = document.getElementById('sidebar');
           if (sidebar) sidebar.style.width = '50%';
       }
@@ -3098,7 +3579,7 @@ function closeStatusViewer() {
   if (statusTimer) clearTimeout(statusTimer);
   statusQueue = [];
   currentStatusIndex = 0;
-  closeViewersPanel(); // Pastikan panel tertutup
+  closeViewersPanel(); 
 }
 
 function renderStatus() {
@@ -3111,18 +3592,18 @@ function renderStatus() {
   const avatarContainer = document.getElementById('statusViewerAvatar');
   const footer = document.getElementById('statusFooter');
   
-  // Update Header
+  
   name.textContent = status.user.nama;
   time.textContent = formatRelativeTime(new Date(status.createdAt));
   avatarContainer.innerHTML = createAvatarHTML(status.user, 'avatar small', false);
   
-  // --- DELETE BUTTON LOGIC ---
+  
   const headerInfo = document.querySelector('#viewStatusModal .status-user-info');
   const closeBtn = headerInfo.querySelector('.close-status-viewer');
   const existingDelete = headerInfo.querySelector('.delete-status-btn');
   if (existingDelete) existingDelete.remove();
   
-  // Reset margin close button
+  
   closeBtn.style.marginLeft = 'auto';
 
   if (status.user._id === currentUser.id) {
@@ -3131,13 +3612,13 @@ function renderStatus() {
     deleteBtn.innerHTML = '<i data-feather="trash-2"></i>';
     deleteBtn.onclick = (e) => { e.stopPropagation(); deleteStatus(status._id); };
     
-    // Adjust layout: Delete pushes to right, Close sits next to it
+    
     deleteBtn.style.marginLeft = 'auto';
     closeBtn.style.marginLeft = '0';
     headerInfo.insertBefore(deleteBtn, closeBtn);
   }
   
-  // Update Body
+  
   body.innerHTML = '';
   if (status.type === 'text') {
     const div = document.createElement('div');
@@ -3159,25 +3640,25 @@ function renderStatus() {
     }
   }
   
-  // Add Tap Navigation (Instagram Style)
-  // Klik kiri layar = Prev, Klik kanan layar = Next
+  
+  
   body.onclick = (e) => {
-    // Abaikan jika klik pada elemen interaktif lain
+    
     if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
     
     const rect = body.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    // 30% area kiri untuk Prev, sisanya Next
+    
     if (x < rect.width * 0.3) prevStatus();
     else nextStatus();
   };
 
-  // Update Footer (Reply or Viewers)
+  
   footer.innerHTML = '';
   const isMyStatus = status.user._id === currentUser.id;
 
   if (isMyStatus) {
-    // Show Viewers Trigger
+    
     const viewerCount = status.viewers ? status.viewers.length : 0;
     const trigger = document.createElement('div');
     trigger.className = 'status-viewers-trigger';
@@ -3188,7 +3669,7 @@ function renderStatus() {
     trigger.onclick = () => openViewersPanel(status.viewers);
     footer.appendChild(trigger);
   } else {
-    // Show Reply Input
+    
     const replyContainer = document.createElement('div');
     replyContainer.className = 'status-reply-container';
     replyContainer.innerHTML = `
@@ -3199,14 +3680,14 @@ function renderStatus() {
     `;
     footer.appendChild(replyContainer);
 
-    // Handle Enter key
+    
     const input = replyContainer.querySelector('input');
     
-    // Stop timer saat mengetik
+    
     input.addEventListener('focus', () => {
       if (statusTimer) clearTimeout(statusTimer);
 
-      // Pause visual progress bar immediately
+      
       const bars = document.querySelectorAll('.status-progress-fill');
       if (bars[currentStatusIndex]) {
         const bar = bars[currentStatusIndex];
@@ -3217,7 +3698,7 @@ function renderStatus() {
       }
     });
     
-    // Lanjut timer saat selesai mengetik (blur)
+    
     input.addEventListener('blur', () => {
       if (statusTimer) clearTimeout(statusTimer);
       if (!document.getElementById('viewStatusModal').classList.contains('hidden')) {
@@ -3235,19 +3716,42 @@ function renderStatus() {
       if (e.key === 'Enter') sendStatusReply(status._id);
     });
     
-    // Mark as viewed (if not already)
+    
     markStatusViewed(status._id);
   }
   if(typeof feather !== 'undefined') feather.replace();
-  if(typeof feather !== 'undefined') feather.replace(); // Re-run feather for delete icon
+  if(typeof feather !== 'undefined') feather.replace(); 
   
-  // Update Progress Bars
-  const duration = status.type === 'image' ? 10000 : 5000; // 10s untuk foto, 5s untuk teks
+  
+  const duration = status.type === 'image' ? 10000 : 5000; 
   updateStatusProgressBars(duration);
   
-  // Auto advance
+  
   if (statusTimer) clearTimeout(statusTimer);
   statusTimer = setTimeout(nextStatus, duration);
+}
+
+async function deleteStatus(statusId) {
+  if (!confirm('Apakah Anda yakin ingin menghapus status ini?')) return;
+
+  try {
+    const res = await fetch(`${API_URL}/statuses/${statusId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      
+      Toast.show('Menghapus status...', 'info');
+    } else {
+      Toast.show(data.error || 'Gagal menghapus status', 'error');
+    }
+  } catch (err) {
+    console.error('Delete status error:', err);
+    Toast.show('Terjadi kesalahan koneksi', 'error');
+  }
 }
 
 async function markStatusViewed(statusId) {
@@ -3270,7 +3774,7 @@ function sendStatusReply(statusId) {
   const status = statusQueue.find(s => s._id === statusId);
   if (!status) return;
 
-  // Construct reply message
+  
   const replyTo = {
     messageId: `status-${status._id}`,
     senderName: status.user.nama,
@@ -3290,11 +3794,11 @@ function sendStatusReply(statusId) {
 
   socket.emit('send_message', payload);
   
-  // Feedback visual
+  
   input.value = '';
   Toast.show('Balasan terkirim', 'success');
-  // Optional: close viewer?
-  // closeStatusViewer();
+  
+  
 }
 
 function openViewersPanel(viewers) {
@@ -3302,7 +3806,7 @@ function openViewersPanel(viewers) {
   const list = document.getElementById('viewersList');
   const count = document.getElementById('viewersCount');
   
-  // Pause timer saat melihat viewers
+  
   if (statusTimer) clearTimeout(statusTimer);
 
   count.textContent = viewers ? viewers.length : 0;
@@ -3311,7 +3815,7 @@ function openViewersPanel(viewers) {
   if (!viewers || viewers.length === 0) {
     list.innerHTML = '<div class="status-placeholder"><p>Belum ada yang melihat</p></div>';
   } else {
-    // Reverse array agar yang terbaru (terakhir masuk) ada di paling atas
+    
     [...viewers].reverse().forEach(v => {
       const item = document.createElement('div');
       item.className = 'viewer-item';
@@ -3333,10 +3837,10 @@ function closeViewersPanel() {
   const panel = document.getElementById('statusViewersPanel');
   if (panel) panel.classList.remove('active');
   
-  // Resume timer (jika viewer masih terbuka)
+  
   if (!document.getElementById('viewStatusModal').classList.contains('hidden')) {
-     // Cek apakah panel benar-benar tertutup sebelum resume, atau resume saja langsung
-     // Sederhananya, kita resume timer status saat ini
+     
+     
      if (statusQueue.length > 0) {
         if (statusTimer) clearTimeout(statusTimer);
         const currentStatus = statusQueue[currentStatusIndex];
@@ -3359,7 +3863,7 @@ function updateStatusProgressBars(duration = 5000) {
     if (idx < currentStatusIndex) {
       fill.classList.add('filled');
     } else if (idx === currentStatusIndex) {
-      // Animate current bar
+      
       setTimeout(() => {
         fill.style.transition = `width ${duration}ms linear`;
         fill.style.width = '100%';
@@ -3372,7 +3876,7 @@ function updateStatusProgressBars(duration = 5000) {
 }
 
 function nextStatus() {
-  // Debounce: Cegah navigasi ganda jika dipanggil terlalu cepat
+  
   if (statusNavLock) return;
   statusNavLock = true;
   setTimeout(() => statusNavLock = false, 300);
@@ -3381,14 +3885,14 @@ function nextStatus() {
     currentStatusIndex++;
     renderStatus();
   } else {
-    // Cek apakah ada user berikutnya
+    
     const currentUserIdx = statusUserOrder.indexOf(currentViewedUserId);
     if (currentUserIdx !== -1 && currentUserIdx < statusUserOrder.length - 1) {
-      // Pindah ke user berikutnya
+      
       const nextUserId = statusUserOrder[currentUserIdx + 1];
       viewStatus(nextUserId);
     } else if (currentUserIdx === -1 && currentViewedUserId === currentUser.id && statusUserOrder.length > 0) {
-      // Dari status saya, lanjut ke teman pertama
+      
       viewStatus(statusUserOrder[0]);
     } else {
       closeStatusViewer();
@@ -3397,7 +3901,7 @@ function nextStatus() {
 }
 
 function prevStatus() {
-  // Debounce: Cegah navigasi ganda
+  
   if (statusNavLock) return;
   statusNavLock = true;
   setTimeout(() => statusNavLock = false, 300);
@@ -3406,14 +3910,14 @@ function prevStatus() {
     currentStatusIndex--;
     renderStatus();
   } else {
-    // Cek apakah ada user sebelumnya
+    
     const currentUserIdx = statusUserOrder.indexOf(currentViewedUserId);
     if (currentUserIdx > 0) {
-      // Pindah ke user sebelumnya
+      
       const prevUserId = statusUserOrder[currentUserIdx - 1];
       viewStatus(prevUserId);
     } else if (currentUserIdx === 0 && currentStatuses[currentUser.id]) {
-      // Opsional: Dari teman pertama, kembali ke status saya (jika ada)
+      
       viewStatus(currentUser.id);
     } else {
       closeStatusViewer();
@@ -3421,7 +3925,7 @@ function prevStatus() {
   }
 }
 
-// Expose status navigation globally to ensure timer and onclick works
+
 window.nextStatus = nextStatus;
 window.prevStatus = prevStatus;
 window.closeStatusViewer = closeStatusViewer;
@@ -3429,7 +3933,7 @@ window.closeStatusViewer = closeStatusViewer;
 function openCreateStatusModal() {
   const modal = document.getElementById('createStatusModal');
   if (modal) {
-    // LOGIC: Pindahkan modal ke dalam chatArea jika Desktop
+    
     const isDesktop = window.innerWidth > 768;
     if (isDesktop) {
       const chatArea = document.getElementById('chatArea');
@@ -3440,7 +3944,7 @@ function openCreateStatusModal() {
       document.getElementById('chatRoom').classList.add('hidden');
       modal.classList.add('desktop-embedded');
       
-      // FIX: Resize sidebar saat buat status
+      
       const sidebar = document.getElementById('sidebar');
       if (sidebar) sidebar.style.width = '380px';
     } else {
@@ -3453,7 +3957,7 @@ function openCreateStatusModal() {
     modal.classList.remove('hidden');
     modal.classList.add('active');
     
-    // Reset text input
+    
     const textInput = document.getElementById('statusTextInput');
     textInput.value = '';
     textInput.style.backgroundColor = '#31363F';
@@ -3461,7 +3965,7 @@ function openCreateStatusModal() {
     const defaultColorDot = document.querySelector('.color-dot[data-color="#31363F"]');
     if (defaultColorDot) defaultColorDot.classList.add('active');
 
-    // Reset image input
+    
     statusImageBase64 = null;
     const imageInput = document.getElementById('statusImageInput');
     if (imageInput) imageInput.value = '';
@@ -3471,7 +3975,7 @@ function openCreateStatusModal() {
     
     document.querySelector('.image-upload-placeholder').classList.remove('hidden');
 
-    // Default to text tab
+    
     switchStatusType('text');
   }
 }
@@ -3483,7 +3987,7 @@ function closeCreateStatusModal() {
     modal.classList.remove('active');
     modal.classList.remove('desktop-embedded');
 
-    // Restore Desktop UI
+    
     if (window.innerWidth > 768) {
       if (selectedUser || selectedGroup) {
           document.getElementById('welcomeScreen').classList.add('hidden');
@@ -3492,7 +3996,7 @@ function closeCreateStatusModal() {
           document.getElementById('chatRoom').classList.add('hidden');
           document.getElementById('welcomeScreen').classList.remove('hidden');
           
-          // FIX: Kembalikan sidebar ke 50% jika tidak ada chat aktif
+          
           const sidebar = document.getElementById('sidebar');
           if (sidebar) sidebar.style.width = '50%';
       }
@@ -3512,7 +4016,7 @@ async function postStatus() {
     const backgroundColor = document.getElementById('statusTextInput').style.backgroundColor || '#31363F';
     if (!content) return Toast.show('Status tidak boleh kosong', 'error');
     payloadBody = { userId: currentUser.id, type: 'text', content, backgroundColor };
-  } else { // image
+  } else { 
     if (!statusImageBase64) return Toast.show('Pilih gambar terlebih dahulu', 'error');
     const caption = document.getElementById('statusImageCaption').value.trim();
     payloadBody = { userId: currentUser.id, type: 'image', content: statusImageBase64, caption };
@@ -3540,7 +4044,7 @@ async function postStatus() {
     btn.disabled = false;
     btn.innerHTML = '<i data-feather="send"></i>';
     if(typeof feather !== 'undefined') feather.replace();
-    statusImageBase64 = null; // Clear after attempt
+    statusImageBase64 = null; 
   }
 }
 
@@ -3556,18 +4060,18 @@ function switchStatusType(type) {
     
     imageCreator.classList.remove('hidden');
     imageCreator.classList.remove('slide-in-right');
-    void imageCreator.offsetWidth; // Trigger reflow untuk restart animasi
+    void imageCreator.offsetWidth; 
     imageCreator.classList.add('slide-in-right');
 
     textBtn.classList.remove('active');
     imageBtn.classList.add('active');
-  } else { // text
+  } else { 
     imageCreator.classList.add('hidden');
     imageCreator.classList.remove('slide-in-right');
 
     textCreator.classList.remove('hidden');
     textCreator.classList.remove('slide-in-left');
-    void textCreator.offsetWidth; // Trigger reflow untuk restart animasi
+    void textCreator.offsetWidth; 
     textCreator.classList.add('slide-in-left');
 
     textBtn.classList.add('active');
@@ -3583,22 +4087,23 @@ function handleStatusImageSelect(e) {
     Toast.show('Hanya file gambar yang diizinkan', 'error');
     return;
   }
-  if (file.size > 5 * 1024 * 1024) { // 5MB limit for status
+  if (file.size > 5 * 1024 * 1024) { 
     Toast.show('Ukuran gambar terlalu besar (Maks 5MB)', 'error');
     return;
   }
 
-  // Gunakan kompresi gambar agar upload dan load status lebih cepat
-  // Max 1024px agar kualitas tetap oke di HP tapi size kecil
-  compressImage(file, (base64) => {
-    statusImageBase64 = base64;
+  
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    statusImageBase64 = event.target.result;
     const preview = document.getElementById('statusImagePreview');
     const placeholder = document.querySelector('.image-upload-placeholder');
     const wrapper = document.getElementById('imagePreviewWrapper');
     preview.src = statusImageBase64;
     wrapper.classList.remove('hidden');
     placeholder.classList.add('hidden');
-  }, 1024, 1024);
+  };
+  reader.readAsDataURL(file);
 }
 
 function openCreateGroupModal() {
@@ -3606,14 +4111,14 @@ function openCreateGroupModal() {
   modal.classList.remove('hidden');
   modal.classList.add('active');
   
-  // Populate members list
+  
   populateMembersCheckbox();
   
-  // Reset form
+  
   document.getElementById('groupNameInput').value = '';
   document.querySelectorAll('input[name="groupMembers"]').forEach(cb => cb.checked = false);
   
-  // Reset search
+  
   const searchInput = document.getElementById('groupMemberSearch');
   if (searchInput) {
     searchInput.value = '';
@@ -3639,13 +4144,13 @@ async function populateMembersCheckbox() {
     
     const id = `member-${user._id}`;
     
-    // Check if user has a profile photo
+    
     let avatarHtml = '';
     if (user.avatar) {
-      // User has uploaded a profile photo
+      
       avatarHtml = `<div class="user-avatar-small user-avatar-small-bg" style="background-image: url('${user.avatar}');"></div>`;
     } else {
-      // Generate text avatar with first letter
+      
       const avatarText = user.nama ? user.nama.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase();
       avatarHtml = `<div class="user-avatar-small">${avatarText}</div>`;
     }
@@ -3656,18 +4161,18 @@ async function populateMembersCheckbox() {
       <input type="checkbox" id="${id}" name="groupMembers" value="${user._id}">
     `;
 
-    // Make row clickable
+    
     div.onclick = (e) => {
-      // Prevent double toggle if clicking directly on checkbox or label
+      
       if (e.target.type !== 'checkbox' && e.target.tagName !== 'LABEL') {
         const checkbox = div.querySelector('input[type="checkbox"]');
         checkbox.checked = !checkbox.checked;
-        // Trigger change event manually to update style
+        
         checkbox.dispatchEvent(new Event('change'));
       }
     };
 
-    // Update style on selection
+    
     const checkbox = div.querySelector('input[type="checkbox"]');
     checkbox.addEventListener('change', () => {
       if (checkbox.checked) {
@@ -3709,7 +4214,7 @@ async function createGroup() {
     return;
   }
   
-  // Ambil member yang dipilih
+  
   const selectedMembers = Array.from(document.querySelectorAll('input[name="groupMembers"]:checked'))
     .map(cb => cb.value);
   
@@ -3739,11 +4244,11 @@ async function createGroup() {
     if (data.success) {
       Toast.show('Group berhasil dibuat!', 'success');
       
-      // Tambah ke local list
+      
       allGroups.unshift(data.group);
       displayGroups();
       
-      // Add to chat history
+      
       chatHistory[data.group._id] = {
         id: data.group._id,
         name: data.group.nama,
@@ -3754,11 +4259,11 @@ async function createGroup() {
       };
       updateRecentChatsDisplay();
       
-      // Tutup modal
+      
       document.getElementById('createGroupModal').classList.remove('active');
       document.getElementById('createGroupModal').classList.add('hidden');
       
-      // Select group yang baru dibuat
+      
       setTimeout(() => selectGroup(data.group._id), 300);
     } else {
       Toast.show(data.error || 'Gagal membuat group', 'error');
@@ -3775,7 +4280,7 @@ async function createGroup() {
 socket.on('group_updated', ({ group }) => {
     if (!group) return;
 
-    // 1. Update the group in the main `allGroups` array
+    
     const groupIndex = allGroups.findIndex(g => g._id === group._id);
     if (groupIndex > -1) {
         allGroups[groupIndex] = group;
@@ -3783,17 +4288,17 @@ socket.on('group_updated', ({ group }) => {
         allGroups.push(group);
     }
 
-    // 2. If the updated group is the currently selected one, update the chat view
+    
     if (selectedGroup && selectedGroup._id === group._id) {
-        selectedGroup = group; // Update the selectedGroup object
+        selectedGroup = group; 
         
-        // Update chat header
+        
         document.getElementById('chatName').textContent = group.nama;
         document.getElementById('chatAvatar').textContent = group.avatar || group.nama.charAt(0).toUpperCase();
         document.getElementById('chatStatus').textContent = `${group.members.length} anggota`;
     }
 
-    // 3. Re-render the group list and recent chats list to reflect changes
+    
     displayGroups();
     updateRecentChatsDisplay();
 
@@ -3810,11 +4315,11 @@ function selectGroupById(groupId) {
 
 function selectGroup(groupId) {
   selectedGroup = allGroups.find(g => g._id === groupId);
-  selectedUser = null; // Clear selectedUser saat membuka group
+  selectedUser = null; 
   
   if (!selectedGroup) return;
 
-  // FIX: Tutup modal status jika sedang terbuka agar chat group langsung terlihat
+  
   if (document.getElementById('viewStatusModal') && !document.getElementById('viewStatusModal').classList.contains('hidden')) {
     closeStatusViewer();
   }
@@ -3822,10 +4327,10 @@ function selectGroup(groupId) {
     closeCreateStatusModal();
   }
   
-  // Clear unread count for this group
+  
   clearUnread(groupId);
   
-  // Animasi Sidebar Desktop: Kecilkan saat chat dibuka
+  
   if (window.innerWidth > 768) {
     const sidebar = document.getElementById('sidebar');
     if (sidebar) sidebar.style.width = '380px';
@@ -3841,12 +4346,12 @@ function selectGroup(groupId) {
   document.getElementById('welcomeScreen').classList.add('hidden');
   document.getElementById('chatRoom').classList.remove('hidden');
   
-  // Update chat header untuk group
+  
   document.getElementById('chatName').textContent = selectedGroup.nama;
   document.getElementById('chatAvatar').textContent = selectedGroup.avatar || 'G';
   document.getElementById('chatStatus').textContent = `${selectedGroup.members.length} anggota`;
   
-  // Highlight active group
+  
   document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
@@ -3857,13 +4362,19 @@ function selectGroup(groupId) {
   const activeChatItem = document.getElementById(`chat-item-${groupId}`);
   if (activeChatItem) activeChatItem.classList.add('active');
   
-  // Toggle menu items
+  
   document.getElementById('menuOpenProfile')?.style.setProperty('display', 'none', 'important');
   const menuGroupSettings = document.getElementById('menuGroupSettings');
   if (menuGroupSettings) {
     const createdById = selectedGroup.createdBy._id || selectedGroup.createdBy;
     const isCreator = createdById === currentUser.id;
     menuGroupSettings.style.display = isCreator ? 'flex' : 'none';
+  }
+
+  
+  const chatInfoEl = document.querySelector('#chatRoom .chat-info');
+  if (chatInfoEl) {
+    chatInfoEl.onclick = () => openGroupProfileModal();
   }
 
   loadGroupMessages(groupId);
@@ -3881,11 +4392,11 @@ async function loadGroupMessages(groupId) {
     if (data.messages.length === 0) {
       container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Belum ada pesan. Mulai percakapan! 💬</div>';
       
-      // FIX: Hapus cache lokal grup jika server kosong
+      
       const cacheKey = `lastMsg-${currentUser.username}-group-${groupId}`;
       if (localStorage.getItem(cacheKey)) {
         localStorage.removeItem(cacheKey);
-        updateRecentChatsDisplay(); // Refresh sidebar
+        updateRecentChatsDisplay(); 
       }
     } else {
       data.messages.forEach(msg => addGroupMessageToUI(msg));
@@ -3919,6 +4430,10 @@ function addGroupMessageToUI(msg) {
     div.innerHTML = deletedContent;
     container.appendChild(div);
     scrollToBottom();
+
+    if (selectedGroup) {
+      saveLastMessageGroup(selectedGroup._id, 'Pesan ini telah dihapus', msg.timestamp, msg._id);
+    }
     return;
   }
 
@@ -3926,27 +4441,27 @@ function addGroupMessageToUI(msg) {
     container.innerHTML = '';
   }
 
-  // Fallback for missing message ID from server
+  
   if (!msg._id) {
     msg._id = `${msg.from}-${msg.timestamp}`;
   }
 
   const isMe = msg.from === currentUser.username;
   
-  // Jika ada image, jangan kasih background/padding
+  
   const hasImage = msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('image/');
   
   const div = document.createElement('div');
   div.id = `message-${msg._id}`;
   div.dataset.messageId = msg._id;
 
-  // Set sender name for reply context. Use display name for consistency.
+  
   let senderDisplayName = '';
   if (isMe) {
     senderDisplayName = currentUser.nama;
   } else {
     const senderUser = (window.allUsers || []).find(u => u.username === msg.from);
-    senderDisplayName = senderUser ? senderUser.nama : msg.from; // Fallback to username if not a friend
+    senderDisplayName = senderUser ? senderUser.nama : msg.from; 
   }
   div.dataset.senderName = senderDisplayName;
 
@@ -3959,7 +4474,7 @@ function addGroupMessageToUI(msg) {
 
   let content = '';
 
-  // RENDER REPLY BLOCK
+  
   if (msg.replyTo) {
     const isStatus = msg.replyTo.messageId && msg.replyTo.messageId.startsWith('status-');
     const clickAction = isStatus && msg.replyTo.userId 
@@ -4008,7 +4523,7 @@ function addGroupMessageToUI(msg) {
         </div>
       `;
     } else if (msg.file.type && msg.file.type.startsWith('image/')) {
-      content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview('${msg.file.data.replace(/'/g, "\\'")}')" style="cursor: pointer;">`;
+      content += `<img src="${msg.file.data}" class="msg-img" onclick="openImagePreview(this.src)" style="cursor: pointer;">`;
     } else {
       content += `<div class="file-bubble">
                     <a href="${msg.file.data}" download="${msg.file.name || 'file'}" class="file-bubble-link">
@@ -4027,9 +4542,9 @@ function addGroupMessageToUI(msg) {
   div.innerHTML = content;
   container.appendChild(div);
   
-  // Initialize waveform for audio messages
+  
   if (msg.file && msg.file.data && msg.file.type && msg.file.type.startsWith('audio/')) {
-    // Find the audioId in the newly added content
+    
     const audioElements = div.querySelectorAll('[id^="audio-"]');
     if (audioElements.length > 0) {
       const audioId = audioElements[0].id.replace('audio-element-', '');
@@ -4039,6 +4554,13 @@ function addGroupMessageToUI(msg) {
   
   if(typeof feather !== 'undefined') feather.replace();
   scrollToBottom();
+
+  if (selectedGroup) {
+    const messageText = msg.message 
+      || (msg.file && msg.file.type && msg.file.type.startsWith('audio/') ? '🎤 Voice note' : '')
+      || (msg.file && msg.file.name ? `📎 ${msg.file.name}` : '');
+    saveLastMessageGroup(selectedGroup._id, messageText, msg.timestamp, msg._id);
+  }
 }
 
 function sendGroupMessage() {
@@ -4066,7 +4588,7 @@ function sendGroupMessage() {
       return;
     }
     
-    // Kirim file langsung tanpa kompresi
+    
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
@@ -4083,14 +4605,14 @@ function sendGroupMessage() {
       }
       socket.emit('send_message', payload);
 
-      // Optimistic UI update
+      
       addGroupMessageToUI({ ...payload, timestamp: new Date().toISOString(), _id: tempId });
       const displayMsg = msg || `📎 ${file.name}`;
       saveLastMessageGroup(selectedGroup._id, displayMsg, new Date(), tempId);
 
       input.value = '';
       clearFile();
-      // Update button visibility after clearing input
+      
       updateSendButtonVisibility();
       if (currentReplyContext) cancelReply();
     };
@@ -4107,12 +4629,12 @@ function sendGroupMessage() {
     }
     socket.emit('send_message', payload);
 
-    // Optimistic UI update
+    
     addGroupMessageToUI({ ...payload, timestamp: new Date().toISOString(), _id: tempId });
     saveLastMessageGroup(selectedGroup._id, msg, new Date(), tempId);
 
     input.value = '';
-    // Update button visibility after clearing input
+    
     updateSendButtonVisibility();
     if (currentReplyContext) cancelReply();
   }
@@ -4124,7 +4646,7 @@ function openGroupProfileModal() {
   const modal = document.getElementById('groupProfileModal');
   if (!modal) return;
 
-  // Populate data
+  
   document.getElementById('editGroupName').value = selectedGroup.nama;
   
   const avatarPreview = document.getElementById('groupAvatarPreview');
@@ -4137,7 +4659,7 @@ function openGroupProfileModal() {
       avatarPreview.textContent = selectedGroup.nama.charAt(0).toUpperCase();
   }
 
-  // Populate members list
+  
   const membersListContainer = document.getElementById('groupMembersList');
   membersListContainer.innerHTML = '<h4>Anggota</h4>';
   selectedGroup.members.forEach(member => {
@@ -4152,7 +4674,7 @@ function openGroupProfileModal() {
       membersListContainer.appendChild(memberDiv);
   });
 
-  // Show/hide save button based on permission (creator only)
+  
   const createdById = selectedGroup.createdBy._id || selectedGroup.createdBy;
   const isCreator = createdById === currentUser.id;
   
@@ -4189,7 +4711,7 @@ async function saveGroupProfile() {
   try {
     let avatarBase64 = null;
     if (avatarFile) {
-      if (avatarFile.size > 2 * 1024 * 1024) { // 2MB limit
+      if (avatarFile.size > 2 * 1024 * 1024) { 
           throw new Error('Ukuran avatar terlalu besar (maks 2MB)');
       }
       avatarBase64 = await new Promise((resolve, reject) => {
@@ -4211,7 +4733,7 @@ async function saveGroupProfile() {
     
     Toast.show('Info grup berhasil diperbarui', 'success');
     closeGroupProfileModal();
-    // UI update is handled by the 'group_updated' socket event
+    
   } catch (err) {
     Toast.show(err.message, 'error');
   } finally {
@@ -4224,54 +4746,66 @@ async function saveGroupProfile() {
 socket.on('message_deleted', (payload) => {
     const { messageId, groupId, from, to, newLastMessage } = payload;
 
-    // 1. Update the message in the chat window if it's open
+    
     updateUIMessageAsDeleted(messageId);
 
-    // 2. Tentukan ID obrolan (pengguna lain atau grup)
+    
     const chatId = groupId ? groupId : (from === currentUser.username ? to : from);
     
-    // 3. Periksa apakah pesan yang dihapus adalah yang ditampilkan di sidebar.
-    // Ini untuk mencegah penimpaan jika pesan yang lebih baru sudah tiba.
-    const currentLastMessage = groupId ? getLastMessageForGroup(chatId) : getLastMessageForUser(chatId);
+    
+    let targetId = chatId;
+    if (!groupId) {
+        const user = window.allUsers ? window.allUsers.find(u => u.username === chatId) : null;
+        if (user) targetId = user._id;
+    }
+
+    
+    
+    const currentLastMessage = groupId ? getLastMessageForGroup(chatId) : getLastMessageForUser(targetId);
 
     if (currentLastMessage && currentLastMessage.id === messageId) {
         let newSummaryText;
         let newTimestamp;
         let newId;
 
-        // Pesan yang dihapus memang yang terakhir. Perbarui sidebar dengan info baru dari server.
+        
         if (newLastMessage) {
-            // Ada pesan sebelumnya yang sekarang menjadi yang terakhir.
-            newSummaryText = newLastMessage.message || 
-                                (newLastMessage.file?.name ? `📎 ${newLastMessage.file.name}` : 'Pesan media');
+            
+            if (newLastMessage.isDeleted) {
+                newSummaryText = 'Pesan ini telah dihapus';
+            } else {
+                newSummaryText = newLastMessage.message || 
+                                    (newLastMessage.file?.name ? `📎 ${newLastMessage.file.name}` : 'Pesan media');
+            }
             newTimestamp = newLastMessage.timestamp;
             newId = newLastMessage._id;
 
             if (groupId) {
                 saveLastMessageGroup(chatId, newSummaryText, newTimestamp, newId);
             } else {
-                saveLastMessage(chatId, newSummaryText, newTimestamp, newId);
+                
+                saveLastMessage(targetId, newSummaryText, newTimestamp, newId);
             }
         } else {
-            // Tidak ada pesan sebelumnya. Tampilkan "Pesan dihapus" sebagai pesan terakhir.
+            
             newSummaryText = 'Pesan ini telah dihapus';
-            newTimestamp = new Date(payload.timestamp); // Gunakan timestamp dari pesan yang dihapus
+            newTimestamp = new Date(payload.timestamp); 
             newId = messageId;
 
             if (groupId) {
                 saveLastMessageGroup(chatId, newSummaryText, newTimestamp, newId);
             } else {
-                saveLastMessage(chatId, newSummaryText, newTimestamp, newId);
+                saveLastMessage(targetId, newSummaryText, newTimestamp, newId);
             }
         }
 
-        // Perbarui juga state di memori (chatHistory) untuk konsistensi
+        
         if (chatHistory[chatId]) {
             chatHistory[chatId].lastMessage = newSummaryText;
             chatHistory[chatId].timestamp = new Date(newTimestamp);
         }
 
-        // Re-render the recent chats to show the change
+        
         updateRecentChatsDisplay();
     }
 });
@@ -4286,7 +4820,7 @@ socket.on('receive_message', (msg) => {
     const group = (allGroups || []).find(g => g._id === msg.groupId);
     addToChatHistory(msg.groupId, group?.nama || 'Group', summaryText, true, msg._id, msg.timestamp);
     
-    // Group message
+    
     if (selectedGroup && msg.groupId === selectedGroup._id) {
       addGroupMessageToUI(msg);
     } else {
@@ -4295,7 +4829,6 @@ socket.on('receive_message', (msg) => {
   } else {
     const sender = (window.allUsers || []).find(u => u.username === msg.from);
     addToChatHistory(msg.from, sender?.nama || msg.from, summaryText, false, msg._id, msg.timestamp);
-    
     if (selectedUser && (msg.from === selectedUser.username || msg.to === selectedUser.username)) {
       addMessageToUI(msg);
     } else {
@@ -4309,11 +4842,11 @@ socket.on('receive_message', (msg) => {
   }
 });
 
-// Helper function to perform the UI update for a deleted message
+
 function updateUIMessageAsDeleted(messageId) {
     const messageEl = document.getElementById(`message-${messageId}`);
     if (messageEl) {
-        // Check if it's already deleted to avoid re-processing
+        
         if (messageEl.classList.contains('deleted-message')) return;
 
         const isGroup = messageEl.classList.contains('group-message');
@@ -4323,7 +4856,7 @@ function updateUIMessageAsDeleted(messageId) {
 
         let deletedContent = '';
 
-        // Preserve sender name for incoming group messages
+        
         if (isGroup && !isMe) {
             const senderNameEl = messageEl.querySelector('small[style*="color: var(--primary)"]');
             if (senderNameEl) {
@@ -4335,29 +4868,29 @@ function updateUIMessageAsDeleted(messageId) {
         
         messageEl.innerHTML = deletedContent + timeHTML;
         
-        // Reset classes and add the deleted-message marker
+        
         messageEl.className = `message ${isMe ? 'outgoing' : 'incoming'} ${isGroup ? 'group-message' : ''} deleted-message`;
     }
 }
 
-// --- DELETE FUNCTIONS ---
-// Fungsi ini mengirim permintaan ke server untuk menghapus pesan bagi semua orang.
-// Server akan mengganti konten pesan dan menyiarkannya ke semua klien.
+
+
+
 function deleteMessageForEveryone() {
   if (!selectedMessageElement) return;
   const messageId = selectedMessageElement.dataset.messageId;
   if (!messageId || messageId.startsWith('temp-')) {
     return Toast.show('Tidak bisa menghapus pesan ini.', 'error');
   }
-  // Optimistic UI Update for the sender
+  
   updateUIMessageAsDeleted(messageId);
   socket.emit('delete_message_for_everyone', { messageId });
   document.getElementById('messageContextMenu').classList.add('hidden');
   selectedMessageElement = null;
 }
 
-// Fungsi ini HANYA menyembunyikan pesan di sisi klien (browser Anda).
-// Tidak ada perubahan yang dikirim ke server.
+
+
 function deleteMessageForMe() {
   if (!selectedMessageElement) return;
   selectedMessageElement.style.display = 'none';
@@ -4366,7 +4899,7 @@ function deleteMessageForMe() {
   selectedMessageElement = null;
 }
 
-// --- REPLY FUNCTIONS ---
+
 
 function startReply() {
   if (!selectedMessageElement) return;
@@ -4375,7 +4908,7 @@ function startReply() {
   const senderName = selectedMessageElement.dataset.senderName;
   let content = selectedMessageElement.querySelector('p')?.textContent;
   
-  // Handle file messages for content preview
+  
   if (!content) {
     if (selectedMessageElement.querySelector('.msg-img')) {
       content = '📷 Gambar';
@@ -4396,7 +4929,7 @@ function startReply() {
   currentReplyContext = { messageId, senderName, content };
   showReplyPreview(currentReplyContext);
 
-  // Hide context menu
+  
   document.getElementById('messageContextMenu').classList.add('hidden');
   selectedMessageElement = null;
 }
@@ -4422,7 +4955,7 @@ function scrollToMessage(event, messageId) {
   const targetMessage = document.getElementById(`message-${messageId}`);
   if (targetMessage) {
     targetMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Add a temporary highlight effect
+    
     targetMessage.classList.add('highlight');
     setTimeout(() => {
       targetMessage.classList.remove('highlight');
@@ -4432,12 +4965,13 @@ function scrollToMessage(event, messageId) {
   }
 }
 
-// --- HELPER FUNCTIONS FOR MESSAGE & CALL HISTORY ---
 
-// Get last message untuk user tertentu
-function getLastMessageForUser(username) {
+
+
+function getLastMessageForUser(userId) {
   try {
-    const storage = localStorage.getItem(`lastMsg-${currentUser.username}-${username}`);
+    
+    const storage = localStorage.getItem(`lastMsg-${currentUser.id}-${userId}`);
     if (storage) return JSON.parse(storage);
   } catch (err) {
 
@@ -4445,17 +4979,17 @@ function getLastMessageForUser(username) {
   return null;
 }
 
-// Save last message
-function saveLastMessage(username, message, timestamp, messageId) {
+
+function saveLastMessage(userId, message, timestamp, messageId) {
   try {
     const lastMsg = { message, timestamp, id: messageId };
-    localStorage.setItem(`lastMsg-${currentUser.username}-${username}`, JSON.stringify(lastMsg));
+    localStorage.setItem(`lastMsg-${currentUser.id}-${userId}`, JSON.stringify(lastMsg));
   } catch (err) {
 
   }
 }
 
-// Format message time untuk display
+
 function formatMessageTime(timestamp) {
   const date = new Date(timestamp);
   const now = new Date();
@@ -4472,23 +5006,24 @@ function formatMessageTime(timestamp) {
   return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
 }
 
-// --- CALL HISTORY TRACKING ---
 
-// Save call ke history dengan status
-function saveCallToHistoryWithStatus(targetUsername, targetName, type, duration, status) {
+
+
+function saveCallToHistoryWithStatus(targetUsername, targetName, type, duration, status, direction) {
   const call = {
     id: Date.now(),
     username: targetUsername,
     name: targetName,
-    type: type, // 'voice' or 'video'
+    type: type, 
     duration: duration,
     timestamp: new Date(),
-    status: status // 'completed', 'missed', 'rejected'
+    status: status, 
+    direction: direction 
   };
   
   callHistory.unshift(call);
   
-  // Simpan ke localStorage (limit 50 call terakhir)
+  
   try {
     const stored = JSON.parse(localStorage.getItem(`callHistory-${currentUser.username}`) || '[]');
     stored.unshift(call);
@@ -4498,12 +5033,12 @@ function saveCallToHistoryWithStatus(targetUsername, targetName, type, duration,
   }
 }
 
-// Keep old function for backward compatibility
+
 function saveCallToHistory(targetUsername, targetName, type, duration) {
-  saveCallToHistoryWithStatus(targetUsername, targetName, type, duration, 'completed');
+  saveCallToHistoryWithStatus(targetUsername, targetName, type, duration, 'completed', 'outgoing'); 
 }
 
-// Load call history dari localStorage
+
 function loadCallHistory() {
   try {
     const stored = localStorage.getItem(`callHistory-${currentUser.username}`);
@@ -4515,7 +5050,7 @@ function loadCallHistory() {
   }
 }
 
-// Display call history
+
 function displayCallHistory() {
   const list = document.getElementById('callsList');
   
@@ -4525,9 +5060,9 @@ function displayCallHistory() {
 
   if (!callHistory || callHistory.length === 0) {
     list.innerHTML = `
-      <div class="call-empty">
+      <div class="call-empty" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary);">
         <i data-feather="phone" style="width: 48px; height: 48px; opacity: 0.5; margin-bottom: 15px;"></i>
-        <p>No call history yet</p>
+        <p>Belum ada riwayat panggilan</p>
       </div>
     `;
     if(typeof feather !== 'undefined') feather.replace();
@@ -4538,28 +5073,17 @@ function displayCallHistory() {
     const div = document.createElement('div');
     div.className = 'call-item';
     
-    // Hanya tampilkan durasi untuk completed call
+    
     let durationText = '';
     if (call.status === 'completed' && call.duration) {
       durationText = formatDuration(call.duration);
     }
-    
-    const typeIcon = call.type === 'video' ? 'video' : 'phone';
+
     const callDate = new Date(call.timestamp);
     
-    // Tombol call sesuai dengan tipe history
+    
     const callButtonIcon = call.type === 'video' ? 'video' : 'phone';
     const callButtonText = call.type === 'video' ? 'Video Call' : 'Voice Call';
-    
-    // Tentukan status badge
-    let statusBadge = '';
-    if (call.status === 'missed') {
-      statusBadge = '<span class="call-status missed" title="Tidak Terjawab"><i data-feather="phone-missed" style="width:14px; height:14px;"></i></span>';
-    } else if (call.status === 'rejected') {
-      statusBadge = '<span class="call-status rejected" title="Ditolak"><i data-feather="phone-off" style="width:14px; height:14px;"></i></span>';
-    } else if (call.status === 'completed') {
-      statusBadge = '<span class="call-status completed" title="Diterima"><i data-feather="check" style="width:14px; height:14px;"></i></span>';
-    }
     
     div.innerHTML = `
       <div class="avatar small" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -4567,9 +5091,11 @@ function displayCallHistory() {
       </div>
       <div class="call-item-info">
         <h4>${call.name}</h4>
+        <div class="call-status-details">
+          <small>${call.type === 'video' ? 'Panggilan video' : 'Panggilan suara'}</small>
+        </div>
       </div>
       <div class="call-item-time">
-        ${statusBadge}
         <small>${formatCallDate(callDate)}</small>
       </div>
       <button onclick="initiateCallFromHistory(event, '${call.username}', '${call.type}', '${call.name.replace(/'/g, "\\'")}')" class="icon-btn" title="${callButtonText}">
@@ -4591,7 +5117,7 @@ function formatDuration(seconds) {
   return `${mins}m ${secs}s`;
 }
 
-// Format call date untuk display
+
 function formatCallDate(date) {
   const now = new Date();
   const diffMs = now - date;
@@ -4608,16 +5134,16 @@ function formatCallDate(date) {
   return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
 }
 
-// --- KEYBOARD DETECTION UNTUK MOBILE ---
+
 let previousInnerHeight = window.innerHeight;
 
 window.addEventListener('resize', () => {
   const currentInnerHeight = window.innerHeight;
   const keyboardHeight = previousInnerHeight - currentInnerHeight;
   
-  // Jika tinggi window berkurang, keyboard mungkin sedang terbuka
+  
   if (currentInnerHeight < previousInnerHeight) {
-    // Keyboard sedang terbuka - scroll ke bawah otomatis
+    
     const messagesContainer = document.getElementById('messagesContainer');
     if (messagesContainer) {
       setTimeout(() => {
@@ -4629,7 +5155,7 @@ window.addEventListener('resize', () => {
   previousInnerHeight = currentInnerHeight;
 });
 
-// Juga handle input focus untuk scroll
+
 document.addEventListener('focusin', (e) => {
   if (e.target.matches('.input-area input, textarea')) {
     setTimeout(() => {
@@ -4641,9 +5167,9 @@ document.addEventListener('focusin', (e) => {
   }
 });
 
-// --- IMAGE PREVIEW FUNCTIONS ---
 
-// Store current preview image for download
+
+
 let currentPreviewImage = null;
 let currentPreviewImageName = 'image.jpg';
 
@@ -4656,7 +5182,7 @@ function openImagePreview(imageSrc) {
   modal.classList.remove('hidden');
   modal.classList.add('active');
   
-  // Disable body scroll
+  
   document.body.style.overflow = 'hidden';
 }
 
@@ -4666,19 +5192,19 @@ function closeImagePreview() {
   modal.classList.remove('active');
   currentPreviewImage = null;
   
-  // Enable body scroll
+  
   document.body.style.overflow = 'auto';
 }
 
 function downloadPreviewImage() {
   if (!currentPreviewImage) return;
   
-  // Create link element
+  
   const link = document.createElement('a');
   link.href = currentPreviewImage;
   link.download = currentPreviewImageName || 'image.jpg';
   
-  // Trigger download
+  
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -4686,7 +5212,7 @@ function downloadPreviewImage() {
   Toast.show('Gambar sedang diunduh...', 'success');
 }
 
-// Close preview when clicking outside the image
+
 document.addEventListener('click', (e) => {
   const modal = document.getElementById('imagePreviewModal');
   if (modal && modal.classList.contains('active')) {
@@ -4696,7 +5222,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Close preview with ESC key
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const modal = document.getElementById('imagePreviewModal');
@@ -4706,7 +5232,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// --- GROUP CALL FUNCTIONS ---
+
 
 function startGroupCall(type) {
   if (!selectedGroup) return;
@@ -4714,7 +5240,7 @@ function startGroupCall(type) {
   const callType = type === 'video' ? 'Video Call' : 'Voice Call';
   const message = `📞 ${currentUser.nama} mengajukan ${callType} kepada grup ini`;
   
-  // Kirim notifikasi call ke group
+  
   socket.emit('send_message', {
     from: currentUser.username,
     to: selectedGroup._id,
@@ -4725,35 +5251,270 @@ function startGroupCall(type) {
   });
 }
 
-function openUserProfile() {
-  if (!selectedUser) return;
+function showUserProfilePopup(user) {
   
-  localStorage.setItem('selectedUserProfile', JSON.stringify({
-    ...selectedUser,
-    status: window.userStatusMap?.[selectedUser.username] === 'online' ? 'online' : 'offline'
-  }));
+  let modal = document.getElementById('userProfilePopup');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'userProfilePopup';
+    modal.className = 'modal hidden';
+    modal.style.zIndex = '5000'; 
+    modal.innerHTML = `
+      <div class="glass-panel profile-modal-content">
+        <button class="close-modal" onclick="closeUserProfilePopup()" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer;"><i data-feather="x"></i></button>
+        <div class="profile-modal-body" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+            <div class="user-avatar-container" style="display: flex; justify-content: center; width: 100%; margin-bottom: 15px;">
+                <div id="popupProfileAvatar"></div>
+            </div>
+            <div class="info-section">
+                <h2 id="popupProfileName"></h2>
+                <p id="popupProfileUsername" class="username-display"></p>
+                <span id="popupProfileStatus" class="status-badge"></span>
+            </div>
+            <div class="action-buttons">
+                <div class="main-actions">
+                    <button class="action-btn" id="popupOpenChatBtn"><i data-feather="message-square"></i><span>Chat</span></button>
+                    <button class="action-btn" id="popupVoiceCallBtn"><i data-feather="phone"></i><span>Panggil</span></button>
+                    <button class="action-btn" id="popupVideoCallBtn"><i data-feather="video"></i><span>Video</span></button>
+                </div>
+                <button class="action-btn delete-friend-btn" id="popupDeleteFriendBtn" style="background: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 20px; width: 100%; justify-content: center; padding: 12px; border-radius: 12px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                   <i data-feather="user-x" style="width: 18px; height: 18px;"></i> Hapus Pertemanan
+                </button>
+                <div class="delete-chat-section" style="width: 100%;">
+                    <button class="action-btn" id="popupDeleteChatBtn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); width: 100%; justify-content: center; padding: 12px; border-radius: 10px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <i data-feather="trash-2" style="width: 18px; height: 18px;"></i> Hapus Semua Chat
+                    </button>
+                </div>
+            </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
   
-  window.location.href = 'profiles.html';
+  
+  const avatarContainer = document.getElementById('popupProfileAvatar');
+  const isOnline = window.userStatusMap && window.userStatusMap[user.username] === 'online';
+  avatarContainer.innerHTML = createAvatarHTML(user, 'avatar large', isOnline);
+  
+  document.getElementById('popupProfileName').textContent = user.nama;
+  document.getElementById('popupProfileUsername').textContent = '@' + user.username;
+  document.getElementById('popupProfileStatus').textContent = getUserStatusText(user);
+  
+  document.getElementById('popupDeleteFriendBtn').onclick = () => deleteFriend(user._id, user.nama);
+  document.getElementById('popupDeleteChatBtn').onclick = () => deleteAllChat(user.username, user.nama, user._id);
+
+  
+  document.getElementById('popupOpenChatBtn').onclick = () => {
+    selectUser(user);
+    closeUserProfilePopup();
+  };
+  document.getElementById('popupVoiceCallBtn').onclick = () => {
+    selectUser(user);
+    closeUserProfilePopup();
+    setTimeout(() => startCall('voice'), 50); 
+  };
+  document.getElementById('popupVideoCallBtn').onclick = () => {
+    selectUser(user);
+    closeUserProfilePopup();
+    setTimeout(() => startCall('video'), 50); 
+  };
+
+  
+  modal.classList.remove('hidden');
+  modal.classList.add('active');
+
+  
+  const content = modal.querySelector('.profile-modal-content');
+  if (content) {
+    content.classList.remove('fade-scale-out');
+    content.classList.add('fade-scale-in');
+  }
+
+  if(typeof feather !== 'undefined') feather.replace();
 }
 
-function closeUserProfile() {
+function closeUserProfilePopup() {
+    const modal = document.getElementById('userProfilePopup');
+    if(modal) {
+        const content = modal.querySelector('.profile-modal-content');
+        if (content) {
+            content.classList.remove('fade-scale-in');
+            content.classList.add('fade-scale-out');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('active');
+                content.classList.remove('fade-scale-out');
+            }, 250);
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('active');
+        }
+    }
 }
 
-// --- GEMINI AI FUNCTIONS ---
 
-let geminiHistory = []; // Menyimpan konteks percakapan sesi ini
+function showConfirmModal(title, message, checkboxLabel = null) {
+  return new Promise((resolve) => {
+    const modalId = 'customConfirmModal';
+    let modal = document.getElementById(modalId);
+    
+    if (!modal) {
+      const html = `
+        <div id="${modalId}" class="modal hidden" style="z-index: 10000; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;">
+          <div class="glass-panel confirm-modal-content fade-scale-in" style="max-width: 350px; padding: 30px; text-align: center; border: 1px solid rgba(255,255,255,0.1); position: relative;">
+            <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; width: 64px; height: 64px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+              <i data-feather="user-x" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3 style="margin-bottom: 10px; font-size: 1.25rem; font-weight: 700;">${title}</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 25px; line-height: 1.6; font-size: 0.95rem;">${message}</p>
+            ${checkboxLabel ? `
+              <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; color: var(--text-secondary); font-size: 0.85rem;">
+                <input type="checkbox" id="modalConfirmCheckbox" style="cursor: pointer; width: 16px; height: 16px; accent-color: #ef4444;">
+                <label for="modalConfirmCheckbox" style="cursor: pointer;">${checkboxLabel}</label>
+              </div>
+            ` : ''}
+            <div style="display: flex; gap: 12px;">
+              <button id="confirmCancelBtn" style="flex: 1; background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--border-color); padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;">Batal</button>
+              <button id="confirmOkBtn" style="flex: 1; background: #ef4444; color: white; border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">Hapus</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', html);
+      modal = document.getElementById(modalId);
+    } else {
+      modal.querySelector('h3').textContent = title;
+      modal.querySelector('p').innerHTML = message;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
+    document.body.appendChild(modal); 
+    if (typeof feather !== 'undefined') feather.replace();
+
+    const okBtn = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+
+    const handleAction = (result) => {
+      const checkbox = document.getElementById('modalConfirmCheckbox');
+      const isChecked = checkbox ? checkbox.checked : false;
+      modal.classList.add('hidden');
+      modal.classList.remove('active');
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      resolve({ confirmed: result, checkboxChecked: isChecked });
+    };
+
+    okBtn.onclick = () => handleAction(true);
+    cancelBtn.onclick = () => handleAction(false);
+    modal.onclick = (e) => { if (e.target === modal) handleAction(false); };
+  });
+}
+
+async function deleteFriend(friendId, friendName) {
+    const { confirmed } = await showConfirmModal(
+        "Hapus Pertemanan", 
+        `Apakah Anda yakin ingin menghapus <strong>${friendName}</strong> dari daftar teman?`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/friends/${friendId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUser.id })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            Toast.show("Teman berhasil dihapus", "success");
+            
+            
+            closeUserProfilePopup();
+            if (selectedUser && selectedUser._id === friendId) {
+                closeChat();
+            }
+
+            
+            loadFriendsAndRequests(true);
+        } else {
+            Toast.show(data.error || "Gagal menghapus teman", "error");
+        }
+    } catch (err) {
+        Toast.show("Kesalahan koneksi", "error");
+    }
+}
+
+async function deleteAllChat(targetUsername, targetName, targetId) {
+    const { confirmed, checkboxChecked: forEveryone } = await showConfirmModal(
+        "Hapus Semua Chat",
+        `Apakah Anda yakin ingin menghapus semua riwayat chat dengan <strong>${targetName}</strong>?`,
+        `Hapus untuk ${targetName} juga`
+    );
+
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/messages/all`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                from: currentUser.username, 
+                to: targetUsername, 
+                forEveryone 
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            Toast.show("Chat berhasil dibersihkan", "success");
+            closeUserProfilePopup();
+            
+            
+            if (selectedUser && selectedUser.username === targetUsername) {
+                loadMessages(targetUsername);
+            }
+
+            
+            localStorage.removeItem(`lastMsg-${currentUser.id}-${targetId}`);
+            updateRecentChatsDisplay();
+        }
+    } catch (err) {
+        Toast.show("Gagal menghapus chat", "error");
+    }
+}
+
+socket.on('chat_cleared', (data) => {
+    if (selectedUser && selectedUser.username === data.with) {
+        loadMessages(data.with);
+    }
+    
+    const user = (window.allUsers || []).find(u => u.username === data.with);
+    if (user) {
+        localStorage.removeItem(`lastMsg-${currentUser.id}-${user._id}`);
+        updateRecentChatsDisplay();
+    }
+});
+
+
+
+let geminiHistory = []; 
 
 async function sendGeminiMessage() {
   const input = document.getElementById('geminiInput');
   const text = input.value.trim();
   if (!text) return;
 
-  // 1. Add User Message
+  
   addGeminiBubble(text, true);
   input.value = '';
-  input.disabled = true; // Disable input saat loading
+  input.disabled = true; 
 
-  // 2. Simulate Loading
+  
   const chatList = document.getElementById('geminiChatList');
   const loadingDiv = document.createElement('div');
   loadingDiv.className = 'gemini-message ai loading-bubble';
@@ -4767,7 +5528,7 @@ async function sendGeminiMessage() {
   chatList.scrollTop = chatList.scrollHeight;
 
   try {
-    // 3. Call Real Backend API
+    
     const res = await fetch(`${API_URL}/gemini`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4781,11 +5542,11 @@ async function sendGeminiMessage() {
     loadingDiv.remove();
 
     if (data.success) {
-      // Tampilkan balasan
+      
       addGeminiBubble(data.reply, false);
       
-      // Update history untuk konteks selanjutnya
-      // Format history sesuai SDK Google Generative AI
+      
+      
       geminiHistory.push({ role: "user", parts: [{ text: text }] });
       geminiHistory.push({ role: "model", parts: [{ text: data.reply }] });
     } else {
@@ -4800,21 +5561,21 @@ async function sendGeminiMessage() {
   }
 }
 
-// Helper untuk format teks sederhana (Bold & Code)
+
 function formatGeminiText(text) {
-  // 1. Escape HTML dasar untuk keamanan
+  
   let html = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // 2. Code Blocks (```...```)
+  
   html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
 
-  // 3. Inline Code (`...`)
+  
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // 4. Bold (**...**)
+  
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
   return html;
@@ -4822,7 +5583,7 @@ function formatGeminiText(text) {
 
 function addGeminiBubble(text, isUser) {
   const container = document.getElementById('geminiChatList');
-  // Sembunyikan intro jika ada
+  
   const intro = container.querySelector('.gemini-intro');
   if (intro) intro.style.display = 'none';
 
@@ -4832,7 +5593,7 @@ function addGeminiBubble(text, isUser) {
   if (isUser) {
     div.innerText = text;
   } else {
-    // Gunakan formatter untuk AI agar bisa render bold/code
+    
     div.innerHTML = formatGeminiText(text);
   }
   

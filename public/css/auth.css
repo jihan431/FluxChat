@@ -1,5 +1,4 @@
 :root {
-  /* Palet warna dari gambar: dark blue-gray, lighter blue-gray, muted teal, light gray */
   --primary: #5a8a8c;
   --primary-dark: #4a7c7e;
   --primary-light: #7ba5a7;
@@ -14,7 +13,6 @@
   --info-color: #5a8a8c;
 }
 
-/* ==================== LOADING SCREEN ==================== */
 .loading-screen {
   position: fixed;
   top: 0;
@@ -30,22 +28,22 @@
   overflow: hidden;
 }
 
-/* Background dengan blur */
 .loading-screen::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: #0a0a0a url('../assets/loading.jpg') center center / cover no-repeat fixed;
+  background: #0a0a0a url("../assets/loading.jpg") center center / cover
+    no-repeat fixed;
   filter: blur(10px);
   -webkit-filter: blur(10px);
   z-index: 0;
 }
 
 .loading-screen::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -132,7 +130,8 @@
 }
 
 @keyframes logoPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -143,7 +142,8 @@
 }
 
 @keyframes titleFade {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -152,7 +152,9 @@
 }
 
 @keyframes spinnerBounce {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0.8);
     opacity: 0.5;
   }
@@ -163,26 +165,49 @@
 }
 
 @keyframes hueRotate {
-  0% { filter: brightness(0.5) hue-rotate(0deg); }
-  100% { filter: brightness(0.5) hue-rotate(360deg); }
+  0% {
+    filter: brightness(0.5) hue-rotate(0deg);
+  }
+  100% {
+    filter: brightness(0.5) hue-rotate(360deg);
+  }
 }
 
 @keyframes fadeOutScreen {
-  0% { opacity: 1; visibility: visible; }
-  100% { opacity: 0; visibility: hidden; }
+  0% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
 }
 
 @keyframes backgroundZoomIn {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.1); }
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.1);
+  }
 }
 
 @keyframes contentZoomOut {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
 }
 
-* { box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+* {
+  box-sizing: border-box;
+  font-family: "Outfit", sans-serif;
+}
 
 body {
   margin: 0;
@@ -195,45 +220,35 @@ body {
   overflow: hidden;
 }
 
+.otp-message {
+  padding-bottom: 20px;
+  line-height: 1.5;
+  color: var(--text-light);
+}
 
-
-.otp-message { padding-bottom: 20px; line-height: 1.5; color: var(--text-light);}
-
-/* --- GLASSMORPHISM CARD WITH ENTRANCE ANIMATION --- */
 .auth-card {
-  /* Enhanced Glassmorphism Effect */
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   padding: 40px 50px;
-  
-  /* Animasi Masuk - Hidden saat loading */
   opacity: 0;
   transform: translateY(30px) scale(0.95);
   animation: none;
-  
-  /* Smooth height transition */
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); /* Dipercepat agar tidak terasa lambat */
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: auto;
-  /* PC display - larger card */
   width: 600px;
   max-width: 90vw;
   position: relative;
   overflow: hidden;
   z-index: 10;
-  
-  /* Add subtle shadow for depth */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-/* Enhanced Animasi card saat loading selesai */
 .auth-card.loaded {
   animation: cardEntranceComplete 1.4s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-  /* Add a subtle glow effect when loaded */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
-              0 0 20px rgba(90, 138, 140, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 0 20px rgba(90, 138, 140, 0.2);
 }
 
 @keyframes cardEntranceComplete {
@@ -241,31 +256,49 @@ body {
     opacity: 0;
     transform: translateY(60px) scale(0.8) perspective(1000px) rotateX(10deg);
     filter: blur(10px);
-    box-shadow: 0 0 0 rgba(0,0,0,0);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   }
   100% {
     opacity: 1;
     transform: translateY(0) scale(1) perspective(1000px) rotateX(0);
     filter: blur(0);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
-                0 0 20px rgba(90, 138, 140, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 0 20px rgba(90, 138, 140, 0.2);
   }
 }
 
-.auth-header { text-align: center; margin-bottom: 30px; }
-.logo-wrapper { 
+.auth-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.logo-wrapper {
   background: var(--primary);
-  width: 45px; 
-  height: 45px; 
-  border-radius: 12px; 
-  display: flex; 
-  align-items: center; 
+  width: 45px;
+  height: 45px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
   justify-content: center;
   margin: 0 auto 12px;
 }
-.app-logo { width: 24px; color: white; }
-h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
-.subtitle { color: var(--text-dim); font-size: 0.85rem; margin-top: 6px; }
+
+.app-logo {
+  width: 24px;
+  color: white;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.subtitle {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-top: 6px;
+}
 
 .auth-tabs {
   display: flex;
@@ -280,7 +313,7 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
 }
 
 .auth-tabs::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 4px;
   left: 4px;
@@ -314,8 +347,10 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.3px; }
   color: var(--text-light);
 }
 
-/* Floating Label Inputs */
-.input-group { position: relative; margin-bottom: 16px; }
+.input-group {
+  position: relative;
+  margin-bottom: 16px;
+}
 input {
   width: 100%;
   background: rgba(255, 255, 255, 0.06);
@@ -329,8 +364,8 @@ input {
   outline: none;
   transition: all 0.2s ease;
 }
-input:focus { 
-  border-color: var(--primary); 
+input:focus {
+  border-color: var(--primary);
   background: rgba(90, 138, 140, 0.1);
 }
 label {
@@ -342,7 +377,8 @@ label {
   transition: 0.2s ease;
   font-size: 0.95rem;
 }
-input:focus ~ label, input:not(:placeholder-shown) ~ label {
+input:focus ~ label,
+input:not(:placeholder-shown) ~ label {
   top: -8px;
   left: 10px;
   font-size: 0.65rem;
@@ -353,7 +389,6 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   font-weight: 600;
 }
 
-/* Password Visibility Toggle */
 .password-toggle {
   position: absolute;
   right: 10px;
@@ -402,7 +437,7 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   transform: translateY(-1px);
 }
 
-.btn-submit:active { 
+.btn-submit:active {
   transform: translateY(0px);
 }
 
@@ -454,9 +489,10 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   cursor: not-allowed;
 }
 
-.hidden { display: none; }
+.hidden {
+  display: none;
+}
 
-/* --- FORM TRANSITION ANIMATIONS --- */
 .auth-form {
   display: flex;
   flex-direction: column;
@@ -472,16 +508,23 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   pointer-events: none;
 }
 
-/* Animasi staggered pada input-group */
 .auth-form:not(.hidden) .input-group {
   animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   opacity: 0;
 }
 
-.auth-form:not(.hidden) .input-group:nth-child(1) { animation-delay: 0.1s; }
-.auth-form:not(.hidden) .input-group:nth-child(2) { animation-delay: 0.2s; }
-.auth-form:not(.hidden) .input-group:nth-child(3) { animation-delay: 0.3s; }
-.auth-form:not(.hidden) .input-group:nth-child(4) { animation-delay: 0.4s; }
+.auth-form:not(.hidden) .input-group:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.auth-form:not(.hidden) .input-group:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.auth-form:not(.hidden) .input-group:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.auth-form:not(.hidden) .input-group:nth-child(4) {
+  animation-delay: 0.4s;
+}
 
 .auth-form:not(.hidden) .btn-submit {
   animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -500,19 +543,30 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   }
 }
 
-.auth-footer { margin-top: 30px; text-align: center; font-size: 0.85rem; color: var(--text-dim); }
-.auth-footer a { color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.2s; }
-.auth-footer a:hover { color: var(--primary-light); }
+.auth-footer {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.auth-footer a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.auth-footer a:hover {
+  color: var(--primary-light);
+}
 
-/* --- MODERN TOAST NOTIFICATION - OPTIMIZED --- */
-#toastBox { 
-  position: fixed; 
-  top: 20px; 
-  right: 20px; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 10px; 
-  z-index: 9999; 
+#toastBox {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
 }
 
 .toast {
@@ -530,33 +584,44 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   gap: 12px;
   position: relative;
   overflow: hidden;
-
-  /* Spring Animation - Simplified */
   transform-origin: top center;
   animation: toastSpring 0.4s ease-out forwards;
 }
 
-/* Accent line pada toast */
 .toast::before {
-  content: '';
+  content: "";
   position: absolute;
-  left: 0; top: 0; bottom: 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 3px;
 }
-.toast.success::before { background: var(--success-color); }
-.toast.error::before { background: var(--error-color); }
-.toast.info::before { background: var(--info-color); }
+.toast.success::before {
+  background: var(--success-color);
+}
+.toast.error::before {
+  background: var(--error-color);
+}
+.toast.info::before {
+  background: var(--info-color);
+}
 
 .toast-icon {
-  display: flex; 
-  align-items: center; 
+  display: flex;
+  align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
 @keyframes toastSpring {
-  0% { opacity: 0; transform: translateY(-15px) scale(0.95); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .toast.hide {
@@ -564,13 +629,16 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
 }
 
 @keyframes toastExit {
-  0% { opacity: 1; transform: translateX(0); }
-  100% { opacity: 0; transform: translateX(110%) scale(0.9); }
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(110%) scale(0.9);
+  }
 }
 
-/* --- RESPONSIVE DESIGN --- */
-
-/* Mobile (Android) - max-width: 768px */
 @media (max-width: 768px) {
   body {
     padding: 8px;
@@ -587,14 +655,11 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
     max-width: 100%;
     box-sizing: border-box;
     width: 43vh;
-    /* Add subtle shadow for depth on mobile */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   }
-  
+
   .auth-card.loaded {
-    /* Add a subtle glow effect when loaded on mobile */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 
-                0 0 15px rgba(90, 138, 140, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 0 15px rgba(90, 138, 140, 0.15);
   }
 
   .auth-header {
@@ -621,7 +686,7 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   .auth-tabs {
     margin-bottom: 16px;
   }
-  
+
   .input-group {
     margin-bottom: 12px;
   }
@@ -637,7 +702,8 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
     font-size: 0.9rem;
   }
 
-  input:focus ~ label, input:not(:placeholder-shown) ~ label {
+  input:focus ~ label,
+  input:not(:placeholder-shown) ~ label {
     top: -6px;
     left: 8px;
     font-size: 0.6rem;
@@ -678,22 +744,24 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
 }
 
 @keyframes toastSpringMobile {
-  0% { opacity: 0; transform: translateY(20px) scale(0.95); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-/* Small mobile devices - max-width: 480px */
 @media (max-width: 480px) {
   .auth-card {
     padding: 14px 14px;
-    /* Maintain shadow consistency on small screens */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   }
-  
+
   .auth-card.loaded {
-    /* Maintain glow effect consistency on small screens */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 
-                0 0 15px rgba(90, 138, 140, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 0 15px rgba(90, 138, 140, 0.15);
   }
 
   .auth-header {
@@ -719,7 +787,8 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
     font-size: 0.85rem;
   }
 
-  input:focus ~ label, input:not(:placeholder-shown) ~ label {
+  input:focus ~ label,
+  input:not(:placeholder-shown) ~ label {
     top: -5px;
     left: 7px;
     font-size: 0.55rem;
@@ -741,43 +810,43 @@ input:focus ~ label, input:not(:placeholder-shown) ~ label {
   }
 }
 
-/* Background dengan gambar background.jpg */
 body {
   background: #0a0a0a;
   height: 100vh;
   margin: 0;
   overflow: hidden;
   position: relative;
-  font-family: 'Outfit', sans-serif;
+  font-family: "Outfit", sans-serif;
 }
 
-/* Background image layer */
 body::after {
-  content: '';
+  content: "";
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: #0a0a0a url('../assets/background.jpg') center center / cover no-repeat;
+  background: #0a0a0a url("../assets/background.jpg") center center / cover
+    no-repeat;
   z-index: 0;
   transition: all 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
   pointer-events: none;
   filter: brightness(0.5);
   transform-origin: center center;
-
 }
 
-/* Overlay gelap untuk meningkatkan kontras dan readability */
 body::before {
-  content: '';
+  content: "";
   position: fixed;
   top: 0;
-  left: 0;                                                                                                                                                 
+  left: 0;
   width: 100%;
   height: 100%;
-  /* Vignette effect: Gelap di pinggir, terang di tengah ala lensa */
-  background: radial-gradient(circle at center, rgba(0,0,0,0) 20%, rgba(0,0,0,0.8) 100%);
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0) 20%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
   opacity: 0.3;
   backdrop-filter: blur(0px);
   z-index: 1;
@@ -785,27 +854,23 @@ body::before {
   transition: all 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* Efek blur, opacity, zoom dan rotate saat input focused - hanya pada background */
 body.input-focused::after {
   animation: hueRotate 20s infinite linear;
-  /* Wide Angle Feel: Zoom in lebih dalam */
   transform: scale(1.15);
   transition: all 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 body.input-focused::before {
-  /* Pertegas vignette dan tambah blur saat focus */
   opacity: 1;
   backdrop-filter: blur(5px);
 }
 
-/* Efek Partikel Melayang - DISABLED */
 .circles {
   display: none;
 }
 
-/* Login Container di depan */
-.login-container, .glass-panel {
+.login-container,
+.glass-panel {
   position: relative;
   z-index: 10;
 }
@@ -815,12 +880,10 @@ body.input-focused::before {
   z-index: 10;
 }
 
-/* Background blobs tersembunyi */
 .background-blobs {
   display: none;
 }
 
-/* Perf-lite mode untuk halaman auth: tambahkan class .perf-lite di <body> */
 body.perf-lite {
   background: #1a1f2e;
   animation: none;
@@ -847,9 +910,6 @@ body.perf-lite .auth-tabs {
   box-shadow: none;
 }
 
-/* TAMBAHKAN DI AKHIR FILE auth.css */
-
-/* --- FORGOT PASSWORD SPECIFIC STYLES --- */
 #loginForm.hidden {
   display: none;
 }
@@ -866,7 +926,6 @@ body.perf-lite .auth-tabs {
   line-height: 1.5;
 }
 
-/* Recovery specific styles */
 .recovery-link {
   text-align: center;
   margin-top: 15px;
@@ -882,20 +941,16 @@ body.perf-lite .auth-tabs {
   text-decoration: underline;
 }
 
-/* Responsive untuk recovery page */
 @media (max-width: 768px) {
   .auth-card {
     padding: 20px !important;
-    /* Ensure recovery page maintains consistent styling */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   }
-  
+
   .auth-card.loaded {
-    /* Ensure recovery page maintains glow effect */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 
-                0 0 15px rgba(90, 138, 140, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 0 15px rgba(90, 138, 140, 0.15);
   }
-  
+
   .otp-message {
     font-size: 0.8rem;
   }

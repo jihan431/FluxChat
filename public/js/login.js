@@ -1,7 +1,7 @@
 const API_URL = window.location.origin;
 let googleInitTried = false;
 
-// Deteksi perangkat
+
 function isMobileDevice() {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
@@ -45,24 +45,24 @@ async function initGoogleLogin() {
 
       const isMobile = isMobileDevice();
       
-      // Konfigurasi berbeda untuk mobile dan desktop
+      
       const config = {
         client_id: clientId,
         callback: handleGoogleCredential
       };
 
       if (isMobile) {
-        // Mobile: gunakan redirect
+        
         config.ux_mode = 'redirect';
         config.redirect_uri = `${window.location.origin}/login.html`;
       } else {
-        // Desktop: gunakan popup
+        
         config.ux_mode = 'popup';
       }
 
       google.accounts.id.initialize(config);
 
-      // Untuk desktop, buat button tersembunyi
+      
       if (!isMobile) {
         const googleBtnContainer = document.createElement('div');
         googleBtnContainer.id = 'googleBtnContainer';
@@ -81,7 +81,7 @@ async function initGoogleLogin() {
           width: btn.offsetWidth || 300
         });
 
-        // Custom button click trigger Google button tersembunyi
+        
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           setTimeout(() => {
@@ -101,7 +101,7 @@ async function initGoogleLogin() {
           }, 100);
         });
       } else {
-        // Mobile: button langsung trigger Google login
+        
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           google.accounts.id.prompt();
@@ -202,12 +202,12 @@ function setMode(mode) {
   const tabButtons = document.querySelectorAll('.tab-btn');
 
   const updateCardHeight = (form) => {
-    // Gunakan double RAF untuk memastikan browser selesai merender elemen (display: block)
+    
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         let totalHeight = 0;
         
-        // Hitung tinggi semua anak elemen yang terlihat (tidak hidden)
+        
         Array.from(authCard.children).forEach(child => {
           if (!child.classList.contains('hidden') && getComputedStyle(child).display !== 'none') {
             const style = getComputedStyle(child);
@@ -215,18 +215,18 @@ function setMode(mode) {
           }
         });
 
-        // Tambahkan padding vertikal kartu itu sendiri
+        
         const cardStyle = getComputedStyle(authCard);
         totalHeight += parseInt(cardStyle.paddingTop) + parseInt(cardStyle.paddingBottom);
 
-        // Set tinggi eksplisit agar transisi CSS berfungsi
+        
         authCard.style.height = totalHeight + 'px';
-        authCard.style.minHeight = ''; // Reset minHeight agar tidak konflik
+        authCard.style.minHeight = ''; 
       });
     });
   };
 
-  // Helper untuk menampilkan/menyembunyikan tab navigasi
+  
   const toggleTabs = (show) => {
     if (authTabs) {
       if (show) authTabs.classList.remove('hidden');
@@ -234,9 +234,9 @@ function setMode(mode) {
     }
   };
 
-  // Helper untuk menampilkan/menyembunyikan global footer (jika ada di luar form)
+  
   const toggleGlobalFooter = (show) => {
-    // Cari .auth-footer yang merupakan anak langsung dari authCard (bukan di dalam form)
+    
     const globalFooter = Array.from(authCard.children).find(el => el.classList.contains('auth-footer'));
     if (globalFooter) {
       if (show) globalFooter.classList.remove('hidden');
@@ -244,7 +244,7 @@ function setMode(mode) {
     }
   };
 
-  // Helper untuk menampilkan/menyembunyikan main header
+  
   const toggleMainHeader = (show) => {
     const mainHeader = Array.from(authCard.children).find(el => el.classList.contains('auth-header'));
     if (mainHeader) {
@@ -253,17 +253,17 @@ function setMode(mode) {
     }
   };
 
-  // 1. Identifikasi form yang sedang aktif
+  
   const forms = [loginForm, registerForm, otpForm, recoveryForm, resetPasswordForm].filter(f => f);
   const activeForm = forms.find(f => !f.classList.contains('hidden'));
 
-  // Kunci tinggi kartu saat ini sebelum animasi dimulai agar transisi mulus
+  
   if (authCard) {
     authCard.style.height = authCard.offsetHeight + 'px';
     authCard.style.minHeight = '';
   }
 
-  // 2. Definisikan logika pergantian form
+  
   const executeSwitch = () => {
     tabButtons.forEach(btn => btn.classList.remove('active'));
 
@@ -292,9 +292,9 @@ function setMode(mode) {
       registerForm.classList.remove('hidden');
       updateCardHeight(registerForm);
     } else if (mode === 'otp') {
-      toggleTabs(false); // Sembunyikan tab saat OTP
-      toggleGlobalFooter(false); // Sembunyikan footer global saat OTP
-      toggleMainHeader(false); // Sembunyikan header utama saat OTP
+      toggleTabs(false); 
+      toggleGlobalFooter(false); 
+      toggleMainHeader(false); 
       tabButtons.forEach(btn => btn.classList.remove('active'));
       authTabs.classList.remove('tab-daftar');
       loginForm.classList.add('hidden');
@@ -304,9 +304,9 @@ function setMode(mode) {
       otpForm.classList.remove('hidden');
       updateCardHeight(otpForm);
     } else if (mode === 'recovery') {
-      toggleTabs(false); // Sembunyikan tab saat Recovery
-      toggleGlobalFooter(false); // Sembunyikan footer global saat Recovery
-      toggleMainHeader(false); // Sembunyikan header utama saat Recovery
+      toggleTabs(false); 
+      toggleGlobalFooter(false); 
+      toggleMainHeader(false); 
       tabButtons.forEach(btn => btn.classList.remove('active'));
       loginForm.classList.add('hidden');
       registerForm.classList.add('hidden');
@@ -315,9 +315,9 @@ function setMode(mode) {
       if(recoveryForm) recoveryForm.classList.remove('hidden');
       if(recoveryForm) updateCardHeight(recoveryForm);
     } else if (mode === 'reset-password') {
-      toggleTabs(false); // Sembunyikan tab saat Reset Password
-      toggleGlobalFooter(false); // Sembunyikan footer global saat Reset Password
-      toggleMainHeader(false); // Sembunyikan header utama saat Reset Password
+      toggleTabs(false); 
+      toggleGlobalFooter(false); 
+      toggleMainHeader(false); 
       tabButtons.forEach(btn => btn.classList.remove('active'));
       loginForm.classList.add('hidden');
       registerForm.classList.add('hidden');
@@ -330,15 +330,15 @@ function setMode(mode) {
     }
   };
 
-  // 3. Jalankan transisi jika ada form aktif
+  
   if (activeForm) {
     activeForm.classList.add('form-exit');
-    // Tunggu animasi exit selesai (250ms) baru ganti form
+    
     setTimeout(() => {
       activeForm.classList.remove('form-exit');
-      activeForm.classList.add('hidden'); // Pastikan hidden sebelum switch
+      activeForm.classList.add('hidden'); 
       executeSwitch();
-    }, 150); // Dipercepat dari 250ms ke 150ms agar lebih responsif
+    }, 150); 
   } else {
     executeSwitch();
   }
@@ -460,9 +460,9 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
   const otp = document.getElementById('otpCode').value.trim();
   const otpType = document.getElementById('otpType').value;
 
-  // Jika ini adalah OTP untuk recovery, kita simpan OTP di memori dan lanjut ke form reset password
+  
   if (otpType === 'recovery') {
-    // Simpan OTP sementara di input hidden pada form reset password
+    
     document.getElementById('resetOtpHidden').value = otp;
     setMode('reset-password');
     return;
@@ -520,7 +520,7 @@ function hideLoadingScreen() {
     loadingScreen.classList.add('hidden');
     setTimeout(() => {
       loadingScreen.remove();
-    }, 1600); // Sesuaikan dengan durasi animasi baru (1.5s + buffer)
+    }, 1600); 
   }
   
   if (authCard) {
@@ -556,17 +556,17 @@ function setupPasswordToggle() {
   }
 }
 
-// --- RECOVERY SYSTEM INJECTION ---
+
 function initRecoverySystem() {
   const authCard = document.querySelector('.auth-card');
   const loginForm = document.getElementById('loginForm');
   
   if (!authCard || !loginForm) return;
 
-  // FIX: Cari dan hapus link lama yang mengarah ke password.html
+  
   const oldLinks = document.querySelectorAll('a[href*="password.html"]');
   oldLinks.forEach(link => {
-    // Jika link ada di dalam tag <p>, hapus tag <p>-nya sekalian agar rapi
+    
     if (link.parentElement && link.parentElement.tagName === 'P') {
       link.parentElement.remove();
     } else {
@@ -574,7 +574,7 @@ function initRecoverySystem() {
     }
   });
 
-  // 1. Inject "Lupa Password?" link to Login Form
+  
   const loginFooter = loginForm.querySelector('.auth-footer');
   
   if (loginFooter) {
@@ -583,20 +583,20 @@ function initRecoverySystem() {
     forgotLink.innerHTML = `<a href="#" onclick="setMode('recovery'); return false;" style="font-size: 0.9rem;">Lupa Password?</a>`;
     loginFooter.insertBefore(forgotLink, loginFooter.firstChild);
   } else {
-    // FALLBACK: Jika tidak ada .auth-footer di dalam form, inject sebelum tombol submit
+    
     const submitBtn = loginForm.querySelector('button[type="submit"]');
     if (submitBtn) {
       const forgotLink = document.createElement('div');
       forgotLink.className = 'recovery-link';
       forgotLink.style.marginBottom = '12px';
-      forgotLink.style.textAlign = 'right'; // Posisi di kanan atas tombol
+      forgotLink.style.textAlign = 'right'; 
       forgotLink.innerHTML = `<a href="#" onclick="setMode('recovery'); return false;" style="font-size: 0.9rem; color: var(--text-dim); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-dim)'">Lupa Password?</a>`;
       
       loginForm.insertBefore(forgotLink, submitBtn);
     }
   }
 
-  // 2. Inject Recovery Form (Input Email)
+  
   const recoveryFormHTML = `
     <form id="recoveryForm" class="auth-form hidden">
       <div class="auth-header">
@@ -615,7 +615,7 @@ function initRecoverySystem() {
   `;
   authCard.insertAdjacentHTML('beforeend', recoveryFormHTML);
 
-  // 3. Inject Reset Password Form
+  
   const resetFormHTML = `
     <form id="resetPasswordForm" class="auth-form hidden">
       <div class="auth-header">
@@ -632,14 +632,14 @@ function initRecoverySystem() {
   `;
   authCard.insertAdjacentHTML('beforeend', resetFormHTML);
 
-  // FIX: Tambahkan event listener focus/blur agar animasi background jalan (sama seperti login)
+  
   const newInputs = authCard.querySelectorAll('#recoveryForm input, #resetPasswordForm input');
   newInputs.forEach(input => {
     input.addEventListener('focus', () => document.body.classList.add('input-focused'));
     input.addEventListener('blur', () => document.body.classList.remove('input-focused'));
   });
 
-  // 4. Attach Event Listeners
+  
   document.getElementById('recoveryForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('recEmail').value.trim();
@@ -698,7 +698,7 @@ function initRecoverySystem() {
         setTimeout(() => setMode('login'), 1500);
       } else {
         showNotification(data.error || 'Gagal mereset password', 'error');
-        // Jika OTP salah/kadaluarsa, mungkin perlu kembali ke input OTP
+        
         if (data.error.includes('OTP') || data.error.includes('Kode')) {
              setTimeout(() => setMode('otp'), 1500);
         }
@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
   const authCard = document.querySelector('.auth-card');
   
-  // Inisialisasi tinggi awal (gunakan auto agar responsif saat load pertama)
+  
   authCard.style.height = 'auto';
   authCard.style.minHeight = '';
   
@@ -785,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   waitForResources();
   
-  // Initialize Recovery System
+  
   initRecoverySystem();
   
   
@@ -794,15 +794,15 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('newUser');
   }
   
-  // Handle redirect dari Google (untuk mobile)
+  
   const urlParams = new URLSearchParams(window.location.search);
   const credential = urlParams.get('credential');
   const g_csrf_token = urlParams.get('g_csrf_token');
   
   if (credential && g_csrf_token) {
-    // Hapus parameter dari URL
+    
     window.history.replaceState({}, document.title, window.location.pathname);
-    // Proses credential
+    
     handleGoogleCredential({ credential });
   } else {
     initGoogleLogin();
