@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FluxChat Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="admin-container">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <i class="fas fa-bolt"></i>
+            <span>FluxChat</span>
+          </div>
+          <span class="admin-badge">Admin</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a href="#" class="nav-item active" data-section="dashboard">
+            <i class="fas fa-chart-pie"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" data-section="users">
+            <i class="fas fa-users"></i>
+            <span>Users</span>
+          </a>
+          <a href="#" class="nav-item" data-section="groups">
+            <i class="fas fa-layer-group"></i>
+            <span>Groups</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="admin-profile">
+            <div class="admin-avatar" id="adminAvatar">A</div>
+            <div class="admin-info">
+              <span class="admin-name" id="adminName">Admin</span>
+              <span class="admin-role">Administrator</span>
+            </div>
+          </div>
+          <button class="logout-btn" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="content-header">
+          <div class="header-left">
+            <button class="menu-toggle" id="menuToggle">
+              <i class="fas fa-bars"></i>
+            </button>
+            <h1 id="pageTitle">Dashboard</h1>
+          </div>
+          <div class="header-right">
+            <span class="current-time" id="currentTime"></span>
+          </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section class="content-section active" id="dashboardSection">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon users">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-value" id="totalUsers">-</span>
+                <span class="stat-label">Total Users</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon messages">
+                <i class="fas fa-comments"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-value" id="totalMessages">-</span>
+                <span class="stat-label">Total Messages</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon groups">
+                <i class="fas fa-layer-group"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-value" id="totalGroups">-</span>
+                <span class="stat-label">Total Groups</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon new-users">
+                <i class="fas fa-user-plus"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-value" id="newUsersToday">-</span>
+                <span class="stat-label">New Users Today</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="recent-section">
+            <h2>Quick Actions</h2>
+            <div class="quick-actions">
+              <button class="action-btn" onclick="showSection('users')">
+                <i class="fas fa-user-cog"></i>
+                Manage Users
+              </button>
+              <button class="action-btn" onclick="showSection('groups')">
+                <i class="fas fa-users-cog"></i>
+                Manage Groups
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Users Section -->
+        <section class="content-section" id="usersSection">
+          <div class="section-header">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input
+                type="text"
+                id="userSearch"
+                placeholder="Search users..."
+              />
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Provider</th>
+                  <th>Last Seen</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr>
+                  <td colspan="6" class="loading-cell">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="usersPagination"></div>
+        </section>
+
+        <!-- Groups Section -->
+        <section class="content-section" id="groupsSection">
+          <div class="section-header">
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input
+                type="text"
+                id="groupSearch"
+                placeholder="Search groups..."
+              />
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Group</th>
+                  <th>Created By</th>
+                  <th>Members</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="groupsTableBody">
+                <tr>
+                  <td colspan="5" class="loading-cell">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="groupsPagination"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal" id="editUserModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Edit User</h2>
+          <button class="modal-close" onclick="closeModal('editUserModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="editUserForm">
+          <input type="hidden" id="editUserId" />
+          <div class="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              id="editUsername"
+              disabled
+              style="opacity: 0.6; cursor: not-allowed"
+            />
+          </div>
+          <div class="form-group">
+            <label for="editEmail">Email</label>
+            <input type="email" id="editEmail" required />
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="resetPassword" />
+            <label for="resetPassword">Reset Password (kirim email)</label>
+          </div>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="closeModal('editUserModal')"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal" id="deleteModal">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>Konfirmasi Hapus</h2>
+          <button class="modal-close" onclick="closeModal('deleteModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="deleteMessage">Apakah Anda yakin ingin menghapus item ini?</p>
+        </div>
+        <div class="form-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeModal('deleteModal')"
+          >
+            Cancel
+          </button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">
+      <i class="toast-icon fas fa-check-circle"></i>
+      <span class="toast-message"></span>
+    </div>
+
+    <script src="js/admin.js"></script>
+  </body>
+</html>

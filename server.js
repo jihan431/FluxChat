@@ -10,6 +10,7 @@ const nodemailer = require("nodemailer");
 const { OAuth2Client } = require("google-auth-library");
 const crypto = require("crypto");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { exec } = require("child_process");
 
 const app = express();
 const server = http.createServer(app);
@@ -44,6 +45,9 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   lastSeen: { type: Date, default: Date.now },
   avatar: { type: String, default: "default" },
+  profileCompleted: { type: Boolean, default: false },
+  authProvider: { type: String, enum: ["local", "google"], default: "local" },
+  role: { type: String, enum: ["user", "admin"], default: "user" },
 
   otpHash: { type: String },
   otpExpires: { type: Date },
@@ -185,6 +189,313 @@ function isFileTypeAllowed(mime) {
   });
 }
 
+
+const isAdmin = async (req, res, next) => {
+  try {
+    const adminId = req.body.adminId || req.query.adminId || req.headers["x-admin-id"];
+    if (!adminId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(adminId)) {
+      return res.status(400).json({ success: false, error: "Invalid admin ID" });
+    }
+
+    const admin = await User.findById(adminId);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, error: "Akses ditolak. Hanya admin yang diizinkan." });
+    }
+
+    req.admin = admin;
+    next();
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
+
+
+
+app.get("/api/admin/stats", isAdmin, async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalMessages = await Message.countDocuments();
+    const totalGroups = await GroupChat.countDocuments();
+    const totalStatuses = await Status.countDocuments();
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const newUsersToday = await User.countDocuments({ 
+      _id: { $gte: mongoose.Types.ObjectId.createFromTime(today.getTime() / 1000) }
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalMessages,
+        totalGroups,
+        totalStatuses,
+        newUsersToday
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.get("/api/admin/users", isAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = "", sortBy = "createdAt", order = "desc" } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = {};
+    if (search) {
+      query = {
+        $or: [
+          { username: { $regex: search, $options: "i" } },
+          { nama: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ]
+      };
+    }
+
+    const sortOrder = order === "asc" ? 1 : -1;
+    const sortField = ["username", "nama", "email", "lastSeen", "role"].includes(sortBy) ? sortBy : "_id";
+
+    const users = await User.find(query)
+      .select("username nama email avatar lastSeen role authProvider profileCompleted friends")
+      .sort({ [sortField]: sortOrder })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(query);
+
+    res.json({
+      success: true,
+      users: users.map(u => ({
+        ...u.toObject(),
+        friendsCount: u.friends?.length || 0
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.get("/api/admin/users/:id", isAdmin, validateObjectId, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select("-password -otpHash -otpExpires")
+      .populate("friends", "username nama avatar");
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User tidak ditemukan" });
+    }
+
+    const messageCount = await Message.countDocuments({ from: user.username });
+
+    res.json({
+      success: true,
+      user: {
+        ...user.toObject(),
+        messageCount
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.put("/api/admin/users/:id", isAdmin, validateObjectId, async (req, res) => {
+  try {
+    const { email, resetPassword } = req.body;
+    const userId = req.params.id;
+
+    
+    if (userId === req.admin._id.toString()) {
+      return res.status(400).json({ success: false, error: "Tidak dapat mengedit akun sendiri" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User tidak ditemukan" });
+    }
+
+    
+    if (user.role === "admin") {
+      return res.status(400).json({ success: false, error: "Tidak dapat mengedit admin lain" });
+    }
+
+    
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+      if (emailExists) {
+        return res.status(400).json({ success: false, error: "Email sudah digunakan user lain" });
+      }
+    }
+
+    const updateData = {};
+    
+    if (email) updateData.email = email;
+
+    
+    if (resetPassword) {
+      const tempPassword = crypto.randomBytes(6).toString("hex");
+      updateData.password = await bcrypt.hash(tempPassword, 10);
+      
+      
+      try {
+        await transporter.sendMail({
+          from: "FluxChat Admin",
+          to: user.email,
+          subject: "Password Reset oleh Admin",
+          html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #5a8a8c;">FluxChat</h2>
+            <p>Password Anda telah direset oleh administrator.</p>
+            <p>Password baru Anda: <strong>${tempPassword}</strong></p>
+            <p>Silakan login dan segera ubah password Anda.</p>
+          </div>`
+        });
+      } catch (emailErr) {
+        console.error("[Admin] Failed to send password reset email:", emailErr);
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true })
+      .select("-password -otpHash -otpExpires");
+
+    
+    io.to(user.username).emit("user_updated_by_admin", {
+      email: updateData.email,
+      passwordReset: !!resetPassword
+    });
+
+    res.json({
+      success: true,
+      message: resetPassword ? "Password berhasil direset" : "User berhasil diperbarui",
+      user: updatedUser
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.delete("/api/admin/users/:id", isAdmin, validateObjectId, async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User tidak ditemukan" });
+    }
+
+    
+    if (userId === req.admin._id.toString()) {
+      return res.status(400).json({ success: false, error: "Tidak dapat menghapus akun sendiri" });
+    }
+
+    
+    await User.updateMany(
+      { friends: userId },
+      { $pull: { friends: userId } }
+    );
+
+    
+    await User.updateMany(
+      { "friendRequests.from": userId },
+      { $pull: { friendRequests: { from: userId } } }
+    );
+
+    
+    await Message.deleteMany({ from: user.username });
+
+    
+    await GroupChat.updateMany(
+      { members: userId },
+      { $pull: { members: userId } }
+    );
+
+    
+    await GroupChat.deleteMany({ createdBy: userId, members: { $size: 1 } });
+
+    
+    await Status.deleteMany({ user: userId });
+
+    
+    await User.findByIdAndDelete(userId);
+
+    res.json({ success: true, message: "User berhasil dihapus" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.get("/api/admin/groups", isAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const groups = await GroupChat.find()
+      .populate("createdBy", "username nama")
+      .populate("members", "username nama avatar")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await GroupChat.countDocuments();
+
+    res.json({
+      success: true,
+      groups,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.delete("/api/admin/groups/:id", isAdmin, validateObjectId, async (req, res) => {
+  try {
+    const groupId = req.params.id;
+
+    const group = await GroupChat.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ success: false, error: "Grup tidak ditemukan" });
+    }
+
+    
+    await Message.deleteMany({ groupId });
+
+    
+    await GroupChat.findByIdAndDelete(groupId);
+
+    res.json({ success: true, message: "Grup berhasil dihapus" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+
 app.post("/api/register", async (req, res) => {
   try {
     const { username, nama, email, password } = req.body;
@@ -213,6 +524,8 @@ app.post("/api/register", async (req, res) => {
       password: hashedPassword,
       otpHash,
       otpExpires,
+      authProvider: "local",
+      profileCompleted: false,
     });
 
     await user.save();
@@ -264,6 +577,105 @@ app.get("/api/config", (req, res) => {
   res.json({
     googleClientId: googleClientId || null,
   });
+});
+
+
+app.post("/login.html", async (req, res) => {
+  try {
+    const { credential, g_csrf_token } = req.body;
+
+    if (!credential) {
+      return res.redirect("/login.html?error=no_credential");
+    }
+
+    if (!googleClientId || !googleClient) {
+      return res.redirect("/login.html?error=google_not_configured");
+    }
+
+    
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+    const payload = ticket.getPayload();
+
+    const email = payload?.email;
+    if (!email) {
+      return res.redirect("/login.html?error=no_email");
+    }
+
+    const displayName = payload.name || email.split("@")[0];
+    const avatar = payload.picture || "default";
+    const googleSub = payload.sub;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const baseUsername =
+        (email.split("@")[0] || "user")
+          .replace(/[^a-zA-Z0-9_]/g, "")
+          .slice(0, 18) || "user";
+      let usernameCandidate = baseUsername;
+      let attempt = 0;
+      while (await User.findOne({ username: usernameCandidate })) {
+        attempt += 1;
+        usernameCandidate = `${baseUsername}${Math.floor(
+          100 + Math.random() * 900
+        )}`;
+        if (attempt > 5) {
+          usernameCandidate = `${baseUsername}${Date.now()
+            .toString()
+            .slice(-4)}`;
+          break;
+        }
+      }
+
+      const randomPass = crypto.randomBytes(12).toString("hex");
+      const hashedPassword = await bcrypt.hash(randomPass, 10);
+
+      user = new User({
+        username: usernameCandidate,
+        nama: displayName,
+        email,
+        password: hashedPassword,
+        avatar,
+        otpHash: undefined,
+        otpExpires: undefined,
+        lastSeen: new Date(),
+        authProvider: "google",
+        profileCompleted: false,
+      });
+
+      await user.save();
+    } else {
+      user.otpHash = undefined;
+      user.otpExpires = undefined;
+      user.avatar = avatar || user.avatar;
+      user.lastSeen = new Date();
+      await user.save();
+    }
+
+    
+    const userData = {
+      username: user.username,
+      nama: user.nama,
+      email: user.email,
+      id: user._id,
+      avatar: user.avatar,
+      provider: "google",
+      authProvider: user.authProvider || "google",
+      profileCompleted: user.profileCompleted || false,
+      role: user.role || "user",
+      googleSub,
+    };
+
+    
+    const userDataEncoded = encodeURIComponent(JSON.stringify(userData));
+    res.redirect(`/login.html?google_user=${userDataEncoded}`);
+  } catch (error) {
+    console.error("[Google Redirect] Error:", error);
+    res.redirect(`/login.html?error=${encodeURIComponent(error.message)}`);
+  }
 });
 
 app.post("/api/auth/google", async (req, res) => {
@@ -330,6 +742,8 @@ app.post("/api/auth/google", async (req, res) => {
         otpHash: undefined,
         otpExpires: undefined,
         lastSeen: new Date(),
+        authProvider: "google",
+        profileCompleted: false,
       });
 
       await user.save();
@@ -350,6 +764,9 @@ app.post("/api/auth/google", async (req, res) => {
         id: user._id,
         avatar: user.avatar,
         provider: "google",
+        authProvider: user.authProvider || "google",
+        profileCompleted: user.profileCompleted || false,
+        role: user.role || "user",
         googleSub,
       },
     });
@@ -477,6 +894,10 @@ app.post("/api/login", async (req, res) => {
         nama: user.nama,
         email: user.email,
         id: user._id,
+        avatar: user.avatar,
+        authProvider: user.authProvider || "local",
+        profileCompleted: user.profileCompleted || false,
+        role: user.role || "user",
       },
     });
   } catch (error) {
@@ -518,6 +939,12 @@ app.put("/api/profile", async (req, res) => {
         .status(404)
         .json({ success: false, error: "User tidak ditemukan" });
     }
+    io.emit("user_profile_updated", {
+      userId: user._id,
+      nama: user.nama,
+      avatar: user.avatar,
+      username: user.username,
+    });
 
     res.json({
       success: true,
@@ -528,6 +955,59 @@ app.put("/api/profile", async (req, res) => {
         email: user.email,
         id: user._id,
         avatar: user.avatar,
+        authProvider: user.authProvider,
+        profileCompleted: user.profileCompleted,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+app.put("/api/users/:id/complete-profile", validateObjectId, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nama, avatar } = req.body;
+
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, error: "Format ID tidak valid" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User tidak ditemukan" });
+    }
+
+    const updateData = { profileCompleted: true };
+
+    if (nama && nama.trim() !== "") {
+      updateData.nama = nama.trim();
+    }
+
+    if (avatar && avatar.startsWith("data:")) {
+      updateData.avatar = avatar;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true });
+    io.emit("user_profile_updated", {
+      userId: updatedUser._id,
+      nama: updatedUser.nama,
+      avatar: updatedUser.avatar,
+      username: updatedUser.username,
+    });
+
+    res.json({
+      success: true,
+      message: "Profil berhasil dilengkapi",
+      user: {
+        username: updatedUser.username,
+        nama: updatedUser.nama,
+        email: updatedUser.email,
+        id: updatedUser._id,
+        avatar: updatedUser.avatar,
+        authProvider: updatedUser.authProvider,
+        profileCompleted: updatedUser.profileCompleted,
       },
     });
   } catch (error) {
@@ -800,6 +1280,7 @@ app.get("/api/users/search", async (req, res) => {
     const users = await User.find({
       $and: [
         { _id: { $ne: currentUserId } },
+        { role: { $ne: "admin" } }, 
         {
           $or: [
             { username: { $regex: query, $options: "i" } },
@@ -876,6 +1357,11 @@ app.post("/api/friends/request", async (req, res) => {
 
     if (!targetUser || !senderUser)
       return res.status(404).json({ error: "User tidak ditemukan" });
+
+    
+    if (targetUser.role === "admin") {
+      return res.status(400).json({ error: "Tidak dapat menambahkan admin sebagai teman" });
+    }
 
     if (targetUser.friends.includes(fromId)) {
       return res.status(400).json({ error: "Kalian sudah berteman" });
@@ -1236,9 +1722,9 @@ app.post("/api/gemini", async (req, res) => {
     const { message, history } = req.body;
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash",
+      model: "gemini-2.5-flash",
       systemInstruction:
-        "kamu adalah seorang manusia,dapat mengerti perasaan manunsia dan seorang programer senior jenius lulusan s3 oxford",
+        "kamu adalah seorang manusia,dapat mengerti perasaan manunsia dan seorang programer senior jenius lulusan s3 oxford serta gaul dan kamu adalah seorang gen z",
     });
 
     const chat = model.startChat({
@@ -1293,19 +1779,11 @@ io.on("connection", (socket) => {
     io.emit("user_status_change", { username, status: "online" });
 
     const onlineUsersList = Array.from(new Set(onlineUsers.values()));
-    console.log(
-      `[Socket] User ${username} joined. Broadcasting online users:`,
-      onlineUsersList
-    );
     io.emit("online_users_list", onlineUsersList);
   });
 
   socket.on("get_online_users", () => {
     const onlineUsersList = Array.from(new Set(onlineUsers.values()));
-    console.log(
-      `[Socket] get_online_users requested. Sending:`,
-      onlineUsersList
-    );
     socket.emit("online_users_list", onlineUsersList);
   });
 
@@ -1454,6 +1932,58 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("delete_message_for_me", async (data) => {
+    try {
+      const { messageId } = data;
+      const username = onlineUsers.get(socket.id);
+
+      if (!username) {
+        return socket.emit("message_error", {
+          error: "Autentikasi gagal untuk menghapus pesan.",
+        });
+      }
+
+      const message = await Message.findById(messageId);
+
+      if (!message) {
+        return socket.emit("message_error", {
+          error: "Pesan tidak ditemukan.",
+        });
+      }
+
+      await Message.findByIdAndUpdate(messageId, {
+        $addToSet: { hiddenFor: username },
+      });
+      let newLastMessage = null;
+      const query = { hiddenFor: { $ne: username } };
+
+      if (message.groupId) {
+        query.groupId = message.groupId;
+      } else {
+        query.groupId = { $exists: false };
+        query.$or = [
+          { from: message.from, to: message.to },
+          { from: message.to, to: message.from },
+        ];
+      }
+
+      newLastMessage = await Message.findOne(query).sort({ timestamp: -1 });
+
+      socket.emit("message_hidden", {
+        messageId: message._id.toString(),
+        groupId: message.groupId ? message.groupId.toString() : null,
+        from: message.from,
+        to: message.to,
+        newLastMessage: newLastMessage,
+      });
+    } catch (error) {
+      console.error("Error delete_message_for_me:", error);
+      socket.emit("message_error", {
+        error: "Gagal menyembunyikan pesan.",
+      });
+    }
+  });
+
   socket.on("call_offer", (data) => {
     io.to(data.to).emit("call_offer", {
       offer: data.offer,
@@ -1478,6 +2008,208 @@ io.on("connection", (socket) => {
 
   socket.on("end_call", (data) => {
     io.to(data.to).emit("call_ended", { reason: data.reason });
+  });
+
+  
+  
+  
+  if (!global.activeGroupCalls) {
+    global.activeGroupCalls = new Map();
+  }
+
+  
+  socket.on("group_call_start", async (data) => {
+    const { groupId, callType, from } = data;
+    
+    try {
+      const group = await GroupChat.findById(groupId).populate("members", "username");
+      if (!group) return;
+
+      
+      global.activeGroupCalls.set(groupId, {
+        participants: new Set([from]),
+        callType,
+        startTime: Date.now(),
+        initiator: from
+      });
+
+      
+      group.members.forEach((member) => {
+        if (member.username !== from) {
+          io.to(member.username).emit("group_call_incoming", {
+            groupId,
+            groupName: group.nama,
+            callType,
+            initiator: from
+          });
+        }
+      });
+
+      
+      socket.emit("group_call_started", { groupId, callType });
+    } catch (error) {
+      socket.emit("group_call_error", { error: "Gagal memulai panggilan grup" });
+    }
+  });
+
+  
+  socket.on("group_call_join", (data) => {
+    const { groupId, username } = data;
+    const call = global.activeGroupCalls.get(groupId);
+    
+    if (!call) {
+      socket.emit("group_call_error", { error: "Panggilan tidak ditemukan" });
+      return;
+    }
+
+    
+    const existingParticipants = Array.from(call.participants);
+    
+    
+    call.participants.add(username);
+    
+    
+    socket.emit("group_call_participants", {
+      groupId,
+      participants: existingParticipants,
+      callType: call.callType
+    });
+
+    
+    existingParticipants.forEach((participant) => {
+      io.to(participant).emit("group_call_participant_joined", {
+        groupId,
+        username,
+        participantCount: call.participants.size
+      });
+    });
+  });
+
+  
+  socket.on("group_call_offer", (data) => {
+    const { groupId, to, from, offer } = data;
+    io.to(to).emit("group_call_offer", {
+      groupId,
+      from,
+      offer
+    });
+  });
+
+  
+  socket.on("group_call_answer", (data) => {
+    const { groupId, to, from, answer } = data;
+    io.to(to).emit("group_call_answer", {
+      groupId,
+      from,
+      answer
+    });
+  });
+
+  
+  socket.on("group_call_ice", (data) => {
+    const { groupId, to, from, candidate } = data;
+    io.to(to).emit("group_call_ice", {
+      groupId,
+      from,
+      candidate
+    });
+  });
+
+  
+  socket.on("group_call_leave", (data) => {
+    const { groupId, username } = data;
+    const call = global.activeGroupCalls.get(groupId);
+    
+    if (call) {
+      call.participants.delete(username);
+      
+      
+      call.participants.forEach((participant) => {
+        io.to(participant).emit("group_call_participant_left", {
+          groupId,
+          username,
+          participantCount: call.participants.size
+        });
+      });
+
+      
+      if (call.participants.size === 0) {
+        global.activeGroupCalls.delete(groupId);
+      }
+    }
+  });
+
+  
+  socket.on("group_call_end", async (data) => {
+    const { groupId, username } = data;
+    const call = global.activeGroupCalls.get(groupId);
+    
+    if (call) {
+      
+      call.participants.forEach((participant) => {
+        io.to(participant).emit("group_call_ended", { groupId });
+      });
+
+      
+      try {
+        const group = await GroupChat.findById(groupId).populate("members", "username");
+        if (group) {
+          group.members.forEach((member) => {
+            if (!call.participants.has(member.username)) {
+              io.to(member.username).emit("group_call_ended", { groupId });
+            }
+          });
+        }
+      } catch (e) {
+        
+      }
+
+      global.activeGroupCalls.delete(groupId);
+    }
+  });
+
+  
+  socket.on("group_call_reject", (data) => {
+    const { groupId, username } = data;
+    
+    socket.emit("group_call_rejected", { groupId });
+  });
+
+  
+  socket.on("group_call_mute_toggle", (data) => {
+    const { groupId, username, isMuted } = data;
+    const call = global.activeGroupCalls.get(groupId);
+    
+    if (call) {
+      call.participants.forEach((participant) => {
+        if (participant !== username) {
+          io.to(participant).emit("group_call_participant_muted", {
+            groupId,
+            username,
+            isMuted
+          });
+        }
+      });
+    }
+  });
+
+  
+  
+  socket.on("group_call_camera_toggle", (data) => {
+    const { groupId, username, isCameraOff } = data;
+    const call = global.activeGroupCalls.get(groupId);
+    
+    if (call) {
+      call.participants.forEach((participant) => {
+        if (participant !== username) {
+          io.to(participant).emit("group_call_participant_camera", {
+            groupId,
+            username,
+            isCameraOff
+          });
+        }
+      });
+    }
   });
 
   socket.on("disconnect", () => {

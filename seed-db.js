@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   lastSeen: { type: Date, default: Date.now },
   avatar: { type: String, default: 'default' },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
   otpHash: { type: String },
   otpExpires: { type: Date },
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -49,7 +50,8 @@ const seedDB = async () => {
       username: 'admin',
       nama: 'Admin FluxChat',
       email: 'admin@fluxchat.com',
-      password: hashedPassword
+      password: hashedPassword,
+      role: 'admin'
     });
 
     console.log('✅ Database Reset Selesai!');

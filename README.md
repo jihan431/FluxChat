@@ -1,110 +1,137 @@
-# FluxChat
+<div align="center">
 
-FluxChat is a modern, real-time messaging application built with Node.js, Express, Socket.IO, and MongoDB. It features a responsive UI, voice/video calls, status updates, and AI integration.
+  <h1>FluxChat</h1>
+  
+  <p>
+    <strong>Hubungkan Dunia, Satu Pesan pada Satu Waktu</strong>
+  </p>
 
-## 🚀 Features
+  <p>
+    <a href="#fitur">Fitur</a> •
+    <a href="#teknologi">Teknologi</a> •
+    <a href="#instalasi">Instalasi</a> •
+    <a href="#kontribusi">Kontribusi</a>
+  </p>
+1
+  <p>
+    <img src="https://img.shields.io/badge/node.js-339933?style=for-the-badge&logo=Node.js&logoColor=white" alt="Node.js" />
+    <img src="https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB" alt="Express.js" />
+    <img src="https://img.shields.io/badge/Socket.io-black?style=for-the-badge&logo=socket.io&badgeColor=010101" alt="Socket.io" />
+    <img src="https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+    <img src="https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white" alt="Google Gemini" />
+  </p>
 
-- **Real-time Messaging:** Instant private and group chats using Socket.IO.
-- **Multimedia Support:** Send images, videos, audio, PDFs, and text files.
-- **Voice Notes:** Record and send voice messages directly from the chat interface.
-- **Voice & Video Calls:** Peer-to-peer calling using WebRTC.
-- **Status Updates:** Share text or image stories (like WhatsApp/Instagram) that expire after 24 hours.
-- **AI Assistant:** Integrated Google Gemini AI for chatting and assistance.
-- **Friend System:** Send friend requests, accept/reject, and block users.
-- **Authentication:**
-  - Email/Password registration with OTP verification.
-  - Google OAuth login.
-  - Password recovery via email.
-- **UI/UX:**
-  - Responsive design (Mobile & Desktop).
-  - Dark/Light theme toggle.
-  - Message replies and context menus (Delete for me/everyone).
-  - Typing indicators and online status.
-  - Read receipts and unread counters.
+  <br />
 
-## 🛠️ Tech Stack
+  <img src="./public/assets/Screenshot_20251212_095000.png" alt="FluxChat Screenshot" width="800" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+
+  <br />
+  <br />
+
+  <p>
+    FluxChat adalah aplikasi pesan real-time modern yang dibangun untuk komunikasi tanpa batas. Dengan fitur panggilan suara/video, status update, dan integrasi AI, FluxChat membawa pengalaman chatting ke level berikutnya.
+  </p>
+</div>
+
+<hr />
+
+## 🚀 Fitur Unggulan
+
+FluxChat dirancang dengan fitur-fitur kekinian untuk memenuhi kebutuhan komunikasi Anda:
+
+| Fitur | Deskripsi |
+| :--- | :--- |
+| **💬 Real-time Messaging** | Chat pribadi dan grup instan dengan Socket.IO. |
+| **📎 Multimedia Support** | Kirim gambar, video, audio, PDF, dan file lainnya dengan mudah. |
+| **🎤 Voice Notes** | Rekam dan kirim pesan suara langsung dari antarmuka chat. |
+| **📞 Voice & Video Calls** | Panggilan peer-to-peer berkualitas tinggi menggunakan WebRTC. |
+| **⭕ Status Updates** | Bagikan cerita (story) teks atau gambar yang hilang setelah 24 jam. |
+| **🤖 AI Assistant** | Ngobrol cerdas dengan integrasi Google Gemini AI. |
+| **🔐 Aman & Privat** | Autentikasi aman dengan OAuth Google dan verifikasi email. |
+
+## 🛠️ Teknologi
+
+Dibangun dengan stack teknologi yang handal dan modern:
 
 - **Backend:** Node.js, Express.js
 - **Database:** MongoDB (Mongoose)
 - **Real-time Engine:** Socket.IO
 - **Frontend:** HTML5, CSS3, Vanilla JavaScript
 - **AI:** Google Generative AI (Gemini)
-- **Authentication:** Google Auth Library, Bcrypt, Nodemailer
 
-## ⚙️ Installation
+## ⚙️ Instalasi
 
-1.  **Clone the repository:**
+Ikuti langkah-langkah berikut untuk menjalankan FluxChat di mesin lokal Anda:
 
-    ```bash
-    git clone https://github.com/jihan431/fluxchat.git
-    cd fluxchat
-    ```
+### 1. Clone Repository
 
-2.  **Install dependencies:**
-
-    ```bash
-    npm install
-    ```
-
-3.  **Configure Environment Variables:**
-    Create a `.env` file in the root directory and add the following:
-
-    ```env
-    # Server Configuration
-    PORT=3000
-
-    # Database
-    MONGO_URI=mongodb://localhost:27017/chatapp
-
-    # Email Configuration (for OTP & Recovery)
-    EMAIL_USER=your_email@gmail.com
-    EMAIL_PASS=your_app_password
-
-    # Google OAuth (Optional)
-    GOOGLE_CLIENT_ID=your_google_client_id
-
-    # Google Gemini AI (Optional)
-    GEMINI_API_KEY=your_gemini_api_key
-    ```
-
-    > **Note:** For Gmail, use an App Password if 2FA is enabled.
-
-4.  **Start the Server:**
-
-    For development (with nodemon):
-
-    ```bash
-    npm run dev
-    ```
-
-    For production:
-
-    ```bash
-    npm start
-    ```
-
-5.  **Access the App:**
-    Open your browser and navigate to `http://localhost:3000`.
-
-## 📁 Project Structure
-
-```
-FluxChat/
-├── public/             # Static frontend files
-│   ├── css/            # Stylesheets
-│   ├── js/             # Client-side logic
-│   ├── index.html      # Main application view
-│   ├── login.html      # Login view
-│   └── ...
-├── server.js           # Main backend server entry point
-├── package.json        # Project dependencies and scripts
-└── .env                # Environment variables
+```bash
+git clone https://github.com/jihan431/fluxchat.git
+cd fluxchat
 ```
 
-## 🤝 Contributing
+### 2. Install Dependencies
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+```bash
+npm install
+```
 
-## 📄 License
+### 3. Konfigurasi Environment
 
-This project is licensed under the MIT License.
+Buat file `.env` di root direktori dan tambahkan konfigurasi berikut:
+
+```env
+# Server Configuration
+PORT=3000
+
+# Database
+MONGO_URI=mongodb://localhost:27017/chatapp
+
+# Email Configuration (Untuk OTP & Recovery)
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+
+# Google OAuth (Opsional)
+GOOGLE_CLIENT_ID=your_google_client_id
+
+# Google Gemini AI (Opsional)
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+> **Catatan:** Jika menggunakan Gmail, pastikan Anda menggunakan **App Password** jika 2FA aktif.
+
+### 4. Jalankan Server
+
+**Mode Development:**
+```bash
+npm run dev
+```
+
+**Mode Production:**
+```bash
+npm start
+```
+
+### 5. Buka Aplikasi
+
+Kunjungi `http://localhost:3000` di browser favorit Anda.
+
+## 🤝 Kontribusi
+
+Kontribusi sangat diterima! Jika Anda ingin meningkatkan FluxChat:
+
+1. Fork repository ini.
+2. Buat branch fitur baru (`git checkout -b fitur-keren`).
+3. Commit perubahan Anda (`git commit -m 'Menambahkan fitur keren'`).
+4. Push ke branch (`git push origin fitur-keren`).
+5. Buat Pull Request.
+
+## 📄 Lisensi
+
+Proyek ini dilisensikan di bawah [MIT License](LICENSE).
+
+---
+
+<div align="center">
+  Dibuat dengan ❤️ oleh <a href="https://github.com/jihan431">Jihan</a>
+</div>

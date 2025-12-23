@@ -8,6 +8,7 @@ function isMobileDevice() {
 
 async function initGoogleLogin() {
   const btn = document.getElementById('googleLoginBtn');
+  const container = document.getElementById('googleLoginBtnContainer');
   if (!btn || googleInitTried) return;
   googleInitTried = true;
 
@@ -46,67 +47,54 @@ async function initGoogleLogin() {
       const isMobile = isMobileDevice();
       
       
-      const config = {
+      
+      const initConfig = {
         client_id: clientId,
-        callback: handleGoogleCredential
+        callback: handleGoogleCredential,
+        ux_mode: isMobile ? 'redirect' : 'popup'
       };
-
+      
+      
       if (isMobile) {
-        
-        config.ux_mode = 'redirect';
-        config.redirect_uri = `${window.location.origin}/login.html`;
-      } else {
-        
-        config.ux_mode = 'popup';
+        initConfig.login_uri = `${window.location.origin}/login.html`;
       }
-
-      google.accounts.id.initialize(config);
+      
+      google.accounts.id.initialize(initConfig);
 
       
-      if (!isMobile) {
-        const googleBtnContainer = document.createElement('div');
-        googleBtnContainer.id = 'googleBtnContainer';
-        googleBtnContainer.style.position = 'absolute';
-        googleBtnContainer.style.left = '-9999px';
-        googleBtnContainer.style.top = '-9999px';
-        googleBtnContainer.style.width = btn.offsetWidth + 'px';
-        googleBtnContainer.style.height = '40px';
-        document.body.appendChild(googleBtnContainer);
-
-        google.accounts.id.renderButton(googleBtnContainer, {
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          width: btn.offsetWidth || 300
-        });
-
+      if (container) {
+        google.accounts.id.renderButton(
+          container,
+          { 
+            theme: 'outline', 
+            size: 'large', 
+            type: 'standard',
+            width: container.offsetWidth || 200
+          }
+        );
         
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          setTimeout(() => {
-            const googleBtn = googleBtnContainer.querySelector('div[role="button"]');
-            if (googleBtn) {
-              googleBtn.click();
-            } else {
-              setTimeout(() => {
-                const retryBtn = googleBtnContainer.querySelector('div[role="button"]');
-                if (retryBtn) {
-                  retryBtn.click();
-                } else {
-                  showNotification('Gagal memuat Google login', 'error');
-                }
-              }, 500);
-            }
-          }, 100);
-        });
-      } else {
         
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          google.accounts.id.prompt();
-        });
+        setTimeout(() => {
+          const iframe = container.querySelector('iframe');
+          if (iframe) {
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+          }
+        }, 100);
       }
+
+      
+      btn.addEventListener('click', (e) => {
+        
+        if (!container || !container.querySelector('iframe')) {
+          e.preventDefault();
+          google.accounts.id.prompt((notification) => {
+            if (notification && notification.isNotDisplayed && notification.isNotDisplayed()) {
+              showNotification('Popup diblokir. Izinkan popup untuk login dengan Google.', 'info');
+            }
+          });
+        }
+      });
 
       setBtnState('Masuk dengan Google', false);
     };
@@ -157,7 +145,8 @@ async function handleGoogleCredential(response) {
     if (data.success) {
       localStorage.setItem('currentUser', JSON.stringify(data.user));
       showNotification('Login Google sukses! Mengalihkan...', 'success');
-      setTimeout(() => window.location.href = 'index.html', 700);
+      const redirectUrl = data.user.role === 'admin' ? 'admin.html' : 'index.html';
+      setTimeout(() => window.location.href = redirectUrl, 700);
     } else {
       showNotification(data.error || 'Login Google gagal', 'error');
       if (btn) {
@@ -401,7 +390,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (data.success) {
       localStorage.setItem('currentUser', JSON.stringify(data.user));
       showNotification('Login sukses! Mengalihkan...', 'success');
-      setTimeout(() => window.location.href = 'index.html', 800);
+      const redirectUrl = data.user.role === 'admin' ? 'admin.html' : 'index.html';
+      setTimeout(() => window.location.href = redirectUrl, 800);
     }
     else {
       showNotification(data.error || 'Login gagal', 'error');
@@ -490,7 +480,8 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
       if (otpType === 'login') {
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         showNotification('Login berhasil! Mengalihkan...', 'success');
-        setTimeout(() => window.location.href = 'index.html', 1000);
+        const redirectUrl = data.user.role === 'admin' ? 'admin.html' : 'index.html';
+        setTimeout(() => window.location.href = redirectUrl, 1000);
       } else {
         showNotification('Verifikasi berhasil! Silakan login.', 'success');
         localStorage.setItem('newUser', 'true');
@@ -509,7 +500,12 @@ document.getElementById('otpForm').addEventListener('submit', async (e) => {
 });
 
 if (localStorage.getItem('currentUser')) {
-  window.location.href = 'index.html';
+  try {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    window.location.href = user.role === 'admin' ? 'admin.html' : 'index.html';
+  } catch (e) {
+    window.location.href = 'index.html';
+  }
 }
 
 function hideLoadingScreen() {
@@ -750,7 +746,7 @@ function waitForResources() {
     }));
   }
   
-  const minLoadTime = new Promise(resolve => setTimeout(resolve, 2000));
+  const minLoadTime = new Promise(resolve => setTimeout(resolve, 5000));
   resources.push(minLoadTime);
   
   Promise.race([
@@ -796,6 +792,32 @@ document.addEventListener('DOMContentLoaded', () => {
   
   
   const urlParams = new URLSearchParams(window.location.search);
+  
+  
+  const googleUserData = urlParams.get('google_user');
+  if (googleUserData) {
+    try {
+      const userData = JSON.parse(decodeURIComponent(googleUserData));
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      showNotification('Login Google sukses! Mengalihkan...', 'success');
+      const redirectUrl = userData.role === 'admin' ? 'admin.html' : 'index.html';
+      setTimeout(() => window.location.href = redirectUrl, 700);
+      return;
+    } catch (e) {
+      console.error('Failed to parse google_user data:', e);
+    }
+  }
+  
+  
+  const error = urlParams.get('error');
+  if (error) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    showNotification('Login Google gagal: ' + decodeURIComponent(error), 'error');
+  }
+  
+  
   const credential = urlParams.get('credential');
   const g_csrf_token = urlParams.get('g_csrf_token');
   

@@ -1,17 +1,23 @@
 feather.replace();
 
 const btn = document.getElementById('themeToggle');
+const savedTheme = localStorage.getItem('fluxchat-theme');
+if (savedTheme === 'light') {
+  document.body.classList.add('light');
+}
 
 function updateThemeIcon(isLight) {
   btn.innerHTML = `<i data-feather="${isLight ? 'moon' : 'sun'}"></i>`;
   feather.replace();
 }
+updateThemeIcon(document.body.classList.contains('light'));
 
 btn.addEventListener('click', async (e) => {
   
   if (!document.startViewTransition) {
     
     const isLight = document.body.classList.toggle('light');
+    localStorage.setItem('fluxchat-theme', isLight ? 'light' : 'dark');
     updateThemeIcon(isLight);
     return;
   }
@@ -40,6 +46,7 @@ btn.addEventListener('click', async (e) => {
     
     document.body.classList.add('disable-transitions');
     const isLight = document.body.classList.toggle('light');
+    localStorage.setItem('fluxchat-theme', isLight ? 'light' : 'dark');
     updateThemeIcon(isLight);
   });
 
