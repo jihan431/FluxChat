@@ -6,12 +6,6 @@
     <strong>Hubungkan Dunia, Satu Pesan pada Satu Waktu</strong>
   </p>
 
-  <p>
-    <a href="#fitur">Fitur</a> •
-    <a href="#teknologi">Teknologi</a> •
-    <a href="#instalasi">Instalasi</a> •
-    <a href="#kontribusi">Kontribusi</a>
-  </p>
 1
   <p>
     <img src="https://img.shields.io/badge/node.js-339933?style=for-the-badge&logo=Node.js&logoColor=white" alt="Node.js" />
@@ -131,7 +125,3 @@ Kontribusi sangat diterima! Jika Anda ingin meningkatkan FluxChat:
 Proyek ini dilisensikan di bawah [MIT License](LICENSE).
 
 ---
-
-<div align="center">
-  Dibuat dengan ❤️ oleh <a href="https://github.com/jihan431">Jihan</a>
-</div>
